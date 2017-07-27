@@ -3,15 +3,21 @@ package smf.webhookevents.webhook_util;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.apache.log4j.Logger;
-import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.hibernate.criterion.Restrictions;
 import org.openbravo.base.model.Entity;
@@ -24,6 +30,10 @@ import org.openbravo.database.ConnectionProvider;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.datamodel.Table;
 import org.openbravo.service.db.DalConnectionProvider;
+import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Text;
 
 import com.smf.webhookevents.data.Customparam;
 import com.smf.webhookevents.data.Events;
@@ -38,10 +48,12 @@ public class WebHookUtil {
   /**
    * Call the all webhook defined in this event
    * 
-   * @param event
+   * @param Event
    *          Events
-   * @param bob
+   * @param Bob
    *          BaseOBObject to generate data (JSON or XML)
+   * @param Logger
+   *          Info logger in log
    * @throws Exception
    */
   public static void callWebHook(Events event, BaseOBObject bob, Logger logger) throws Exception {
@@ -61,10 +73,12 @@ public class WebHookUtil {
   /**
    * Send the request to url to notify defined in webhook
    * 
-   * @param hook
+   * @param Hook
    *          Webhook defined in events
-   * @param bob
+   * @param Bob
    *          BaseOBObject to generate data (JSON or XML)
+   * @param Logger
+   *          Info logger in log
    * @throws Exception
    */
   public static void sendEvent(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
@@ -92,9 +106,10 @@ public class WebHookUtil {
       }
     } else if (hook.getTypedata().equals(Constants.STRING_XML)) {
       if (isOneRowActive(lStdParameters)) {
-        postJsonData = generateDataParametersXML(lStdParameters, bob, logger);
+        postJsonData = generateDataParametersXML(bob.getEntityName(), lStdParameters, bob, logger);
       } else {
-        postJsonData = generateUserDefinedDataParametersXML(lUDefinedParameters, bob, logger);
+        postJsonData = generateUserDefinedDataParametersXML(bob.getEntityName(),
+            lUDefinedParameters, bob, logger);
       }
     }
 
@@ -127,25 +142,27 @@ public class WebHookUtil {
    * Generate a JSON data parameter, take a StandardParameter list and return json with
    * StandardParameter set
    * 
-   * @param listParam
+   * @param ListParameters
    *          Standard Parameter list
-   * @param bob
+   * @param Bob
    *          BaseOBObject to generate data in XML
-   * @return return data in format JSON
+   * @param Logger
+   *          Info logger in log
+   * @return Return data in format JSON
    * @throws Exception
    */
-  public static String generateDataParametersJSON(List<StandardParameter> listParam,
+  public static String generateDataParametersJSON(List<StandardParameter> listParameters,
       BaseOBObject bob, Logger logger) throws Exception {
     String json = "";
     JSONObject jsonMap = new JSONObject();
     try {
-      for (StandardParameter stdParam : listParam) {
+      for (StandardParameter stdParam : listParameters) {
         if (stdParam.isActive()) {
           jsonMap.put(stdParam.getName(), DalUtil.getValueFromPath(bob, stdParam.getProperty()));
         }
       }
       json = jsonMap.toString();
-    } catch (JSONException e) {
+    } catch (Exception e) {
       String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateJson", language),
           bob.getIdentifier());
       logger.error(message, e);
@@ -158,19 +175,21 @@ public class WebHookUtil {
    * Generate a JSON data parameter, take a StandardParameter list and return json with
    * StandardParameter set
    * 
-   * @param listParam
+   * @param ListParameters
    *          Standard Parameter list
-   * @param bob
+   * @param Bob
    *          BaseOBObject to generate data in XML
-   * @return return data in format JSON
+   * @param Logger
+   *          Info logger in log
+   * @return Return data in format JSON
    * @throws Exception
    */
-  public static String generateUserDefinedDataParametersJSON(List<UserDefinedParameter> listParam,
-      BaseOBObject bob, Logger logger) throws Exception {
+  public static String generateUserDefinedDataParametersJSON(
+      List<UserDefinedParameter> listParameters, BaseOBObject bob, Logger logger) throws Exception {
     String json = "";
     JSONObject jsonMap = new JSONObject();
     try {
-      for (UserDefinedParameter param : listParam) {
+      for (UserDefinedParameter param : listParameters) {
         if (param.isActive()) {
           jsonMap.put(param.getName(), replaceValueData(param.getValueParameter(), bob, logger));
         }
@@ -188,63 +207,134 @@ public class WebHookUtil {
   /**
    * Generate a XML data parameter, take a StandardParameter list and return XML with
    * StandardParameter set
-   * 
-   * @param listParam
+   *
+   * @param Name
+   *          Name to root node
+   * @param ListParameters
    *          Standard Parameter list
-   * @param bob
+   * @param Bob
    *          BaseOBObject to generate data in XML
-   * @return return data in format XML
+   * @param Logger
+   *          Info logger in log
+   * @return Return data in format XML
    * @throws Exception
    */
-  public static String generateDataParametersXML(List<StandardParameter> listParam,
-      BaseOBObject bob, Logger logger) throws Exception {
-    String json = "";
-    return json;
+  public static String generateDataParametersXML(String name,
+      List<StandardParameter> listParameters, BaseOBObject bob, Logger logger) throws Exception {
+    StringWriter json = new StringWriter();
+    try {
+      if (listParameters.isEmpty()) {
+        logger.info("empty Standard Parameter List");
+      } else {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        DOMImplementation implementation = builder.getDOMImplementation();
+        Document document = implementation.createDocument(null, name, null);
+        document.setXmlVersion(Constants.XML_VERSION);
+
+        // Main Node
+        Element root = document.getDocumentElement();
+        for (StandardParameter param : listParameters) {
+          // Item Node
+          Element node = document.createElement(param.getName());
+          Text nodeValueValue = document.createTextNode(DalUtil.getValueFromPath(bob,
+              param.getProperty()).toString());
+          node.appendChild(nodeValueValue);
+          // append itemNode to root
+          root.appendChild(node); // add the element in root node "Document"
+        }
+        // Generate XML
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        transformer.transform(new DOMSource(document), new StreamResult(json));
+      }
+    } catch (Exception e) {
+      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateXml", language),
+          bob.getIdentifier());
+      logger.error(message, e);
+      throw new Exception(message);
+    }
+    return json.toString();
   }
 
   /**
    * Generate a XML data parameter, take a StandardParameter list and return XML with
    * StandardParameter set
    * 
-   * @param listParam
+   * @param Name
+   *          Name to root node
+   * @param ListParameters
    *          Standard Parameter list
-   * @param bob
+   * @param Bob
    *          BaseOBObject to generate data in XML
-   * @return return data in format XML
+   * @param Logger
+   *          Info logger in log
+   * @return Return data in format XML
    * @throws Exception
    */
-  public static String generateUserDefinedDataParametersXML(List<UserDefinedParameter> listParam,
-      BaseOBObject bob, Logger logger) throws Exception {
-    String json = "";
-    return json;
+  public static String generateUserDefinedDataParametersXML(String name,
+      List<UserDefinedParameter> listParameters, BaseOBObject bob, Logger logger) throws Exception {
+    StringWriter json = new StringWriter();
+    try {
+      if (listParameters.isEmpty()) {
+        logger.info("empty Standard Parameter List");
+      } else {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        DOMImplementation implementation = builder.getDOMImplementation();
+        Document document = implementation.createDocument(null, name, null);
+        document.setXmlVersion(Constants.XML_VERSION);
+
+        // Main Node
+        Element root = document.getDocumentElement();
+        for (UserDefinedParameter param : listParameters) {
+          // Item Node
+          Element node = document.createElement(param.getName());
+          Text nodeValueValue = document.createTextNode(replaceValueData(param.getValueParameter(),
+              bob, logger));
+          node.appendChild(nodeValueValue);
+          // append itemNode to root
+          root.appendChild(node); // add the element in root node "Document"
+        }
+        // Generate XML
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        transformer.transform(new DOMSource(document), new StreamResult(json));
+      }
+    } catch (Exception e) {
+      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateXml", language),
+          bob.getIdentifier());
+      logger.error(message, e);
+      throw new Exception(message);
+    }
+    return json.toString();
   }
 
   /**
    * Generate a Customparam, take a Customparam list and return string you can added in the url
    * 
-   * @param lCustomParam
+   * @param LCustomParameters
    *          Custom Parameter list
-   * @return return string appended with all the custom parameter
+   * @return Return string appended with all the custom parameter
    */
-  public static String generateCustomParameter(List<Customparam> lCustomParam) {
-    String parameters = Constants.START_PARAMETER;
-    for (Customparam param : lCustomParam) {
+  public static String generateCustomParameter(List<Customparam> lCustomParameters) {
+    StringBuilder parameters = new StringBuilder(Constants.START_PARAMETER);
+    for (Customparam param : lCustomParameters) {
       if (param.isActive()) {
-        parameters += param.getName() + Constants.EQUALS + param.getValue() + Constants.AMPERSAND;
+        parameters.append(param.getName() + Constants.EQUALS + param.getValue()
+            + Constants.AMPERSAND);
       }
     }
-    return parameters.substring(0, parameters.length() - 1);
+    return parameters.toString().substring(0, parameters.length() - 1);
   }
 
   /**
    * Return a Events list from BaseOBObject send for parameter
    * 
-   * @param bob
+   * @param Bob
    *          BaseOBObject to get the events defined
-   * @param action
-   *          defined in this class
-   * @param tableNames
-   * @return return de Events list
+   * @param Action
+   *          Defined in this class
+   * @param TableNames
+   * @return Return de Events list
    */
   public static List<Events> eventsFromBaseOBObject(BaseOBObject bob, String action,
       List<String> tableNames) {
@@ -260,24 +350,28 @@ public class WebHookUtil {
   /**
    * Return a Table Name list
    * 
-   * @param entities
-   *          array
-   * @return return a Table Name list
+   * @param Entities
+   *          Array
+   * @return Return a Table Name list
    */
   public static List<String> getTableName(Entity[] entities) {
-    List<String> lTableName = new LinkedList<String>();
+    List<String> lTableNames = new LinkedList<String>();
     for (Entity e : entities) {
-      lTableName.add(e.getTableName());
+      lTableNames.add(e.getTableName());
     }
-    return lTableName;
+    return lTableNames;
   }
 
   /**
    * Return string concat with property value set
    * 
-   * @param value
-   *          string value defined in user defined data
-   * @return return a string with parameters set
+   * @param Value
+   *          String value defined in user defined data
+   * @param Bob
+   *          BaseOBObject to get the events defined
+   * @param Logger
+   *          Info logger in log
+   * @return Return a string with parameters set
    * @throws Exception
    */
   public static String replaceValueData(String value, BaseOBObject bob, Logger logger)
@@ -302,14 +396,14 @@ public class WebHookUtil {
   /**
    * Return true if at least row is active other case false
    * 
-   * @param listParam
+   * @param ListParameters
    *          Standard Parameter list
-   * @return return true if at least row is active other case false
+   * @return Return true if at least row is active other case false
    * @throws Exception
    */
-  public static boolean isOneRowActive(List<StandardParameter> listParam) {
+  public static boolean isOneRowActive(List<StandardParameter> listParameters) {
     boolean isActive = false;
-    for (StandardParameter p : listParam) {
+    for (StandardParameter p : listParameters) {
       if (p.isActive()) {
         isActive = true;
         break;
