@@ -13,6 +13,7 @@ public class Constants {
   public final static String CREATE = "C";
   public final static String UPDATE = "U";
   public final static String DELETE = "D";
+  public final static String CREATE_OR_UPDATE = "CU";
   public final static String XML_VERSION = "1.0";
 
 }

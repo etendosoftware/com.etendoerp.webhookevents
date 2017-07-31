@@ -341,7 +341,12 @@ public class WebHookUtil {
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
     cEvents.createAlias(Events.PROPERTY_TABLE, "table");
     cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
-    cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, action));
+    if (Constants.CREATE.equals(action) || Constants.UPDATE.equals(action)) {
+      cEvents.add(Restrictions.or(Restrictions.eq(Events.PROPERTY_EXECUTEON, action),
+          Restrictions.eq(Events.PROPERTY_EXECUTEON, Constants.CREATE_OR_UPDATE)));
+    } else {
+      cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, action));
+    }
     cEvents.add(Restrictions.in("table." + Table.PROPERTY_DBTABLENAME, tableNames));
 
     return cEvents.list();
