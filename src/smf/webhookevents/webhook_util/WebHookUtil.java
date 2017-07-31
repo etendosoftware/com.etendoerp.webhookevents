@@ -9,6 +9,7 @@ import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.enterprise.inject.Any;
 import javax.net.ssl.HttpsURLConnection;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -44,6 +45,10 @@ import com.smf.webhookevents.data.Webhook;
 public class WebHookUtil {
   final private static String language = OBContext.getOBContext().getLanguage().getLanguage();
   final private static ConnectionProvider conn = new DalConnectionProvider(false);
+
+  @InjectHook
+  @Any
+  private static List<IChangeDataHook> hooks;
 
   /**
    * Call the all webhook defined in this event
@@ -97,7 +102,7 @@ public class WebHookUtil {
     String postJsonData = "";
     List<StandardParameter> lStdParameters = hook.getSmfwheStdparamList();
     List<UserDefinedParameter> lUDefinedParameters = hook.getSmfwheUdefinedparamList();
-
+    WebHookInitializer.initialize();
     if (hook.getTypedata().equals(Constants.STRING_JSON)) {
       if (isOneRowActive(lStdParameters)) {
         postJsonData = generateDataParametersJSON(lStdParameters, bob, logger);
@@ -161,10 +166,16 @@ public class WebHookUtil {
           jsonMap.put(stdParam.getName(), DalUtil.getValueFromPath(bob, stdParam.getProperty()));
         }
       }
+      if (hooks != null) {
+        for (IChangeDataHook hook : hooks) {
+          hook.postProcessJSON(jsonMap);
+        }
+      }
       json = jsonMap.toString();
     } catch (Exception e) {
-      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateJson", language),
-          bob.getIdentifier());
+      String message = String.format(
+          Utility.messageBD(new DalConnectionProvider(false), "smfwhe_errorGenerateJson", OBContext
+              .getOBContext().getLanguage().getLanguage()), bob.getIdentifier());
       logger.error(message, e);
       throw new Exception(message);
     }
@@ -191,13 +202,20 @@ public class WebHookUtil {
     try {
       for (UserDefinedParameter param : listParameters) {
         if (param.isActive()) {
-          jsonMap.put(param.getName(), replaceValueData(param.getValueParameter(), bob, logger));
+          jsonMap.put(param.getName(),
+              WebHookUtil.replaceValueData(param.getValueParameter(), bob, logger));
+        }
+      }
+      if (hooks != null) {
+        for (IChangeDataHook hook : hooks) {
+          hook.postProcessJSON(jsonMap);
         }
       }
       json = jsonMap.toString();
     } catch (Exception e) {
-      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateJson", language),
-          bob.getIdentifier());
+      String message = String.format(
+          Utility.messageBD(new DalConnectionProvider(false), "smfwhe_errorGenerateJson", OBContext
+              .getOBContext().getLanguage().getLanguage()), bob.getIdentifier());
       logger.error(message, e);
       throw new Exception(message);
     }
@@ -221,7 +239,7 @@ public class WebHookUtil {
    */
   public static String generateDataParametersXML(String name,
       List<StandardParameter> listParameters, BaseOBObject bob, Logger logger) throws Exception {
-    StringWriter json = new StringWriter();
+    StringWriter xml = new StringWriter();
     try {
       if (listParameters.isEmpty()) {
         logger.info("empty Standard Parameter List");
@@ -245,15 +263,21 @@ public class WebHookUtil {
         }
         // Generate XML
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
-        transformer.transform(new DOMSource(document), new StreamResult(json));
+        transformer.transform(new DOMSource(document), new StreamResult(xml));
       }
     } catch (Exception e) {
-      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateXml", language),
-          bob.getIdentifier());
+      String message = String.format(
+          Utility.messageBD(new DalConnectionProvider(false), "smfwhe_errorGenerateXml", OBContext
+              .getOBContext().getLanguage().getLanguage()), bob.getIdentifier());
       logger.error(message, e);
       throw new Exception(message);
     }
-    return json.toString();
+    if (hooks != null) {
+      for (IChangeDataHook hook : hooks) {
+        hook.postProcessXML(xml);
+      }
+    }
+    return xml.toString();
   }
 
   /**
@@ -273,7 +297,7 @@ public class WebHookUtil {
    */
   public static String generateUserDefinedDataParametersXML(String name,
       List<UserDefinedParameter> listParameters, BaseOBObject bob, Logger logger) throws Exception {
-    StringWriter json = new StringWriter();
+    StringWriter xml = new StringWriter();
     try {
       if (listParameters.isEmpty()) {
         logger.info("empty Standard Parameter List");
@@ -289,23 +313,29 @@ public class WebHookUtil {
         for (UserDefinedParameter param : listParameters) {
           // Item Node
           Element node = document.createElement(param.getName());
-          Text nodeValueValue = document.createTextNode(replaceValueData(param.getValueParameter(),
-              bob, logger));
+          Text nodeValueValue = document.createTextNode(WebHookUtil.replaceValueData(
+              param.getValueParameter(), bob, logger));
           node.appendChild(nodeValueValue);
           // append itemNode to root
           root.appendChild(node); // add the element in root node "Document"
         }
         // Generate XML
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
-        transformer.transform(new DOMSource(document), new StreamResult(json));
+        transformer.transform(new DOMSource(document), new StreamResult(xml));
       }
     } catch (Exception e) {
-      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateXml", language),
-          bob.getIdentifier());
+      String message = String.format(
+          Utility.messageBD(new DalConnectionProvider(false), "smfwhe_errorGenerateXml", OBContext
+              .getOBContext().getLanguage().getLanguage()), bob.getIdentifier());
       logger.error(message, e);
       throw new Exception(message);
     }
-    return json.toString();
+    if (hooks != null) {
+      for (IChangeDataHook hook : hooks) {
+        hook.postProcessXML(xml);
+      }
+    }
+    return xml.toString();
   }
 
   /**
