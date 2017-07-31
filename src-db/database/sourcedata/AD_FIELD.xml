@@ -64,8 +64,8 @@
 <!--16731803372244E7895E858C7F37D9BC-->  <AD_ORG_ID><![CDATA[0]]></AD_ORG_ID>
 <!--16731803372244E7895E858C7F37D9BC-->  <ISACTIVE><![CDATA[Y]]></ISACTIVE>
 <!--16731803372244E7895E858C7F37D9BC-->  <NAME><![CDATA[Name]]></NAME>
-<!--16731803372244E7895E858C7F37D9BC-->  <DESCRIPTION><![CDATA[A non-unique identifier for a payment type]]></DESCRIPTION>
-<!--16731803372244E7895E858C7F37D9BC-->  <HELP><![CDATA[A descriptive identifier of a payment type that is used as a default search option along with the search key (that is unique and mostly shorter).]]></HELP>
+<!--16731803372244E7895E858C7F37D9BC-->  <DESCRIPTION><![CDATA[A non-unique identifier for a record/document often used as a search tool.]]></DESCRIPTION>
+<!--16731803372244E7895E858C7F37D9BC-->  <HELP><![CDATA[A more descriptive identifier (that does need to be unique) of a record/document that is used as a default search option along with the search key (that is unique and mostly shorter). It is up to 60 characters in length.]]></HELP>
 <!--16731803372244E7895E858C7F37D9BC-->  <ISCENTRALLYMAINTAINED><![CDATA[Y]]></ISCENTRALLYMAINTAINED>
 <!--16731803372244E7895E858C7F37D9BC-->  <AD_TAB_ID><![CDATA[4E05F2B371FF4BFF8F5B6600D12D7143]]></AD_TAB_ID>
 <!--16731803372244E7895E858C7F37D9BC-->  <AD_COLUMN_ID><![CDATA[9EE09256DC1949CA896B3E71ED339D49]]></AD_COLUMN_ID>
@@ -505,8 +505,8 @@
 <!--5FA44984A807414BB060D8C289751E26-->  <AD_ORG_ID><![CDATA[0]]></AD_ORG_ID>
 <!--5FA44984A807414BB060D8C289751E26-->  <ISACTIVE><![CDATA[Y]]></ISACTIVE>
 <!--5FA44984A807414BB060D8C289751E26-->  <NAME><![CDATA[Name]]></NAME>
-<!--5FA44984A807414BB060D8C289751E26-->  <DESCRIPTION><![CDATA[A non-unique identifier for a payment type]]></DESCRIPTION>
-<!--5FA44984A807414BB060D8C289751E26-->  <HELP><![CDATA[A descriptive identifier of a payment type that is used as a default search option along with the search key (that is unique and mostly shorter).]]></HELP>
+<!--5FA44984A807414BB060D8C289751E26-->  <DESCRIPTION><![CDATA[A non-unique identifier for a record/document often used as a search tool.]]></DESCRIPTION>
+<!--5FA44984A807414BB060D8C289751E26-->  <HELP><![CDATA[A more descriptive identifier (that does need to be unique) of a record/document that is used as a default search option along with the search key (that is unique and mostly shorter). It is up to 60 characters in length.]]></HELP>
 <!--5FA44984A807414BB060D8C289751E26-->  <ISCENTRALLYMAINTAINED><![CDATA[Y]]></ISCENTRALLYMAINTAINED>
 <!--5FA44984A807414BB060D8C289751E26-->  <AD_TAB_ID><![CDATA[BE78838207E442CEA931CBD548740040]]></AD_TAB_ID>
 <!--5FA44984A807414BB060D8C289751E26-->  <AD_COLUMN_ID><![CDATA[C12CC761B58A4966A4B891787DA365D9]]></AD_COLUMN_ID>
@@ -533,8 +533,8 @@
 <!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <AD_ORG_ID><![CDATA[0]]></AD_ORG_ID>
 <!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <ISACTIVE><![CDATA[Y]]></ISACTIVE>
 <!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <NAME><![CDATA[Name]]></NAME>
-<!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <DESCRIPTION><![CDATA[A non-unique identifier for a payment type]]></DESCRIPTION>
-<!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <HELP><![CDATA[A descriptive identifier of a payment type that is used as a default search option along with the search key (that is unique and mostly shorter).]]></HELP>
+<!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <DESCRIPTION><![CDATA[A non-unique identifier for a record/document often used as a search tool.]]></DESCRIPTION>
+<!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <HELP><![CDATA[A more descriptive identifier (that does need to be unique) of a record/document that is used as a default search option along with the search key (that is unique and mostly shorter). It is up to 60 characters in length.]]></HELP>
 <!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <ISCENTRALLYMAINTAINED><![CDATA[Y]]></ISCENTRALLYMAINTAINED>
 <!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <AD_TAB_ID><![CDATA[32382FA13C004014B649E95A925E83A1]]></AD_TAB_ID>
 <!--6ED69B92DE8547D9B2F97FF31FCF77B1-->  <AD_COLUMN_ID><![CDATA[7F98610D5C6E499CB0361408190AFC1D]]></AD_COLUMN_ID>
@@ -752,8 +752,8 @@
 <!--9545EFF0903F451EAC0552AE21B1BFBB-->  <AD_ORG_ID><![CDATA[0]]></AD_ORG_ID>
 <!--9545EFF0903F451EAC0552AE21B1BFBB-->  <ISACTIVE><![CDATA[Y]]></ISACTIVE>
 <!--9545EFF0903F451EAC0552AE21B1BFBB-->  <NAME><![CDATA[Name]]></NAME>
-<!--9545EFF0903F451EAC0552AE21B1BFBB-->  <DESCRIPTION><![CDATA[A non-unique identifier for a payment type]]></DESCRIPTION>
-<!--9545EFF0903F451EAC0552AE21B1BFBB-->  <HELP><![CDATA[A descriptive identifier of a payment type that is used as a default search option along with the search key (that is unique and mostly shorter).]]></HELP>
+<!--9545EFF0903F451EAC0552AE21B1BFBB-->  <DESCRIPTION><![CDATA[A non-unique identifier for a record/document often used as a search tool.]]></DESCRIPTION>
+<!--9545EFF0903F451EAC0552AE21B1BFBB-->  <HELP><![CDATA[A more descriptive identifier (that does need to be unique) of a record/document that is used as a default search option along with the search key (that is unique and mostly shorter). It is up to 60 characters in length.]]></HELP>
 <!--9545EFF0903F451EAC0552AE21B1BFBB-->  <ISCENTRALLYMAINTAINED><![CDATA[Y]]></ISCENTRALLYMAINTAINED>
 <!--9545EFF0903F451EAC0552AE21B1BFBB-->  <AD_TAB_ID><![CDATA[913CBD5D48F641989B956B63CEB5C928]]></AD_TAB_ID>
 <!--9545EFF0903F451EAC0552AE21B1BFBB-->  <AD_COLUMN_ID><![CDATA[3100B7C502524DA0B6CE07730AC7595F]]></AD_COLUMN_ID>
@@ -859,8 +859,8 @@
 <!--C8C69E2C79284A508EB6065033A265A7-->  <AD_ORG_ID><![CDATA[0]]></AD_ORG_ID>
 <!--C8C69E2C79284A508EB6065033A265A7-->  <ISACTIVE><![CDATA[Y]]></ISACTIVE>
 <!--C8C69E2C79284A508EB6065033A265A7-->  <NAME><![CDATA[Name]]></NAME>
-<!--C8C69E2C79284A508EB6065033A265A7-->  <DESCRIPTION><![CDATA[A non-unique identifier for a payment type]]></DESCRIPTION>
-<!--C8C69E2C79284A508EB6065033A265A7-->  <HELP><![CDATA[A descriptive identifier of a payment type that is used as a default search option along with the search key (that is unique and mostly shorter).]]></HELP>
+<!--C8C69E2C79284A508EB6065033A265A7-->  <DESCRIPTION><![CDATA[A non-unique identifier for a record/document often used as a search tool.]]></DESCRIPTION>
+<!--C8C69E2C79284A508EB6065033A265A7-->  <HELP><![CDATA[A more descriptive identifier (that does need to be unique) of a record/document that is used as a default search option along with the search key (that is unique and mostly shorter). It is up to 60 characters in length.]]></HELP>
 <!--C8C69E2C79284A508EB6065033A265A7-->  <ISCENTRALLYMAINTAINED><![CDATA[Y]]></ISCENTRALLYMAINTAINED>
 <!--C8C69E2C79284A508EB6065033A265A7-->  <AD_TAB_ID><![CDATA[7343236386D24FB49EF571C560713D14]]></AD_TAB_ID>
 <!--C8C69E2C79284A508EB6065033A265A7-->  <AD_COLUMN_ID><![CDATA[CAD9713509F848AC901FA59C9C4EA774]]></AD_COLUMN_ID>
