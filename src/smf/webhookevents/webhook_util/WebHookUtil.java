@@ -255,8 +255,8 @@ public class WebHookUtil {
         for (StandardParameter param : listParameters) {
           // Item Node
           Element node = document.createElement(param.getName());
-          Text nodeValueValue = document.createTextNode(DalUtil.getValueFromPath(bob,
-              param.getProperty()).toString());
+          Text nodeValueValue = document
+              .createTextNode(DalUtil.getValueFromPath(bob, param.getProperty()).toString());
           node.appendChild(nodeValueValue);
           // append itemNode to root
           root.appendChild(node); // add the element in root node "Document"
@@ -349,8 +349,8 @@ public class WebHookUtil {
     StringBuilder parameters = new StringBuilder(Constants.START_PARAMETER);
     for (Customparam param : lCustomParameters) {
       if (param.isActive()) {
-        parameters.append(param.getName() + Constants.EQUALS + param.getValue()
-            + Constants.AMPERSAND);
+        parameters
+            .append(param.getName() + Constants.EQUALS + param.getValue() + Constants.AMPERSAND);
       }
     }
     return parameters.toString().substring(0, parameters.length() - 1);
@@ -359,15 +359,12 @@ public class WebHookUtil {
   /**
    * Return a Events list from BaseOBObject send for parameter
    * 
-   * @param Bob
-   *          BaseOBObject to get the events defined
    * @param Action
    *          Defined in this class
-   * @param TableNames
+   * @param TableName
    * @return Return de Events list
    */
-  public static List<Events> eventsFromBaseOBObject(BaseOBObject bob, String action,
-      List<String> tableNames) {
+  public static List<Events> eventsFromBaseOBObject(String action, String tableName) {
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
     cEvents.createAlias(Events.PROPERTY_TABLE, "table");
     cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
@@ -377,7 +374,7 @@ public class WebHookUtil {
     } else {
       cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, action));
     }
-    cEvents.add(Restrictions.in("table." + Table.PROPERTY_DBTABLENAME, tableNames));
+    cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
 
     return cEvents.list();
   }
@@ -420,8 +417,8 @@ public class WebHookUtil {
             .append(" ");
       }
     } catch (Exception e) {
-      String message = String.format(
-          Utility.messageBD(conn, "smfwhe_errorParserParameter", language), value);
+      String message = String
+          .format(Utility.messageBD(conn, "smfwhe_errorParserParameter", language), value);
       logger.error(message, e);
       throw new Exception(message);
     }

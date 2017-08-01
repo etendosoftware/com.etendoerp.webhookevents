@@ -12,15 +12,17 @@ import org.openbravo.client.kernel.event.EntityNewEvent;
 import org.openbravo.client.kernel.event.EntityPersistenceEventObserver;
 import org.openbravo.client.kernel.event.EntityUpdateEvent;
 import org.openbravo.model.common.businesspartner.BusinessPartner;
+import org.openbravo.model.common.invoice.Invoice;
+
+import com.smf.webhookevents.data.Events;
 
 import smf.webhookevents.webhook_util.Constants;
 import smf.webhookevents.webhook_util.WebHookUtil;
 
-import com.smf.webhookevents.data.Events;
-
-public class BusinessPartnerHook extends EntityPersistenceEventObserver {
-  private static Entity[] entities = { ModelProvider.getInstance().getEntity(
-      BusinessPartner.ENTITY_NAME) };
+public class GenericEventHook extends EntityPersistenceEventObserver {
+  private static Entity[] entities = {
+      ModelProvider.getInstance().getEntity(BusinessPartner.ENTITY_NAME),
+      ModelProvider.getInstance().getEntity(Invoice.ENTITY_NAME) };
   protected Logger logger = Logger.getLogger(this.getClass());
 
   @Override
@@ -30,19 +32,14 @@ public class BusinessPartnerHook extends EntityPersistenceEventObserver {
 
   public void onSave(@Observes EntityNewEvent event) {
     if (!isValidEvent(event)) {
-
       return;
     }
-    logger.info("Business Partner " + ((BusinessPartner) event.getTargetInstance()).getName()
-        + " is being created");
     try {
-      final BusinessPartner bPartner = (BusinessPartner) event.getTargetInstance();
-
-      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(bPartner, Constants.CREATE,
-          WebHookUtil.getTableName(getObservedEntities()));
+      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.CREATE,
+          event.getTargetInstance().getEntity().getTableName());
       if (!lEvents.isEmpty()) {
         if (lEvents.get(0).isAllrecord()) {
-          WebHookUtil.callWebHook(lEvents.get(0), bPartner, logger);
+          WebHookUtil.callWebHook(lEvents.get(0), event.getTargetInstance(), logger);
         }
       }
     } catch (Exception e) {
