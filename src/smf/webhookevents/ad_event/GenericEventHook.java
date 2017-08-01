@@ -14,10 +14,10 @@ import org.openbravo.client.kernel.event.EntityUpdateEvent;
 import org.openbravo.model.common.businesspartner.BusinessPartner;
 import org.openbravo.model.common.invoice.Invoice;
 
-import com.smf.webhookevents.data.Events;
-
 import smf.webhookevents.webhook_util.Constants;
 import smf.webhookevents.webhook_util.WebHookUtil;
+
+import com.smf.webhookevents.data.Events;
 
 public class GenericEventHook extends EntityPersistenceEventObserver {
   private static Entity[] entities = {
@@ -35,8 +35,8 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
       return;
     }
     try {
-      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.CREATE,
-          event.getTargetInstance().getEntity().getTableName());
+      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.CREATE, event
+          .getTargetInstance().getEntity().getTableName());
       if (!lEvents.isEmpty()) {
         if (lEvents.get(0).isAllrecord()) {
           WebHookUtil.callWebHook(lEvents.get(0), event.getTargetInstance(), logger);
@@ -51,7 +51,17 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    logger.info("Business Partner " + event.getTargetInstance().getId() + " is being updated");
+    try {
+      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.UPDATE, event
+          .getTargetInstance().getEntity().getTableName());
+      if (!lEvents.isEmpty()) {
+        if (lEvents.get(0).isAllrecord()) {
+          WebHookUtil.callWebHook(lEvents.get(0), event.getTargetInstance(), logger);
+        }
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
 
   }
 
@@ -59,8 +69,16 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    logger.info("Business Partner " + event.getTargetInstance().getId() + " is being deleted");
-
+    try {
+      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.DELETE, event
+          .getTargetInstance().getEntity().getTableName());
+      if (!lEvents.isEmpty()) {
+        if (lEvents.get(0).isAllrecord()) {
+          WebHookUtil.callWebHook(lEvents.get(0), event.getTargetInstance(), logger);
+        }
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
-
 }

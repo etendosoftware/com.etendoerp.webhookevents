@@ -6,7 +6,6 @@ import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.LinkedList;
 import java.util.List;
 
 import javax.enterprise.inject.Any;
@@ -21,7 +20,6 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.log4j.Logger;
 import org.codehaus.jettison.json.JSONObject;
 import org.hibernate.criterion.Restrictions;
-import org.openbravo.base.model.Entity;
 import org.openbravo.base.structure.BaseOBObject;
 import org.openbravo.dal.core.DalUtil;
 import org.openbravo.dal.core.OBContext;
@@ -253,8 +251,8 @@ public class WebHookUtil {
         for (StandardParameter param : listParameters) {
           // Item Node
           Element node = document.createElement(param.getName());
-          Text nodeValueValue = document
-              .createTextNode(DalUtil.getValueFromPath(bob, param.getProperty()).toString());
+          Text nodeValueValue = document.createTextNode(DalUtil.getValueFromPath(bob,
+              param.getProperty()).toString());
           node.appendChild(nodeValueValue);
           // append itemNode to root
           root.appendChild(node); // add the element in root node "Document"
@@ -348,8 +346,8 @@ public class WebHookUtil {
     StringBuilder parameters = new StringBuilder(Constants.START_PARAMETER);
     for (Customparam param : lCustomParameters) {
       if (param.isActive()) {
-        parameters
-            .append(param.getName() + Constants.EQUALS + param.getValue() + Constants.AMPERSAND);
+        parameters.append(param.getName() + Constants.EQUALS + param.getValue()
+            + Constants.AMPERSAND);
       }
     }
     return parameters.toString().substring(0, parameters.length() - 1);
@@ -361,7 +359,7 @@ public class WebHookUtil {
    * @param Action
    *          Defined in this class
    * @param TableName
-   * @return Return de Events list
+   * @return Return the Events list
    */
   public static List<Events> eventsFromBaseOBObject(String action, String tableName) {
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
@@ -375,21 +373,6 @@ public class WebHookUtil {
     }
     cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
     return cEvents.list();
-  }
-
-  /**
-   * Return a Table Name list
-   * 
-   * @param Entities
-   *          Array
-   * @return Return a Table Name list
-   */
-  public static List<String> getTableName(Entity[] entities) {
-    List<String> lTableNames = new LinkedList<String>();
-    for (Entity e : entities) {
-      lTableNames.add(e.getTableName());
-    }
-    return lTableNames;
   }
 
   /**
@@ -415,8 +398,8 @@ public class WebHookUtil {
             .append(" ");
       }
     } catch (Exception e) {
-      String message = String
-          .format(Utility.messageBD(conn, "smfwhe_errorParserParameter", language), value);
+      String message = String.format(
+          Utility.messageBD(conn, "smfwhe_errorParserParameter", language), value);
       logger.error(message, e);
       throw new Exception(message);
     }

@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+  <database name="FUNCTION SMFWHE_QUEUE_WEBHOOKS">
+    <function name="SMFWHE_QUEUE_WEBHOOKS" type="NULL">
+      <parameter name="record_id" type="VARCHAR" mode="in">
+        <default/>
+      </parameter>
+      <parameter name="table_id" type="VARCHAR" mode="in">
+        <default/>
+      </parameter>
+      <body><![CDATA[/*************************************************************************
+* The contents of this file are subject to the Openbravo  Public  License
+* Version  1.1  (the  "License"),  being   the  Mozilla   Public  License
+* Version 1.1  with a permitted attribution clause; you may not  use this
+* file except in compliance with the License. You  may  obtain  a copy of
+* the License at http://www.openbravo.com/legal/license.html
+* Software distributed under the License  is  distributed  on  an "AS IS"
+* basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+* License for the specific  language  governing  rights  and  limitations
+* under the License.
+* The Original Code is Openbravo ERP.
+* The Initial Developer of the Original Code is Openbravo SLU
+* All portions are Copyright (C) 2001-2016 Openbravo SLU
+* All Rights Reserved.
+* Contributor(s):  ______________________________________.
+************************************************************************/
+
+  --  Parameter
+  smfwhe_queueeventhook_id character varying(32);
+  BEGIN
+    --extension point pre
+    smfwhe_queueeventhook_id := get_uuid();
+    --insert data in queue
+    INSERT INTO smfwhe_queueeventhook(
+            smfwhe_queueeventhook_id, ad_client_id, ad_org_id, isactive, 
+            created, createdby, updated, updatedby, record, ad_table_id)
+    VALUES (smfwhe_queueeventhook_id, '0', '0','Y', 
+            now(), '100', now(), '100', record_id, table_id);
+  --extension point post
+END SMFWHE_QUEUE_WEBHOOKS
+]]></body>
+    </function>
+  </database>
