@@ -1,13 +1,12 @@
 package smf.webhookevents.webhook_util;
 
-import java.io.StringWriter;
-
 import org.codehaus.jettison.json.JSONObject;
+import org.w3c.dom.Document;
 
 public interface IChangeDataHook {
 
   public void postProcessJSON(JSONObject jsonObject);
 
-  public void postProcessXML(StringWriter xmlObject);
+  public void postProcessXML(Document xmlObject);
 
 }

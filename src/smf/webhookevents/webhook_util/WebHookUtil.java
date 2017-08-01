@@ -173,9 +173,8 @@ public class WebHookUtil {
       }
       json = jsonMap.toString();
     } catch (Exception e) {
-      String message = String.format(
-          Utility.messageBD(new DalConnectionProvider(false), "smfwhe_errorGenerateJson", OBContext
-              .getOBContext().getLanguage().getLanguage()), bob.getIdentifier());
+      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateJson", language),
+          bob.getIdentifier());
       logger.error(message, e);
       throw new Exception(message);
     }
@@ -213,9 +212,8 @@ public class WebHookUtil {
       }
       json = jsonMap.toString();
     } catch (Exception e) {
-      String message = String.format(
-          Utility.messageBD(new DalConnectionProvider(false), "smfwhe_errorGenerateJson", OBContext
-              .getOBContext().getLanguage().getLanguage()), bob.getIdentifier());
+      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateJson", language),
+          bob.getIdentifier());
       logger.error(message, e);
       throw new Exception(message);
     }
@@ -261,22 +259,23 @@ public class WebHookUtil {
           // append itemNode to root
           root.appendChild(node); // add the element in root node "Document"
         }
+        // Hook that allows you to modify or change the xml
+        if (hooks != null) {
+          for (IChangeDataHook hook : hooks) {
+            hook.postProcessXML(document);
+          }
+        }
         // Generate XML
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
         transformer.transform(new DOMSource(document), new StreamResult(xml));
       }
     } catch (Exception e) {
-      String message = String.format(
-          Utility.messageBD(new DalConnectionProvider(false), "smfwhe_errorGenerateXml", OBContext
-              .getOBContext().getLanguage().getLanguage()), bob.getIdentifier());
+      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateXml", language),
+          bob.getIdentifier());
       logger.error(message, e);
       throw new Exception(message);
     }
-    if (hooks != null) {
-      for (IChangeDataHook hook : hooks) {
-        hook.postProcessXML(xml);
-      }
-    }
+
     return xml.toString();
   }
 
@@ -319,21 +318,21 @@ public class WebHookUtil {
           // append itemNode to root
           root.appendChild(node); // add the element in root node "Document"
         }
+        // Hook that allows you to modify or change the xml
+        if (hooks != null) {
+          for (IChangeDataHook hook : hooks) {
+            hook.postProcessXML(document);
+          }
+        }
         // Generate XML
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
         transformer.transform(new DOMSource(document), new StreamResult(xml));
       }
     } catch (Exception e) {
-      String message = String.format(
-          Utility.messageBD(new DalConnectionProvider(false), "smfwhe_errorGenerateXml", OBContext
-              .getOBContext().getLanguage().getLanguage()), bob.getIdentifier());
+      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateXml", language),
+          bob.getIdentifier());
       logger.error(message, e);
       throw new Exception(message);
-    }
-    if (hooks != null) {
-      for (IChangeDataHook hook : hooks) {
-        hook.postProcessXML(xml);
-      }
     }
     return xml.toString();
   }
@@ -375,7 +374,6 @@ public class WebHookUtil {
       cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, action));
     }
     cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
-
     return cEvents.list();
   }
 
