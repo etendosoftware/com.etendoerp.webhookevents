@@ -26,16 +26,54 @@
 
   --  Parameter
   smfwhe_queueeventhook_id character varying(32);
+  v_count NUMBER;
+  v_Result NUMBER:=1; -- Success
   BEGIN
-    --extension point pre
+    --Smfwhe_Queue_Webhooks - Valistaion Process Extension Point
+    SELECT count(*) INTO v_count
+    FROM DUAL
+    where exists (select 1 from ad_ep_procedures where ad_extension_points_id = '007C2AEC2E564A77B149AB04B669FD30');
+    IF (v_count=1) THEN
+      DECLARE
+        v_ep_instance VARCHAR2(32);
+        v_extension_point_id VARCHAR2(32) := '007C2AEC2E564A77B149AB04B669FD30';
+      BEGIN
+        v_ep_instance := get_uuid();
+        AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Record_ID',record_id, NULL, NULL, NULL, NULL, NULL, NULL);
+        AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Table_ID',table_id, NULL, NULL, NULL, NULL, NULL, NULL);
+
+        DELETE FROM ad_ep_instance_para
+        WHERE ad_ep_instance_id = v_ep_instance;
+      END;
+    END IF;
+    --Start Process 
     smfwhe_queueeventhook_id := get_uuid();
-    --insert data in queue
+    --Insert data in queue
     INSERT INTO smfwhe_queueeventhook(
             smfwhe_queueeventhook_id, ad_client_id, ad_org_id, isactive, 
             created, createdby, updated, updatedby, record, ad_table_id)
     VALUES (smfwhe_queueeventhook_id, '0', '0','Y', 
             now(), '100', now(), '100', record_id, table_id);
-  --extension point post
+  --End Process
+  --Smfwhe_Queue_Webhooks - Finish_Process Extension Point
+  SELECT count(*) INTO v_count FROM DUAL
+  WHERE EXISTS (SELECT 1 FROM ad_ep_procedures WHERE ad_extension_points_id = '45338CCE75CC4AC189BCA93DF0C7252C');
+  IF (v_count=1) THEN
+    DECLARE
+      v_ep_instance VARCHAR2(32);
+      v_extension_point_id VARCHAR2(32) := '45338CCE75CC4AC189BCA93DF0C7252C';
+    BEGIN
+      v_ep_instance := get_uuid();
+      AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Record_ID', record_id, NULL, NULL, NULL, NULL, NULL, NULL);
+      AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Table_ID', table_id, NULL, NULL, NULL, NULL, NULL, NULL);
+      SELECT p_number INTO v_Result
+      FROM ad_ep_instance_para
+      WHERE ad_ep_instance_id = v_ep_instance;
+
+      DELETE FROM ad_ep_instance_para
+      WHERE ad_ep_instance_id = v_ep_instance;
+    END;
+  END IF;
 END SMFWHE_QUEUE_WEBHOOKS
 ]]></body>
     </function>

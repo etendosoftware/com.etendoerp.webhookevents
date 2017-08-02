@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
-  <database name="TRIGGER SMFWHE_HOOK_TRG">
-    <trigger name="SMFWHE_HOOK_TRG" table="C_BPARTNER" fires="after" insert="true" update="true" delete="true" foreach="row">
-      <body><![CDATA[
-/*************************************************************************
+  <database name="FUNCTION SMFWHE_HOOK_BP_TRG">
+    <function name="SMFWHE_HOOK_BP_TRG" type="VARCHAR">
+      <body><![CDATA[/*************************************************************************
 * The contents of this file are subject to the Openbravo  Public  License
 * Version  1.1  (the  "License"),  being   the  Mozilla   Public  License
 * Version 1.1  with a permitted attribution clause; you may not  use this
@@ -20,20 +19,21 @@
 ************************************************************************/
 BEGIN
     
-    IF AD_isTriggerEnabled()='N' THEN RETURN;
+    IF AD_isTriggerEnabled()='N' THEN IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF; 
     END IF;
 
-    IF (UPDATING OR INSERTING)
+    IF (TG_OP = 'UPDATE' OR TG_OP = 'INSERT')
     THEN 
-      SMFWHE_QUEUE_WEBHOOKS(:NEW.c_bpartner_id,'220');  
+      SMFWHE_QUEUE_WEBHOOKS(NEW.c_bpartner_id,'220');  
     END IF;
     
-    IF (DELETING)
+    IF (TG_OP = 'DELETE')
     THEN  
-      SMFWHE_QUEUE_WEBHOOKS(:OLD.c_bpartner_id,'220');  
+      SMFWHE_QUEUE_WEBHOOKS(OLD.c_bpartner_id,'220');  
     END IF;
 
-    END SMFWHE_HOOK_TRG
+    IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+END SMFWHE_HOOK_BP_TRG
 ]]></body>
-    </trigger>
+    </function>
   </database>
