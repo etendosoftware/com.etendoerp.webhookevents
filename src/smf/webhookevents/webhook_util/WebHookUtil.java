@@ -20,6 +20,8 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.log4j.Logger;
 import org.codehaus.jettison.json.JSONObject;
 import org.hibernate.criterion.Restrictions;
+import org.openbravo.base.model.Entity;
+import org.openbravo.base.model.ModelProvider;
 import org.openbravo.base.structure.BaseOBObject;
 import org.openbravo.dal.core.DalUtil;
 import org.openbravo.dal.core.OBContext;
@@ -423,5 +425,31 @@ public class WebHookUtil {
       }
     }
     return isActive;
+  }
+
+  /**
+   * Array of entities defined in events
+   * 
+   * @return Return array of entities defined in events
+   */
+  public static Entity[] getEntities() {
+    Entity[] entities = null;
+    try {
+      OBContext.setAdminMode();
+      OBCriteria<Events> cEvent = OBDal.getInstance().createCriteria(Events.class);
+      List<Events> lEvents = cEvent.list();
+      entities = new Entity[lEvents.size()];
+      int i = 0;
+      for (Events e : lEvents) {
+        entities[i] = ModelProvider.getInstance().getEntityByTableName(
+            e.getTable().getDBTableName());
+        i++;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    } finally {
+      OBContext.restorePreviousMode();
+    }
+    return entities;
   }
 }

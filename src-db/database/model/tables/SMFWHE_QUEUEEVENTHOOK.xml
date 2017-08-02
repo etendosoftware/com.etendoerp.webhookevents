@@ -41,6 +41,10 @@
         <default/>
         <onCreateDefault/>
       </column>
+      <column name="SMFWHE_EVENTS_ID" primaryKey="false" required="false" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
       <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_QUEUE_AD_CLIENT">
         <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
       </foreign-key>
@@ -50,5 +54,11 @@
       <foreign-key foreignTable="AD_TABLE" name="SMFWHE_QUEUEEVENTHOOK_TABLE">
         <reference local="AD_TABLE_ID" foreign="AD_TABLE_ID"/>
       </foreign-key>
+      <foreign-key foreignTable="SMFWHE_EVENTS" name="SMFWHE_QUEUEEVENTS">
+        <reference local="SMFWHE_EVENTS_ID" foreign="SMFWHE_EVENTS_ID"/>
+      </foreign-key>
+      <index name="FKI_SMFWHE_QUEUEEVENTS" unique="false">
+        <index-column name="SMFWHE_EVENTS_ID"/>
+      </index>
     </table>
   </database>
