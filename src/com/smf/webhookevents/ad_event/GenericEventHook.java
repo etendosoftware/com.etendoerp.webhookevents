@@ -1,4 +1,4 @@
-package smf.webhookevents.ad_event;
+package com.smf.webhookevents.ad_event;
 
 import java.util.Date;
 import java.util.List;
@@ -19,11 +19,10 @@ import org.openbravo.model.ad.datamodel.Table;
 import org.openbravo.model.ad.system.Client;
 import org.openbravo.model.common.enterprise.Organization;
 
-import smf.webhookevents.webhook_util.Constants;
-import smf.webhookevents.webhook_util.WebHookUtil;
-
 import com.smf.webhookevents.data.Events;
 import com.smf.webhookevents.data.QueueEventHook;
+import com.smf.webhookevents.webhook_util.Constants;
+import com.smf.webhookevents.webhook_util.WebHookUtil;
 
 public class GenericEventHook extends EntityPersistenceEventObserver {
   private static Entity[] entities = WebHookUtil.getEntities();

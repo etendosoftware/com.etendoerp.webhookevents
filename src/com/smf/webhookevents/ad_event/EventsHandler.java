@@ -1,4 +1,4 @@
-package smf.webhookevents.ad_event;
+package com.smf.webhookevents.ad_event;
 
 import javax.enterprise.event.Observes;
 

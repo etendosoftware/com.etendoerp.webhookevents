@@ -1,4 +1,4 @@
-package smf.webhookevents.webhook_util;
+package com.smf.webhookevents.webhook_util;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;

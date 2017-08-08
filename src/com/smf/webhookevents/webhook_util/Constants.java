@@ -1,4 +1,4 @@
-package smf.webhookevents.webhook_util;
+package com.smf.webhookevents.webhook_util;
 
 public class Constants {
   public final static String USER_AGENT = "Mozilla/5.0";
