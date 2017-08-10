@@ -25,12 +25,11 @@ import com.smf.webhookevents.webhook_util.Constants;
 import com.smf.webhookevents.webhook_util.WebHookUtil;
 
 public class GenericEventHook extends EntityPersistenceEventObserver {
-  private static Entity[] entities = WebHookUtil.getEntities();
   protected Logger logger = Logger.getLogger(this.getClass());
 
   @Override
   protected Entity[] getObservedEntities() {
-    return entities;
+    return WebHookUtil.getEntities();
   }
 
   public void onSave(@Observes EntityNewEvent event) {
@@ -67,12 +66,24 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
       return;
     }
     try {
-      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.UPDATE, event
-          .getTargetInstance().getEntity().getTableName());
+      BaseOBObject bob = event.getTargetInstance();
+      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.CREATE, bob.getEntity()
+          .getTableName());
       if (!lEvents.isEmpty()) {
-        if (lEvents.get(0).isAllrecord()) {
-          WebHookUtil.callWebHook(lEvents.get(0), event.getTargetInstance(), logger);
-        }
+        QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
+
+        obj.setClient((Client) bob.get("client"));
+        obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
+        obj.setCreationDate(new Date());
+        obj.setCreatedBy(OBDal.getInstance().get(User.class, "100"));
+        obj.setUpdated(new Date());
+        obj.setUpdatedBy(OBDal.getInstance().get(User.class, "100"));
+        obj.setRecord(bob.get("id").toString());
+        obj.setTable(OBDal.getInstance().get(Table.class, bob.getEntity().getTableId()));
+        obj.setSmfwheEvents(lEvents.get(0));
+
+        OBDal.getInstance().save(obj);
+        OBDal.getInstance().flush();
       }
     } catch (Exception e) {
       e.printStackTrace();

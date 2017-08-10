@@ -11,6 +11,7 @@ import org.openbravo.dal.service.OBQuery;
 import org.openbravo.database.ConnectionProvider;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.scheduling.ProcessBundle;
+import org.openbravo.scheduling.ProcessLogger;
 import org.openbravo.service.db.DalBaseProcess;
 import org.openbravo.service.db.DalConnectionProvider;
 
@@ -25,6 +26,8 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
 
   @Override
   protected void doExecute(ProcessBundle bundle) throws Exception {
+    ProcessLogger logger = bundle.getLogger();
+    logger.logln("Init dequeue process.");
     int i = 0;
     QueueEventHook obj = null;
     Events event = null;
@@ -36,33 +39,52 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
       cQueue.setFetchSize(1000);
       ScrollableResults scroller = cQueue.scroll();
       while (scroller.next()) {
-        obj = (QueueEventHook) scroller.get()[0];
-        event = obj.getSmfwheEvents();
-        if (event.isAllowRead()) {
-          whereClause = " as e where id = :id ";
-        } else {
-          whereClause = " as e where " + event.getHQLWhereClause() + " and id = :id ";
-        }
-        qBob = OBDal.getInstance().createQuery(
-            ModelProvider.getInstance().getEntityByTableName(obj.getTable().getDBTableName())
-                .getName(), whereClause);
-        qBob.setNamedParameter("id", obj.getRecord());
+        try {
+          obj = (QueueEventHook) scroller.get()[0];
+          event = obj.getSmfwheEvents();
+          if (event.isAllowRead()) {
+            whereClause = " as e where id = :id ";
+          } else {
+            whereClause = " as e where " + event.getHQLWhereClause() + " and id = :id ";
+          }
+          qBob = OBDal.getInstance().createQuery(
+              ModelProvider.getInstance().getEntityByTableName(obj.getTable().getDBTableName())
+                  .getName(), whereClause);
+          qBob.setNamedParameter("id", obj.getRecord());
 
-        WebHookUtil.callWebHook(event, qBob.list().get(0), log);
-        OBDal.getInstance().remove(obj);
-        i++;
-        if (i % 100 == 0) {
-          OBDal.getInstance().flush();
-          OBDal.getInstance().getSession().clear();
+          if (!qBob.list().isEmpty()) {
+            WebHookUtil.callWebHook(event, qBob.list().get(0), log);
+            String message = String.format(
+                Utility.messageBD(conn, "smfwhe_SendCallWebHook", language), qBob.list().get(0)
+                    .getIdentifier());
+            logger.logln(message);
+          }
+          OBDal.getInstance().remove(obj);
+          i++;
+          if (i % 100 == 0) {
+            OBDal.getInstance().flush();
+            OBDal.getInstance().getSession().clear();
+          }
+        } catch (Exception ex) {
+          String message = String.format(
+              Utility.messageBD(conn, "smfwhe_errorSendCallWebHook", language), qBob == null
+                  || qBob.list().isEmpty() ? "" : qBob.list().get(0).getIdentifier());
+          log.error(message, ex);
+          logger.logln(message);
+          i++;
         }
       }
       OBDal.getInstance().flush();
     } catch (Exception e) {
-      String message = String.format(Utility.messageBD(conn, "smfwhe_errorSendCallWebHook",
-          language), event == null ? "" : event.getIdentifier());
+      String message = String.format(
+          Utility.messageBD(conn, "smfwhe_errorSendCallWebHook", language), qBob == null
+              || qBob.list().isEmpty() ? "" : qBob.list().get(0).getIdentifier());
       log.error(message, e);
+      logger.logln(message);
+      throw e;
     } finally {
       OBContext.restorePreviousMode();
+      logger.logln("Finish dequeue process.");
     }
 
   }

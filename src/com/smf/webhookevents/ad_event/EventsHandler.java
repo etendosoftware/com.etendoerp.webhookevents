@@ -63,6 +63,7 @@ public class EventsHandler extends EntityPersistenceEventObserver {
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
     cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, events.getExecuteon()));
     cEvents.add(Restrictions.eq(Events.PROPERTY_TABLE, events.getTable()));
+    cEvents.add(Restrictions.ne(Events.PROPERTY_ID, events.getId()));
     if (!cEvents.list().isEmpty()) {
       String message = String.format(Utility.messageBD(new DalConnectionProvider(false),
           "smfwhe_eventAlreadyExists", OBContext.getOBContext().getLanguage().getLanguage()),
