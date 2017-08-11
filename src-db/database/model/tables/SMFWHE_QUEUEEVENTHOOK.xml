@@ -57,7 +57,7 @@
       <foreign-key foreignTable="SMFWHE_EVENTS" name="SMFWHE_QUEUEEVENTS">
         <reference local="SMFWHE_EVENTS_ID" foreign="SMFWHE_EVENTS_ID"/>
       </foreign-key>
-      <index name="FKI_SMFWHE_QUEUEEVENTS" unique="false">
+      <index name="SMFWHE_QUEUEEVENTS_FKI" unique="false">
         <index-column name="SMFWHE_EVENTS_ID"/>
       </index>
     </table>
