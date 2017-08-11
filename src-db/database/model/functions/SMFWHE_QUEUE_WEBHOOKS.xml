@@ -33,62 +33,69 @@
   v_Result NUMBER:=1; -- Success
   v_Message VARCHAR2(2000):='';
   BEGIN
-    --Smfwhe_Queue_Webhooks - Validation Process Extension Point
-    SELECT count(*) INTO v_count
-    FROM DUAL
-    where exists (select 1 from ad_ep_procedures where ad_extension_points_id = '007C2AEC2E564A77B149AB04B669FD30');
-    IF (v_count=1) THEN
-      DECLARE
-        v_ep_instance VARCHAR2(32);
-        v_extension_point_id VARCHAR2(32) := '007C2AEC2E564A77B149AB04B669FD30';
-      BEGIN
-        v_ep_instance := get_uuid();
-        AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Record_ID',record_id, NULL, NULL, NULL, NULL, NULL, NULL);
-        AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Table_ID',table_id, NULL, NULL, NULL, NULL, NULL, NULL);
-        AD_EXTENSION_POINT_HANDLER(v_ep_instance, v_extension_point_id);
-        DELETE FROM ad_ep_instance_para
-        WHERE ad_ep_instance_id = v_ep_instance;
-      END;
-    END IF;
-    --Start Process 
-    smfwhe_queueeventhook_id := get_uuid();
-    --Insert data in queue
-    INSERT INTO smfwhe_queueeventhook(
+    BEGIN
+      --Smfwhe_Queue_Webhooks - Validation Process Extension Point
+      SELECT count(*) INTO v_count
+      FROM DUAL
+      where exists (select 1 from ad_ep_procedures where ad_extension_points_id = '007C2AEC2E564A77B149AB04B669FD30');
+      IF (v_count=1) THEN
+        DECLARE
+          v_ep_instance VARCHAR2(32);
+          v_extension_point_id VARCHAR2(32) := '007C2AEC2E564A77B149AB04B669FD30';
+        BEGIN
+          v_ep_instance := get_uuid();
+          AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Record_ID',record_id, NULL, NULL, NULL, NULL, NULL, NULL);
+          AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Table_ID',table_id, NULL, NULL, NULL, NULL, NULL, NULL);
+          AD_EXTENSION_POINT_HANDLER(v_ep_instance, v_extension_point_id);
+          DELETE FROM ad_ep_instance_para
+          WHERE ad_ep_instance_id = v_ep_instance;
+        END;
+      END IF;
+      
+      --Start Process 
+      smfwhe_queueeventhook_id := get_uuid();
+      --Insert data in queue
+      INSERT INTO smfwhe_queueeventhook(
             smfwhe_queueeventhook_id, ad_client_id, ad_org_id, isactive, 
             created, createdby, updated, updatedby, record, ad_table_id,smfwhe_events_id)
-    VALUES (smfwhe_queueeventhook_id, '0', '0','Y', 
+      VALUES (smfwhe_queueeventhook_id, '0', '0','Y', 
             now(), '100', now(), '100', record_id, table_id,event_id);
-  --End Process
-  --Smfwhe_Queue_Webhooks - Finish_Process Extension Point
-  SELECT count(*) INTO v_count FROM DUAL
-  WHERE EXISTS (SELECT 1 FROM ad_ep_procedures WHERE ad_extension_points_id = '45338CCE75CC4AC189BCA93DF0C7252C');
-  IF (v_count=1) THEN
-    DECLARE
-      v_ep_instance VARCHAR2(32);
-      v_extension_point_id VARCHAR2(32) := '45338CCE75CC4AC189BCA93DF0C7252C';
-    BEGIN
-      v_ep_instance := get_uuid();
-      AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Record_ID', record_id, NULL, NULL, NULL, NULL, NULL, NULL);
-      AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Table_ID', table_id, NULL, NULL, NULL, NULL, NULL, NULL);
-      AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Message', NULL, NULL, NULL, NULL, NULL, NULL, v_Message);
-      AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Result', NULL, NULL, v_result, NULL, NULL, NULL, NULL);
-      AD_EXTENSION_POINT_HANDLER(v_ep_instance, v_extension_point_id);
-      SELECT p_number INTO v_Result
-      FROM ad_ep_instance_para
-      WHERE ad_ep_instance_id = v_ep_instance
-        AND parametername LIKE 'Result';
-      SELECT p_text INTO v_Message
-      FROM ad_ep_instance_para
-      WHERE ad_ep_instance_id = v_ep_instance
-        AND parametername LIKE 'Message';
+      --End Process
 
-      IF (v_Result = 0) THEN
-        RAISE_APPLICATION_ERROR(-20000, 'The Result is an error ');
+      --Smfwhe_Queue_Webhooks - Finish_Process Extension Point
+      SELECT count(*) INTO v_count FROM DUAL
+      WHERE EXISTS (SELECT 1 FROM ad_ep_procedures WHERE ad_extension_points_id = '45338CCE75CC4AC189BCA93DF0C7252C');
+      IF (v_count=1) THEN
+        DECLARE
+          v_ep_instance VARCHAR2(32);
+          v_extension_point_id VARCHAR2(32) := '45338CCE75CC4AC189BCA93DF0C7252C';
+        BEGIN
+          v_ep_instance := get_uuid();
+          AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Record_ID', record_id, NULL, NULL, NULL, NULL, NULL, NULL);
+          AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Table_ID', table_id, NULL, NULL, NULL, NULL, NULL, NULL);
+          AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Message', NULL, NULL, NULL, NULL, NULL, NULL, v_Message);
+          AD_EP_INSTANCE_PARA_INSERT(v_ep_instance, v_extension_point_id, 'Result', NULL, NULL, v_result, NULL, NULL, NULL, NULL);
+          AD_EXTENSION_POINT_HANDLER(v_ep_instance, v_extension_point_id);
+          SELECT p_number INTO v_Result
+          FROM ad_ep_instance_para
+          WHERE ad_ep_instance_id = v_ep_instance
+            AND parametername LIKE 'Result';
+          SELECT p_text INTO v_Message
+          FROM ad_ep_instance_para
+          WHERE ad_ep_instance_id = v_ep_instance
+            AND parametername LIKE 'Message';
+
+          IF (v_Result = 0) THEN
+            RAISE_APPLICATION_ERROR(-20000, 'The Result is an error ');
+          END IF;
+          DELETE FROM ad_ep_instance_para
+          WHERE ad_ep_instance_id = v_ep_instance;
+        END;
       END IF;
-      DELETE FROM ad_ep_instance_para
-      WHERE ad_ep_instance_id = v_ep_instance;
+    EXCEPTION
+        WHEN OTHERS THEN 
+        DBMS_OUTPUT.PUT_LINE( 'Failed Extension Point Validation for this record ' || record_id);
     END;
-  END IF;
 END SMFWHE_QUEUE_WEBHOOKS
 ]]></body>
     </function>
