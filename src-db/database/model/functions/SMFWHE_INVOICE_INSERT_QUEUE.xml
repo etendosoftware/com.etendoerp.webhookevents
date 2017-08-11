@@ -51,7 +51,8 @@ FOR Cur_Event IN (
   WHERE 
   (e.executeon = 'U' OR e.executeon = 'CU') 
   AND e.ad_table_id = p_ad_table_id
-  AND e.ad_client_id = p_ad_client_invoice)
+  AND e.ad_client_id = p_ad_client_invoice
+  AND e.isactive = 'Y')
 LOOP
   IF (Cur_Event is not null) THEN
     p_exist_event := 'Y';
