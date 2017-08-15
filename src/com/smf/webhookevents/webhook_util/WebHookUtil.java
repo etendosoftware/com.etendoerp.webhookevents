@@ -36,9 +36,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Text;
 
-import com.smf.webhookevents.data.Customparam;
 import com.smf.webhookevents.data.Events;
 import com.smf.webhookevents.data.StandardParameter;
+import com.smf.webhookevents.data.UrlPathParam;
 import com.smf.webhookevents.data.UserDefinedParameter;
 import com.smf.webhookevents.data.Webhook;
 
@@ -88,7 +88,9 @@ public class WebHookUtil {
    */
   public static void sendEvent(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
 
-    String url = hook.getUrlnotify() + generateCustomParameter(hook.getSmfwheCustomparamList());
+    // String url = hook.getUrlnotify() + generateCustomParameter(hook.getSmfwheUrlpathparamList());
+    String url = generateUrlParameter(hook.getSmfwheUrlpathparamList(), hook.getUrlnotify(), bob,
+        logger);
     URL obj = new URL(url);
     HttpURLConnection con = (HttpsURLConnection) obj.openConnection();
 
@@ -140,7 +142,7 @@ public class WebHookUtil {
     in.close();
 
     // printing result from response
-    logger.info(response.toString());
+    logger.debug(response.toString());
   }
 
   /**
@@ -338,21 +340,37 @@ public class WebHookUtil {
   }
 
   /**
-   * Generate a Customparam, take a Customparam list and return string you can added in the url
+   * Generate a UrlPathParam, take a UrlPathParam list and return url modify you can added in the
+   * url
    * 
-   * @param LCustomParameters
-   *          Custom Parameter list
-   * @return Return string appended with all the custom parameter
+   * @param lUrlPathParam
+   *          Url Path Parameter list
+   * @param url
+   *          Url to send request
+   * @param bob
+   *          BaseOBObject
+   * @param logger
+   *          Logger in log
+   * @return Return the url with parameters set
+   * @throws Exception
    */
-  public static String generateCustomParameter(List<Customparam> lCustomParameters) {
-    StringBuilder parameters = new StringBuilder(Constants.START_PARAMETER);
-    for (Customparam param : lCustomParameters) {
-      if (param.isActive()) {
-        parameters.append(param.getName() + Constants.EQUALS + param.getValue()
-            + Constants.AMPERSAND);
+  public static String generateUrlParameter(List<UrlPathParam> lUrlPathParam, String url,
+      BaseOBObject bob, Logger logger) throws Exception {
+    String result = url;
+    for (UrlPathParam param : lUrlPathParam) {
+      try {
+        result = result.replace(
+            "{" + param.getName() + "}",
+            param.isConstants() ? param.getValueParameter() : DalUtil.getValueFromPath(bob,
+                param.getProperty()).toString());
+      } catch (Exception e) {
+        String message = String.format(
+            Utility.messageBD(conn, "smfwhe_errorReplacePathParameter", language), param.getName());
+        logger.error(message, e);
+        throw new Exception(message);
       }
     }
-    return parameters.toString().substring(0, parameters.length() - 1);
+    return result;
   }
 
   /**
@@ -393,15 +411,22 @@ public class WebHookUtil {
       throws Exception {
     String[] sValue = value.split(" ");
     StringBuilder result = new StringBuilder();
+    String propertyError = null;
     try {
       for (String s : sValue) {
-        result.append(
-            s.contains(Constants.AT) ? DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1]) : s)
-            .append(" ");
+        if (s.contains(Constants.AT)
+            && DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1]) == null) {
+          propertyError = s;
+          throw new Exception();
+        } else {
+          result.append(
+              s.contains(Constants.AT) ? DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1])
+                  : s).append(" ");
+        }
       }
     } catch (Exception e) {
       String message = String.format(
-          Utility.messageBD(conn, "smfwhe_errorParserParameter", language), value);
+          Utility.messageBD(conn, "smfwhe_errorParserParameter", language), propertyError);
       logger.error(message, e);
       throw new Exception(message);
     }

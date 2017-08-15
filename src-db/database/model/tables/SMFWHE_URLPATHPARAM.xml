@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
-  <database name="TABLE SMFWHE_CUSTOMPARAM">
-    <table name="SMFWHE_CUSTOMPARAM" primaryKey="SMFWHE_CUSTOMPARAM_KEY">
-      <column name="SMFWHE_CUSTOMPARAM_ID" primaryKey="true" required="true" type="VARCHAR" size="32" autoIncrement="false">
+  <database name="TABLE SMFWHE_URLPATHPARAM">
+    <table name="SMFWHE_URLPATHPARAM" primaryKey="SMFWHE_URLPATHPARAM_KEY">
+      <column name="SMFWHE_URLPATHPARAM_ID" primaryKey="true" required="true" type="VARCHAR" size="32" autoIncrement="false">
         <default/>
         <onCreateDefault/>
       </column>
@@ -37,7 +37,7 @@
         <default/>
         <onCreateDefault/>
       </column>
-      <column name="VALUE" primaryKey="false" required="true" type="VARCHAR" size="255" autoIncrement="false">
+      <column name="VALUE" primaryKey="false" required="false" type="VARCHAR" size="255" autoIncrement="false">
         <default/>
         <onCreateDefault/>
       </column>
@@ -45,13 +45,21 @@
         <default/>
         <onCreateDefault/>
       </column>
-      <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_CUSTOMPARAM_AD_CLIENT">
+      <column name="PROPERTY" primaryKey="false" required="false" type="VARCHAR" size="255" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="ISCONSTANTS" primaryKey="false" required="true" type="CHAR" size="1" autoIncrement="false">
+        <default><![CDATA[N]]></default>
+        <onCreateDefault/>
+      </column>
+      <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_URLPATHPARAM_AD_CLIENT">
         <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
       </foreign-key>
-      <foreign-key foreignTable="AD_ORG" name="SMFWHE_CUSTOMPARAM_AD_ORG">
+      <foreign-key foreignTable="AD_ORG" name="SMFWHE_URLPATHPARAM_AD_ORG">
         <reference local="AD_ORG_ID" foreign="AD_ORG_ID"/>
       </foreign-key>
-      <foreign-key foreignTable="SMFWHE_WEBHOOK" name="SMFWHE_CUSTOMPARAM_HOOKS">
+      <foreign-key foreignTable="SMFWHE_WEBHOOK" name="SMFWHE_URLPATHPARAM_HOOKS">
         <reference local="SMFWHE_WEBHOOK_ID" foreign="SMFWHE_WEBHOOK_ID"/>
       </foreign-key>
     </table>
