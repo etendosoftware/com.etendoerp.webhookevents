@@ -7,6 +7,7 @@ import javax.enterprise.event.Observes;
 
 import org.apache.log4j.Logger;
 import org.openbravo.base.model.Entity;
+import org.openbravo.base.model.ModelProvider;
 import org.openbravo.base.provider.OBProvider;
 import org.openbravo.base.structure.BaseOBObject;
 import org.openbravo.client.kernel.event.EntityDeleteEvent;
@@ -14,6 +15,7 @@ import org.openbravo.client.kernel.event.EntityNewEvent;
 import org.openbravo.client.kernel.event.EntityPersistenceEventObserver;
 import org.openbravo.client.kernel.event.EntityUpdateEvent;
 import org.openbravo.dal.service.OBDal;
+import org.openbravo.dal.service.OBQuery;
 import org.openbravo.model.ad.access.User;
 import org.openbravo.model.ad.datamodel.Table;
 import org.openbravo.model.ad.system.Client;
@@ -97,8 +99,22 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
       List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.DELETE, event
           .getTargetInstance().getEntity().getTableName());
       if (!lEvents.isEmpty()) {
-        if (lEvents.get(0).isAllrecord()) {
-          WebHookUtil.callWebHook(lEvents.get(0), event.getTargetInstance(), logger);
+        OBQuery<BaseOBObject> qBob = null;
+        String whereClause = "";
+        Events events = lEvents.get(0);
+        if (events.isAllrecord() || (!events.isAllrecord() && events.getHQLWhereClause() == null)) {
+          whereClause = " as e where id = :id ";
+        } else {
+          whereClause = " as e where " + events.getHQLWhereClause() + " and id = :id ";
+        }
+        qBob = OBDal.getInstance().createQuery(
+            ModelProvider.getInstance()
+                .getEntityByTableName(event.getTargetInstance().getEntity().getTableName())
+                .getName(), whereClause);
+        qBob.setNamedParameter("id", event.getTargetInstance().getId());
+
+        if (!qBob.list().isEmpty()) {
+          WebHookUtil.callWebHook(events, qBob.list().get(0), logger);
         }
       }
     } catch (Exception e) {
