@@ -89,9 +89,14 @@ public class WebHookUtil {
   public static void sendEvent(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
 
     String url = generateUrlParameter(hook.getSmfwheUrlpathparamList(), hook.getUrlnotify(), bob,
-        logger);
+        logger).toLowerCase();
     URL obj = new URL(url);
-    HttpURLConnection con = (HttpsURLConnection) obj.openConnection();
+    HttpURLConnection con = null;
+    if (url.contains("http")) {
+      con = (HttpURLConnection) obj.openConnection();
+    } else if (url.contains("https")) {
+      con = (HttpsURLConnection) obj.openConnection();
+    }
 
     // Setting basic post request
     con.setRequestMethod(hook.getSmfwheEvents().getMethod());
