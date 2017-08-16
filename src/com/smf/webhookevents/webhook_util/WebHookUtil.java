@@ -88,7 +88,6 @@ public class WebHookUtil {
    */
   public static void sendEvent(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
 
-    // String url = hook.getUrlnotify() + generateCustomParameter(hook.getSmfwheUrlpathparamList());
     String url = generateUrlParameter(hook.getSmfwheUrlpathparamList(), hook.getUrlnotify(), bob,
         logger);
     URL obj = new URL(url);
@@ -359,10 +358,12 @@ public class WebHookUtil {
     String result = url;
     for (UrlPathParam param : lUrlPathParam) {
       try {
-        result = result.replace(
-            "{" + param.getName() + "}",
-            param.isConstants() ? param.getValueParameter() : DalUtil.getValueFromPath(bob,
-                param.getProperty()).toString());
+        if (param.isActive()) {
+          result = result.replace(
+              "{" + param.getName() + "}",
+              param.isConstants() ? param.getValueParameter() : DalUtil.getValueFromPath(bob,
+                  param.getProperty()).toString());
+        }
       } catch (Exception e) {
         String message = String.format(
             Utility.messageBD(conn, "smfwhe_errorReplacePathParameter", language), param.getName());
