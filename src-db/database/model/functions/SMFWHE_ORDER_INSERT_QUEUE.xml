@@ -54,12 +54,10 @@ FOR Cur_Event IN (
   AND e.ad_client_id = p_ad_client
   AND e.isactive = 'Y')
 LOOP
-  IF (Cur_Event is not null) THEN
     p_exist_event := 'Y';
     p_event_id := Cur_Event.smfwhe_events_id;
-  END IF;
 END LOOP;
- 
+
 IF (p_exist_event='Y') THEN
   BEGIN
     SMFWHE_QUEUE_WEBHOOKS(p_record_id, p_ad_table_id, p_event_id);

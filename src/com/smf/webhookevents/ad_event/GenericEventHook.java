@@ -54,7 +54,6 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
         obj.setSmfwheEvents(lEvents.get(0));
 
         OBDal.getInstance().save(obj);
-        OBDal.getInstance().flush();
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -67,7 +66,7 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
     }
     try {
       BaseOBObject bob = event.getTargetInstance();
-      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.CREATE, bob.getEntity()
+      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.UPDATE, bob.getEntity()
           .getTableName());
       if (!lEvents.isEmpty()) {
         QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
@@ -83,7 +82,6 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
         obj.setSmfwheEvents(lEvents.get(0));
 
         OBDal.getInstance().save(obj);
-        OBDal.getInstance().flush();
       }
     } catch (Exception e) {
       e.printStackTrace();

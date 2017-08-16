@@ -49,7 +49,7 @@
         <default/>
         <onCreateDefault/>
       </column>
-      <column name="TYPEDATA" primaryKey="false" required="false" type="VARCHAR" size="60" autoIncrement="false">
+      <column name="TYPEDATA" primaryKey="false" required="true" type="VARCHAR" size="60" autoIncrement="false">
         <default/>
         <onCreateDefault/>
       </column>
