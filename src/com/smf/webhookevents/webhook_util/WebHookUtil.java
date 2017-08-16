@@ -174,7 +174,7 @@ public class WebHookUtil {
       }
       if (hooks != null) {
         for (IChangeDataHook hook : hooks) {
-          hook.postProcessJSON(jsonMap);
+          jsonMap = hook.postProcessJSON(jsonMap);
         }
       }
       json = jsonMap.toString();
@@ -213,7 +213,7 @@ public class WebHookUtil {
       }
       if (hooks != null) {
         for (IChangeDataHook hook : hooks) {
-          hook.postProcessJSON(jsonMap);
+          jsonMap = hook.postProcessJSON(jsonMap);
         }
       }
       json = jsonMap.toString();
@@ -268,7 +268,7 @@ public class WebHookUtil {
         // Hook that allows you to modify or change the xml
         if (hooks != null) {
           for (IChangeDataHook hook : hooks) {
-            hook.postProcessXML(document);
+            document = hook.postProcessXML(document);
           }
         }
         // Generate XML
@@ -327,7 +327,7 @@ public class WebHookUtil {
         // Hook that allows you to modify or change the xml
         if (hooks != null) {
           for (IChangeDataHook hook : hooks) {
-            hook.postProcessXML(document);
+            document = hook.postProcessXML(document);
           }
         }
         // Generate XML

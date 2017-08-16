@@ -5,8 +5,8 @@ import org.w3c.dom.Document;
 
 public interface IChangeDataHook {
 
-  public void postProcessJSON(JSONObject jsonObject);
+  public JSONObject postProcessJSON(JSONObject jsonObject);
 
-  public void postProcessXML(Document xmlObject);
+  public Document postProcessXML(Document xmlObject);
 
 }
