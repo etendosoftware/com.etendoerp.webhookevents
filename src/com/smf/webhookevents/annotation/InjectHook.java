@@ -1,4 +1,4 @@
-package com.smf.webhookevents.webhook_util;
+package com.smf.webhookevents.annotation;
 
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 

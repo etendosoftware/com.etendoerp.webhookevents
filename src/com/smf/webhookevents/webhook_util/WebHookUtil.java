@@ -4,9 +4,13 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import javax.enterprise.inject.Any;
 import javax.net.ssl.HttpsURLConnection;
@@ -36,11 +40,12 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Text;
 
+import com.smf.webhookevents.annotation.InjectHook;
 import com.smf.webhookevents.data.Events;
 import com.smf.webhookevents.data.StandardParameter;
 import com.smf.webhookevents.data.UrlPathParam;
-import com.smf.webhookevents.data.UserDefinedParameter;
 import com.smf.webhookevents.data.Webhook;
+import com.smf.webhookevents.interfaces.IChangeDataHook;
 
 public class WebHookUtil {
   final private static String language = OBContext.getOBContext().getLanguage().getLanguage();
@@ -88,9 +93,12 @@ public class WebHookUtil {
    */
   public static void sendEvent(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
 
-    String url = generateUrlParameter(hook.getSmfwheUrlpathparamList(), hook.getUrlnotify(), bob,
-        logger).toLowerCase();
-    URL obj = new URL(url);
+    OBCriteria<UrlPathParam> cUrlPathParam = OBDal.getInstance().createCriteria(UrlPathParam.class);
+    cUrlPathParam.add(Restrictions.eq(UrlPathParam.PROPERTY_TYPEPARAMETER, "P"));
+
+    String url = generateUrlParameter(cUrlPathParam.list(), hook.getUrlnotify(), bob, logger)
+        .toLowerCase();
+    URL obj = new URL(URLEncoder.encode(url, "UTF-8"));
     HttpURLConnection con = null;
     if (url.contains("http")) {
       con = (HttpURLConnection) obj.openConnection();
@@ -99,29 +107,19 @@ public class WebHookUtil {
     }
 
     // Setting basic post request
+    cUrlPathParam = OBDal.getInstance().createCriteria(UrlPathParam.class);
+    cUrlPathParam.add(Restrictions.eq(UrlPathParam.PROPERTY_TYPEPARAMETER, "H"));
     con.setRequestMethod(hook.getSmfwheEvents().getMethod());
-    con.setRequestProperty("User-Agent", Constants.USER_AGENT);
-    con.setRequestProperty("Accept-Language", Constants.ACCEPT_LANGUAGE);
-    con.setRequestProperty("Content-Type", Constants.CONTENT_TYPE);
+    setHeaderConnection(con, cUrlPathParam.list(), logger, bob);
 
     // Verify if can data is json or xml
     String postJsonData = "";
     List<StandardParameter> lStdParameters = hook.getSmfwheStdparamList();
-    List<UserDefinedParameter> lUDefinedParameters = hook.getSmfwheUdefinedparamList();
     WebHookInitializer.initialize();
     if (hook.getTypedata().equals(Constants.STRING_JSON)) {
-      if (isOneRowActive(lStdParameters)) {
-        postJsonData = generateDataParametersJSON(lStdParameters, bob, logger);
-      } else {
-        postJsonData = generateUserDefinedDataParametersJSON(lUDefinedParameters, bob, logger);
-      }
+      postJsonData = generateDataParametersJSON(lStdParameters, bob, logger);
     } else if (hook.getTypedata().equals(Constants.STRING_XML)) {
-      if (isOneRowActive(lStdParameters)) {
-        postJsonData = generateDataParametersXML(bob.getEntityName(), lStdParameters, bob, logger);
-      } else {
-        postJsonData = generateUserDefinedDataParametersXML(bob.getEntityName(),
-            lUDefinedParameters, bob, logger);
-      }
+      postJsonData = generateDataParametersXML(bob.getEntityName(), lStdParameters, bob, logger);
     }
 
     // Send post request
@@ -132,9 +130,9 @@ public class WebHookUtil {
     wr.close();
 
     int responseCode = con.getResponseCode();
-    logger.info("nSending " + hook.getSmfwheEvents().getMethod() + "request to URL : " + url);
-    logger.info("Post Data : " + postJsonData);
-    logger.info("Response Code : " + responseCode);
+    logger.debug("nSending " + hook.getSmfwheEvents().getMethod() + "request to URL : " + url);
+    logger.debug("Post Data : " + postJsonData);
+    logger.debug("Response Code : " + responseCode);
 
     BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
     String output;
@@ -170,45 +168,6 @@ public class WebHookUtil {
       for (StandardParameter stdParam : listParameters) {
         if (stdParam.isActive()) {
           jsonMap.put(stdParam.getName(), DalUtil.getValueFromPath(bob, stdParam.getProperty()));
-        }
-      }
-      if (hooks != null) {
-        for (IChangeDataHook hook : hooks) {
-          jsonMap = hook.postProcessJSON(jsonMap);
-        }
-      }
-      json = jsonMap.toString();
-    } catch (Exception e) {
-      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateJson", language),
-          bob.getIdentifier());
-      logger.error(message, e);
-      throw new Exception(message);
-    }
-    return json;
-  }
-
-  /**
-   * Generate a JSON data parameter, take a StandardParameter list and return json with
-   * StandardParameter set
-   * 
-   * @param ListParameters
-   *          Standard Parameter list
-   * @param Bob
-   *          BaseOBObject to generate data in XML
-   * @param Logger
-   *          Info logger in log
-   * @return Return data in format JSON
-   * @throws Exception
-   */
-  public static String generateUserDefinedDataParametersJSON(
-      List<UserDefinedParameter> listParameters, BaseOBObject bob, Logger logger) throws Exception {
-    String json = "";
-    JSONObject jsonMap = new JSONObject();
-    try {
-      for (UserDefinedParameter param : listParameters) {
-        if (param.isActive()) {
-          jsonMap.put(param.getName(),
-              WebHookUtil.replaceValueData(param.getValueParameter(), bob, logger));
         }
       }
       if (hooks != null) {
@@ -286,64 +245,6 @@ public class WebHookUtil {
   }
 
   /**
-   * Generate a XML data parameter, take a StandardParameter list and return XML with
-   * StandardParameter set
-   * 
-   * @param Name
-   *          Name to root node
-   * @param ListParameters
-   *          Standard Parameter list
-   * @param Bob
-   *          BaseOBObject to generate data in XML
-   * @param Logger
-   *          Info logger in log
-   * @return Return data in format XML
-   * @throws Exception
-   */
-  public static String generateUserDefinedDataParametersXML(String name,
-      List<UserDefinedParameter> listParameters, BaseOBObject bob, Logger logger) throws Exception {
-    StringWriter xml = new StringWriter();
-    try {
-      if (listParameters.isEmpty()) {
-        logger.info("empty Standard Parameter List");
-      } else {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        DOMImplementation implementation = builder.getDOMImplementation();
-        Document document = implementation.createDocument(null, name, null);
-        document.setXmlVersion(Constants.XML_VERSION);
-
-        // Main Node
-        Element root = document.getDocumentElement();
-        for (UserDefinedParameter param : listParameters) {
-          // Item Node
-          Element node = document.createElement(param.getName());
-          Text nodeValueValue = document.createTextNode(WebHookUtil.replaceValueData(
-              param.getValueParameter(), bob, logger));
-          node.appendChild(nodeValueValue);
-          // append itemNode to root
-          root.appendChild(node); // add the element in root node "Document"
-        }
-        // Hook that allows you to modify or change the xml
-        if (hooks != null) {
-          for (IChangeDataHook hook : hooks) {
-            document = hook.postProcessXML(document);
-          }
-        }
-        // Generate XML
-        Transformer transformer = TransformerFactory.newInstance().newTransformer();
-        transformer.transform(new DOMSource(document), new StreamResult(xml));
-      }
-    } catch (Exception e) {
-      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateXml", language),
-          bob.getIdentifier());
-      logger.error(message, e);
-      throw new Exception(message);
-    }
-    return xml.toString();
-  }
-
-  /**
    * Generate a UrlPathParam, take a UrlPathParam list and return url modify you can added in the
    * url
    * 
@@ -363,11 +264,18 @@ public class WebHookUtil {
     String result = url;
     for (UrlPathParam param : lUrlPathParam) {
       try {
-        if (param.isActive()) {
-          result = result.replace(
-              "{" + param.getName() + "}",
-              param.isConstants() ? param.getValueParameter() : DalUtil.getValueFromPath(bob,
-                  param.getProperty()).toString());
+        if (param.isActive() && Constants.TYPE_PARAMETER_PATH.equals(param.getTypeParameter())) {
+          if (Constants.TYPE_VALUE_STRING.equals(param.getTypeValue())) {
+            result = result.replace("{" + param.getName() + "}",
+                replaceValueData(param.getValueParameter(), bob, logger));
+          } else if (Constants.TYPE_VALUE_PROPERTY.equals(param.getTypeValue())) {
+            result = result.replace("{" + param.getName() + "}",
+                DalUtil.getValueFromPath(bob, param.getProperty()).toString());
+          } else if (Constants.TYPE_VALUE_COMPUTED.equals(param.getTypeValue())) {
+            // call the function
+            result = result.replace("{" + param.getName() + "}",
+                getValueExecuteMethod(param.getFunctionCode(), logger));
+          }
         }
       } catch (Exception e) {
         String message = String.format(
@@ -415,11 +323,10 @@ public class WebHookUtil {
    */
   public static String replaceValueData(String value, BaseOBObject bob, Logger logger)
       throws Exception {
-    String[] sValue = value.split(" ");
     StringBuilder result = new StringBuilder();
     String propertyError = null;
     try {
-      for (String s : sValue) {
+      for (String s : value.split(" ")) {
         if (s.contains(Constants.AT)
             && DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1]) == null) {
           propertyError = s;
@@ -437,25 +344,6 @@ public class WebHookUtil {
       throw new Exception(message);
     }
     return result.toString().substring(0, result.length() - 1);
-  }
-
-  /**
-   * Return true if at least row is active other case false
-   * 
-   * @param ListParameters
-   *          Standard Parameter list
-   * @return Return true if at least row is active other case false
-   * @throws Exception
-   */
-  public static boolean isOneRowActive(List<StandardParameter> listParameters) {
-    boolean isActive = false;
-    for (StandardParameter p : listParameters) {
-      if (p.isActive()) {
-        isActive = true;
-        break;
-      }
-    }
-    return isActive;
   }
 
   /**
@@ -483,4 +371,59 @@ public class WebHookUtil {
     }
     return entities;
   }
+
+  public static String getValueExecuteMethod(String classMethodName, Logger logger)
+      throws Exception {
+    String result = "";
+    String className = getClassName(classMethodName);
+    Class<?> clazz; // convert string classname to class
+    String message = "";
+    try {
+      clazz = Class.forName(className);
+      Object dog = clazz.newInstance(); // invoke empty constructor
+      if (dog.getClass().getInterfaces()[0]
+          .equals(com.smf.webhookevents.interfaces.ComputedFunction.class)) {
+        String methodName = Constants.METHOD_NAME;
+        Method setNameMethod = dog.getClass().getMethod(methodName, HashMap.class);
+        // set the parameters in hashmap
+        HashMap<Object, Object> params = null;
+        result = (String) setNameMethod.invoke(dog, params); // pass arg
+      } else {
+        message = String
+            .format(Utility.messageBD(conn, "smfwhe_errorParserClassMethodName", language),
+                classMethodName);
+        throw new Exception(message);
+      }
+    } catch (Exception e) {
+      logger.error(message, e);
+      throw e;
+    }
+    return result;
+  }
+
+  public static String getClassName(String path) {
+    StringBuilder resul = new StringBuilder();
+    String[] splitString = path.split(Pattern.quote("."));
+    for (int i = 0; i < splitString.length; i++) {
+      resul.append(splitString[i] + ".");
+    }
+    return resul.toString().substring(0, resul.toString().length() - 1);
+  }
+
+  public static void setHeaderConnection(HttpURLConnection con, List<UrlPathParam> lUrlPathParam,
+      Logger logger, BaseOBObject bob) throws Exception {
+    String result = "";
+    for (UrlPathParam param : lUrlPathParam) {
+      if (Constants.TYPE_VALUE_STRING.equals(param.getTypeValue())) {
+        result = replaceValueData(param.getValueParameter(), bob, logger);
+      } else if (Constants.TYPE_VALUE_PROPERTY.equals(param.getTypeValue())) {
+        result = DalUtil.getValueFromPath(bob, param.getProperty()).toString();
+      } else if (Constants.TYPE_VALUE_COMPUTED.equals(param.getTypeValue())) {
+        // call the function
+        result = getValueExecuteMethod(param.getFunctionCode(), logger);
+      }
+      con.setRequestProperty(param.getName(), result);
+    }
+  }
+
 }

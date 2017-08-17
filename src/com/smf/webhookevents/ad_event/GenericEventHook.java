@@ -102,7 +102,7 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
         OBQuery<BaseOBObject> qBob = null;
         String whereClause = "";
         Events events = lEvents.get(0);
-        if (events.isAllrecord() || (!events.isAllrecord() && events.getHQLWhereClause() == null)) {
+        if (events.getHQLWhereClause() == null) {
           whereClause = " as e where id = :id ";
         } else {
           whereClause = " as e where " + events.getHQLWhereClause() + " and id = :id ";

@@ -12,6 +12,8 @@ import javax.enterprise.util.AnnotationLiteral;
 
 import org.openbravo.base.weld.WeldUtils;
 
+import com.smf.webhookevents.annotation.InjectHook;
+
 public class WebHookInitializer {
   @SuppressWarnings("serial")
   private static final AnnotationLiteral<Any> ANY = new AnnotationLiteral<Any>() {

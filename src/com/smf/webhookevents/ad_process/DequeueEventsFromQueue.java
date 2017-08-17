@@ -42,7 +42,7 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
         try {
           obj = (QueueEventHook) scroller.get()[0];
           event = obj.getSmfwheEvents();
-          if (event.isAllrecord() || (!event.isAllrecord() && event.getHQLWhereClause() == null)) {
+          if (event.getHQLWhereClause() == null) {
             whereClause = " as e where id = :id ";
           } else {
             whereClause = " as e where " + event.getHQLWhereClause() + " and id = :id ";

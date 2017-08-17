@@ -1,9 +1,6 @@
 package com.smf.webhookevents.webhook_util;
 
 public class Constants {
-  public final static String USER_AGENT = "Mozilla/5.0";
-  public final static String ACCEPT_LANGUAGE = "en-US,en;q=0.5";
-  public final static String CONTENT_TYPE = "application/json";
   public final static String START_PARAMETER = "?";
   public final static String AMPERSAND = "&";
   public final static String EQUALS = "=";
@@ -15,5 +12,10 @@ public class Constants {
   public final static String DELETE = "D";
   public final static String CREATE_OR_UPDATE = "CU";
   public final static String XML_VERSION = "1.0";
-
+  public final static String TYPE_PARAMETER_PATH = "P";
+  public final static String TYPE_PARAMETER_HEADER = "H";
+  public final static String TYPE_VALUE_STRING = "S";
+  public final static String TYPE_VALUE_COMPUTED = "C";
+  public final static String TYPE_VALUE_PROPERTY = "P";
+  public final static String METHOD_NAME = "execute";
 }
