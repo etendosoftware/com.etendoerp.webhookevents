@@ -12,6 +12,7 @@ import org.openbravo.client.kernel.event.EntityDeleteEvent;
 import org.openbravo.client.kernel.event.EntityNewEvent;
 import org.openbravo.client.kernel.event.EntityPersistenceEventObserver;
 import org.openbravo.client.kernel.event.EntityUpdateEvent;
+import org.openbravo.dal.core.DalUtil;
 
 import com.smf.webhookevents.data.UrlPathParam;
 import com.smf.webhookevents.webhook_util.Constants;
@@ -66,7 +67,7 @@ public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
     if (Constants.TYPE_VALUE_STRING.equals(pathParam.getTypeValue())) {
       for (String s : pathParam.getValue().split(" ")) {
         if (s.contains(Constants.AT)) {
-          entity.checkIsValidProperty(s.split(Constants.AT)[1]);
+          DalUtil.getValueFromPath(pathParam, s.split(Constants.AT)[1]);
         }
       }
     } else if (Constants.TYPE_VALUE_COMPUTED.equals(pathParam.getTypeValue())) {
@@ -84,7 +85,7 @@ public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
         throw e1;
       }
     } else if (Constants.TYPE_VALUE_PROPERTY.equals(pathParam.getTypeValue())) {
-      entity.checkIsValidProperty(pathParam.getProperty());
+      DalUtil.getValueFromPath(pathParam, pathParam.getProperty());
     }
   }
 }

@@ -12,6 +12,7 @@ import org.openbravo.client.kernel.event.EntityDeleteEvent;
 import org.openbravo.client.kernel.event.EntityNewEvent;
 import org.openbravo.client.kernel.event.EntityPersistenceEventObserver;
 import org.openbravo.client.kernel.event.EntityUpdateEvent;
+import org.openbravo.dal.core.DalUtil;
 
 import com.smf.webhookevents.data.JsonXmlData;
 import com.smf.webhookevents.webhook_util.Constants;
@@ -30,11 +31,13 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    final JsonXmlData pathParam = (JsonXmlData) event.getTargetInstance();
+    final JsonXmlData dataParam = (JsonXmlData) event.getTargetInstance();
     try {
       Entity entity = ModelProvider.getInstance().getEntityByTableName(
-          pathParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
-      valid(entity, pathParam);
+          dataParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
+      if (!dataParam.isSummaryLevel()) {
+        valid(entity, dataParam);
+      }
     } catch (Exception e) {
       logger.error(e.toString(), e);
       throw new OBException(e);
@@ -45,11 +48,13 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    final JsonXmlData pathParam = (JsonXmlData) event.getTargetInstance();
+    final JsonXmlData dataParam = (JsonXmlData) event.getTargetInstance();
     try {
       Entity entity = ModelProvider.getInstance().getEntityByTableName(
-          pathParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
-      valid(entity, pathParam);
+          dataParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
+      if (!dataParam.isSummaryLevel()) {
+        valid(entity, dataParam);
+      }
     } catch (Exception e) {
       logger.error(e.toString(), e);
       throw new OBException(e);
@@ -66,7 +71,7 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
     if (Constants.TYPE_VALUE_STRING.equals(pathParam.getTypeValue())) {
       for (String s : pathParam.getValue().split(" ")) {
         if (s.contains(Constants.AT)) {
-          entity.checkIsValidProperty(s.split(Constants.AT)[1]);
+          DalUtil.getValueFromPath(pathParam, s.split(Constants.AT)[1]);
         }
       }
     } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(pathParam.getTypeValue())
@@ -85,7 +90,7 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
         throw e1;
       }
     } else if (Constants.TYPE_VALUE_PROPERTY.equals(pathParam.getTypeValue())) {
-      entity.checkIsValidProperty(pathParam.getProperty());
+      DalUtil.getValueFromPath(pathParam, pathParam.getProperty());
     }
   }
 }
