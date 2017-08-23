@@ -41,6 +41,7 @@ import org.w3c.dom.Text;
 
 import com.smf.webhookevents.annotation.InjectHook;
 import com.smf.webhookevents.data.Arguments;
+import com.smf.webhookevents.data.ArgumentsData;
 import com.smf.webhookevents.data.Events;
 import com.smf.webhookevents.data.JsonXmlData;
 import com.smf.webhookevents.data.UrlPathParam;
@@ -394,6 +395,20 @@ public class WebHookUtil {
     return entities;
   }
 
+  /**
+   * Execute the method and return the string for set in json or xml
+   * 
+   * @param Data
+   *          This is an object JsonXmlData or UrlPathParam
+   * @param Bob
+   *          BaseOBObject to get the events defined
+   * @param Logger
+   *          Info logger in log
+   * @param CompareClass
+   *          class name for compare with interface extend
+   * @return Return the string for set in json or xml
+   * @throws Exception
+   */
   public static String getValueExecuteMethod(Object data, BaseOBObject bob, Logger logger,
       Object compareClass) throws Exception {
     String result = "";
@@ -426,8 +441,9 @@ public class WebHookUtil {
         }
         Method setNameMethod = dog.getClass().getMethod(methodName, HashMap.class);
         // set the parameters in hashmap
-        HashMap<Object, Object> params = recordParam == null ? new HashMap<Object, Object>()
-            : getArgumentsForMethod(recordParam, bob, logger);
+        HashMap<Object, Object> params = recordParam == null ? getArgumentsForMethodData(
+            recordData.getSmfwheArgsDataList(), bob, logger) : getArgumentsForMethod(
+            recordParam.getSmfwheArgsList(), bob, logger);
         result = (String) setNameMethod.invoke(dog, params); // pass arg
       } else {
         message = String
@@ -442,6 +458,18 @@ public class WebHookUtil {
     return result;
   }
 
+  /**
+   * 
+   * @param Con
+   *          HttpURLConnection
+   * @param lUrlPathParam
+   *          List the UrlPathParam
+   * @param Logger
+   *          Info logger in log
+   * @param Bob
+   *          BaseOBObject to get the events defined
+   * @throws Exception
+   */
   public static void setHeaderConnection(HttpURLConnection con, List<UrlPathParam> lUrlPathParam,
       Logger logger, BaseOBObject bob) throws Exception {
     String result = "";
@@ -458,12 +486,47 @@ public class WebHookUtil {
     }
   }
 
-  public static HashMap<Object, Object> getArgumentsForMethod(UrlPathParam param, BaseOBObject bob,
-      Logger logger) throws Exception {
+  /**
+   * Get the arguments for method
+   * 
+   * @param Param
+   *          List the arguments for method
+   * @param Bob
+   *          BaseOBObject to get the events defined
+   * @param Logger
+   *          Info logger in log
+   * @return Return the hashmap with parameters for execute method
+   * @throws Exception
+   */
+  public static HashMap<Object, Object> getArgumentsForMethod(List<Arguments> args,
+      BaseOBObject bob, Logger logger) throws Exception {
     HashMap<Object, Object> result = new HashMap<Object, Object>();
-    for (Arguments arg : param.getSmfwheArgsList()) {
+    for (Arguments arg : args) {
       if (arg.isActive()) {
         result.put(arg.getName(), replaceValueData(arg.getValueParameter(), bob, logger));
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Get the arguments for method
+   * 
+   * @param Param
+   *          List the arguments for method
+   * @param Bob
+   *          BaseOBObject to get the events defined
+   * @param Logger
+   *          Info logger in log
+   * @return Return the hashmap with parameters for execute method
+   * @throws Exception
+   */
+  public static HashMap<Object, Object> getArgumentsForMethodData(List<ArgumentsData> args,
+      BaseOBObject bob, Logger logger) throws Exception {
+    HashMap<Object, Object> result = new HashMap<Object, Object>();
+    for (ArgumentsData arg : args) {
+      if (arg.isActive()) {
+        result.put(arg.getName(), replaceValueData(arg.getValue(), bob, logger));
       }
     }
     return result;
