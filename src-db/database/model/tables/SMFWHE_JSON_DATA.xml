@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
-  <database name="TABLE SMFWHE_STDPARAM">
-    <table name="SMFWHE_STDPARAM" primaryKey="SMFWHE_STDPARAM_KEY">
-      <column name="SMFWHE_STDPARAM_ID" primaryKey="true" required="true" type="VARCHAR" size="32" autoIncrement="false">
+  <database name="TABLE SMFWHE_JSON_DATA">
+    <table name="SMFWHE_JSON_DATA" primaryKey="SMFWHE_JSON_KEY">
+      <column name="SMFWHE_JSON_DATA_ID" primaryKey="true" required="true" type="VARCHAR" size="32" autoIncrement="false">
         <default/>
         <onCreateDefault/>
       </column>
@@ -37,21 +37,37 @@
         <default/>
         <onCreateDefault/>
       </column>
-      <column name="PROPERTY" primaryKey="false" required="true" type="VARCHAR" size="255" autoIncrement="false">
+      <column name="PROPERTY" primaryKey="false" required="false" type="VARCHAR" size="255" autoIncrement="false">
         <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="VALUE" primaryKey="false" required="false" type="VARCHAR" size="255" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="FUNCTION_CODE" primaryKey="false" required="false" type="VARCHAR" size="300" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="TYPE_VALUE" primaryKey="false" required="true" type="VARCHAR" size="60" autoIncrement="false">
+        <default><![CDATA[S]]></default>
         <onCreateDefault/>
       </column>
       <column name="SMFWHE_WEBHOOK_ID" primaryKey="false" required="true" type="VARCHAR" size="32" autoIncrement="false">
         <default/>
         <onCreateDefault/>
       </column>
-      <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_STDPARAM_AD_CLIENT">
+      <column name="ISSUMMARY" primaryKey="false" required="true" type="CHAR" size="1" autoIncrement="false">
+        <default><![CDATA[S]]></default>
+        <onCreateDefault/>
+      </column>
+      <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_JSON_AD_CLIENT">
         <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
       </foreign-key>
-      <foreign-key foreignTable="AD_ORG" name="SMFWHE_STDPARAM_AD_ORG">
+      <foreign-key foreignTable="AD_ORG" name="SMFWHE_JSON_AD_ORG">
         <reference local="AD_ORG_ID" foreign="AD_ORG_ID"/>
       </foreign-key>
-      <foreign-key foreignTable="SMFWHE_WEBHOOK" name="SMFWHE_STDPARAM_HOOKS">
+      <foreign-key foreignTable="SMFWHE_WEBHOOK" name="SMFWHE_JSON_HOOKS">
         <reference local="SMFWHE_WEBHOOK_ID" foreign="SMFWHE_WEBHOOK_ID"/>
       </foreign-key>
     </table>

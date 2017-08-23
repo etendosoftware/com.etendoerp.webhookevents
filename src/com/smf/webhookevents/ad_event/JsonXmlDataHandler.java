@@ -13,12 +13,12 @@ import org.openbravo.client.kernel.event.EntityNewEvent;
 import org.openbravo.client.kernel.event.EntityPersistenceEventObserver;
 import org.openbravo.client.kernel.event.EntityUpdateEvent;
 
-import com.smf.webhookevents.data.UrlPathParam;
+import com.smf.webhookevents.data.JsonXmlData;
 import com.smf.webhookevents.webhook_util.Constants;
 
-public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
+public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
   private static Entity[] entities = { ModelProvider.getInstance().getEntity(
-      UrlPathParam.ENTITY_NAME) };
+      JsonXmlData.ENTITY_NAME) };
   protected Logger logger = Logger.getLogger(this.getClass());
 
   @Override
@@ -30,7 +30,7 @@ public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    final UrlPathParam pathParam = (UrlPathParam) event.getTargetInstance();
+    final JsonXmlData pathParam = (JsonXmlData) event.getTargetInstance();
     try {
       Entity entity = ModelProvider.getInstance().getEntityByTableName(
           pathParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
@@ -45,7 +45,7 @@ public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    final UrlPathParam pathParam = (UrlPathParam) event.getTargetInstance();
+    final JsonXmlData pathParam = (JsonXmlData) event.getTargetInstance();
     try {
       Entity entity = ModelProvider.getInstance().getEntityByTableName(
           pathParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
@@ -62,21 +62,22 @@ public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
     }
   }
 
-  public void valid(Entity entity, UrlPathParam pathParam) throws Exception {
+  public void valid(Entity entity, JsonXmlData pathParam) throws Exception {
     if (Constants.TYPE_VALUE_STRING.equals(pathParam.getTypeValue())) {
       for (String s : pathParam.getValue().split(" ")) {
         if (s.contains(Constants.AT)) {
           entity.checkIsValidProperty(s.split(Constants.AT)[1]);
         }
       }
-    } else if (Constants.TYPE_VALUE_COMPUTED.equals(pathParam.getTypeValue())) {
+    } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(pathParam.getTypeValue())
+        || Constants.TYPE_VALUE_DYNAMIC_NODE_ARRAY.equals(pathParam.getTypeValue())) {
       String className = pathParam.getJavaClassName();
       Class<?> clazz; // convert string classname to class
       try {
         clazz = Class.forName(className);
         Object dog = clazz.newInstance(); // invoke empty constructor
         if (dog.getClass().getInterfaces()[0]
-            .equals(com.smf.webhookevents.interfaces.ComputedFunction.class)) {
+            .equals(com.smf.webhookevents.interfaces.DynamicNode.class)) {
           String methodName = Constants.METHOD_NAME;
           dog.getClass().getMethod(methodName, HashMap.class);
         }
