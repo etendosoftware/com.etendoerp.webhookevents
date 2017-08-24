@@ -74,8 +74,7 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
           DalUtil.getValueFromPath(pathParam, s.split(Constants.AT)[1]);
         }
       }
-    } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(pathParam.getTypeValue())
-        || Constants.TYPE_VALUE_DYNAMIC_NODE_ARRAY.equals(pathParam.getTypeValue())) {
+    } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(pathParam.getTypeValue())) {
       String className = pathParam.getJavaClassName();
       Class<?> clazz; // convert string classname to class
       try {
@@ -83,7 +82,14 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
         Object dog = clazz.newInstance(); // invoke empty constructor
         if (dog.getClass().getInterfaces()[0]
             .equals(com.smf.webhookevents.interfaces.DynamicNode.class)) {
-          String methodName = Constants.METHOD_NAME;
+          String methodName = "";
+          if (Constants.TYPE_VALUE_COMPUTED.equals(pathParam == null ? pathParam.getTypeValue()
+              : pathParam.getTypeValue())) {
+            methodName = Constants.METHOD_NAME;
+          } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(pathParam == null ? pathParam
+              .getTypeValue() : pathParam.getTypeValue())) {
+            methodName = Constants.METHOD_NAME_DYNAMIC_NODE;
+          }
           dog.getClass().getMethod(methodName, HashMap.class);
         }
       } catch (Exception e1) {

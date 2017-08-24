@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.enterprise.inject.Any;
@@ -20,6 +21,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.log4j.Logger;
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.hibernate.criterion.Restrictions;
 import org.openbravo.base.model.Entity;
@@ -124,15 +126,23 @@ public class WebHookUtil {
     OBCriteria<TreeNode> cTreeNode = OBDal.getInstance().createCriteria(TreeNode.class);
     cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_TREE + ".id", Constants.TREE_ID));
     cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_REPORTSET, "0"));
+    cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_ACTIVE, true));
     WebHookInitializer.initialize();
     if (hook.getTypedata().equals(Constants.STRING_JSON)) {
-      JSONObject jsonResult = generateDataParametersJSON(cTreeNode.list(), bob, logger);
+      JSONObject jsonResult = null;
+      JSONArray jsonArrayResult = null;
+      Object res = generateDataParametersJSON(cTreeNode.list(), bob, logger);
       if (hooks != null) {
         for (IChangeDataHook hookJava : hooks) {
-          jsonResult = hookJava.postProcessJSON(jsonResult);
+          res = hookJava.postProcessJSON(res);
         }
       }
-      sendData = jsonResult.toString();
+      if (res instanceof JSONObject) {
+        jsonResult = (JSONObject) res;
+      } else if (res instanceof JSONArray) {
+        jsonArrayResult = (JSONArray) res;
+      }
+      sendData = jsonResult == null ? jsonArrayResult.toString() : jsonResult.toString();
     } else if (hook.getTypedata().equals(Constants.STRING_XML)) {
       sendData = generateDataParametersXML(bob.getEntityName(), dataJson, bob, logger);
     }
@@ -175,29 +185,52 @@ public class WebHookUtil {
    * @return Return data in format JSON
    * @throws Exception
    */
-  public static JSONObject generateDataParametersJSON(List<TreeNode> list, BaseOBObject bob,
+  public static Object generateDataParametersJSON(List<TreeNode> list, BaseOBObject bob,
       Logger logger) throws Exception {
     JSONObject jsonMap = new JSONObject();
-    JsonXmlData node;
+    JsonXmlData node = null;
+    LinkedList<Object> staticValues = new LinkedList<Object>();
     try {
       for (TreeNode treeNode : list) {
         node = OBDal.getInstance().get(JsonXmlData.class, treeNode.getNode());
         if (node.isSummaryLevel()) {
           OBCriteria<TreeNode> cTreeNode = OBDal.getInstance().createCriteria(TreeNode.class);
           cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_REPORTSET, treeNode.getNode()));
-          jsonMap.put(node.getName(), generateDataParametersJSON(cTreeNode.list(), bob, logger));
+          if (node.isArray()) {
+            Object res = generateDataParametersJSON(cTreeNode.list(), bob, logger);
+            if (res instanceof LinkedList) {
+              jsonMap.put(node.getName(), new JSONArray((LinkedList<?>) res));
+            } else {
+              jsonMap.put(node.getName(), new JSONArray().put(res));
+            }
+          } else {
+            jsonMap.put(node.getName(), generateDataParametersJSON(cTreeNode.list(), bob, logger));
+          }
         } else {
-          if (Constants.TYPE_VALUE_STRING.equals(node.getTypeValue())) {
-            jsonMap.put(node.getName(), replaceValueData(node.getValue(), bob, logger));
-          } else if (Constants.TYPE_VALUE_PROPERTY.equals(node.getTypeValue())) {
-            jsonMap.put(node.getName(), DalUtil.getValueFromPath(bob, node.getProperty())
-                .toString());
-          } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(node.getTypeValue())
-              || Constants.TYPE_VALUE_DYNAMIC_NODE_ARRAY.equals(node.getTypeValue())) {
-            // call the function
-            jsonMap.put(node.getName(), getValueExecuteMethod(node, bob, logger, dynamicNode));
+          if (node.getName() == null || node.getName().isEmpty()) {
+            if (Constants.TYPE_VALUE_STRING.equals(node.getTypeValue())) {
+              staticValues.add(replaceValueData(node.getValue(), bob, logger));
+            } else if (Constants.TYPE_VALUE_PROPERTY.equals(node.getTypeValue())) {
+              staticValues.add(DalUtil.getValueFromPath(bob, node.getProperty()).toString());
+            } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(node.getTypeValue())) {
+              // call the function
+              staticValues.add(getValueExecuteMethod(node, bob, logger, dynamicNode));
+            }
+          } else {
+            if (Constants.TYPE_VALUE_STRING.equals(node.getTypeValue())) {
+              jsonMap.put(node.getName(), replaceValueData(node.getValue(), bob, logger));
+            } else if (Constants.TYPE_VALUE_PROPERTY.equals(node.getTypeValue())) {
+              jsonMap.put(node.getName(), DalUtil.getValueFromPath(bob, node.getProperty())
+                  .toString());
+            } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(node.getTypeValue())) {
+              // call the function
+              jsonMap.put(node.getName(), getValueExecuteMethod(node, bob, logger, dynamicNode));
+            }
           }
         }
+      }
+      if (!staticValues.isEmpty()) {
+        return staticValues;
       }
     } catch (Exception e) {
       String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateJson", language),
@@ -435,9 +468,6 @@ public class WebHookUtil {
         } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(recordParam == null ? recordData
             .getTypeValue() : recordParam.getTypeValue())) {
           methodName = Constants.METHOD_NAME_DYNAMIC_NODE;
-        } else if (Constants.TYPE_VALUE_DYNAMIC_NODE_ARRAY.equals(recordParam == null ? recordData
-            .getTypeValue() : recordParam.getTypeValue())) {
-          methodName = Constants.METHOD_NAME_DYNAMIC_NODE_ARRAY;
         }
         Method setNameMethod = dog.getClass().getMethod(methodName, HashMap.class);
         // set the parameters in hashmap
