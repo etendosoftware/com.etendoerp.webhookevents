@@ -10,6 +10,7 @@ import org.openbravo.client.kernel.event.EntityDeleteEvent;
 import org.openbravo.client.kernel.event.EntityNewEvent;
 import org.openbravo.client.kernel.event.EntityPersistenceEventObserver;
 import org.openbravo.client.kernel.event.EntityUpdateEvent;
+import org.openbravo.dal.core.DalUtil;
 
 import com.smf.webhookevents.data.ArgumentsData;
 import com.smf.webhookevents.webhook_util.Constants;
@@ -60,10 +61,12 @@ public class ArgumentsDataHandler extends EntityPersistenceEventObserver {
     }
   }
 
-  public void valid(Entity entity, ArgumentsData arg) {
+  public void valid(Entity entity, ArgumentsData arg) throws Exception {
     for (String s : arg.getValue().split(" ")) {
       if (s.contains(Constants.AT)) {
-        entity.checkIsValidProperty(s.split(Constants.AT)[1]);
+        if (DalUtil.getPropertyFromPath(entity, s.split(Constants.AT)[1]) == null) {
+          throw new Exception(s.split(Constants.AT)[1].toString());
+        }
       }
     }
   }

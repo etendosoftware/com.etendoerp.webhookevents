@@ -130,19 +130,14 @@ public class WebHookUtil {
     WebHookInitializer.initialize();
     if (hook.getTypedata().equals(Constants.STRING_JSON)) {
       JSONObject jsonResult = null;
-      JSONArray jsonArrayResult = null;
       Object res = generateDataParametersJSON(cTreeNode.list(), bob, logger);
       if (hooks != null) {
         for (IChangeDataHook hookJava : hooks) {
           res = hookJava.postProcessJSON(res);
         }
       }
-      if (res instanceof JSONObject) {
-        jsonResult = (JSONObject) res;
-      } else if (res instanceof JSONArray) {
-        jsonArrayResult = (JSONArray) res;
-      }
-      sendData = jsonResult == null ? jsonArrayResult.toString() : jsonResult.toString();
+      jsonResult = (JSONObject) res;
+      sendData = jsonResult.toString();
     } else if (hook.getTypedata().equals(Constants.STRING_XML)) {
       sendData = generateDataParametersXML(bob.getEntityName(), dataJson, bob, logger);
     }
@@ -330,7 +325,7 @@ public class WebHookUtil {
           } else if (Constants.TYPE_VALUE_COMPUTED.equals(param.getTypeValue())) {
             // call the function
             result = result.replace("{" + param.getName() + "}",
-                getValueExecuteMethod(param, bob, logger, computedFunction));
+                getValueExecuteMethod(param, bob, logger, computedFunction).toString());
           }
         }
       } catch (Exception e) {
@@ -442,9 +437,9 @@ public class WebHookUtil {
    * @return Return the string for set in json or xml
    * @throws Exception
    */
-  public static String getValueExecuteMethod(Object data, BaseOBObject bob, Logger logger,
+  public static Object getValueExecuteMethod(Object data, BaseOBObject bob, Logger logger,
       Object compareClass) throws Exception {
-    String result = "";
+    Object result = null;
     JsonXmlData recordData = null;
     UrlPathParam recordParam = null;
     if (dynamicNode.equals(compareClass)) {
@@ -474,7 +469,7 @@ public class WebHookUtil {
         HashMap<Object, Object> params = recordParam == null ? getArgumentsForMethodData(
             recordData.getSmfwheArgsDataList(), bob, logger) : getArgumentsForMethod(
             recordParam.getSmfwheArgsList(), bob, logger);
-        result = (String) setNameMethod.invoke(dog, params); // pass arg
+        result = setNameMethod.invoke(dog, params); // pass arg
       } else {
         message = String
             .format(Utility.messageBD(conn, "smfwhe_errorParserClassMethodName", language),
@@ -510,7 +505,7 @@ public class WebHookUtil {
         result = DalUtil.getValueFromPath(bob, param.getProperty()).toString();
       } else if (Constants.TYPE_VALUE_COMPUTED.equals(param.getTypeValue())) {
         // call the function
-        result = getValueExecuteMethod(param, bob, logger, computedFunction);
+        result = getValueExecuteMethod(param, bob, logger, computedFunction).toString();
       }
       con.setRequestProperty(param.getName(), result);
     }

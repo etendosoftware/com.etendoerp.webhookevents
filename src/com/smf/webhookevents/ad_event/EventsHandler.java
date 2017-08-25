@@ -33,9 +33,7 @@ public class EventsHandler extends EntityPersistenceEventObserver {
 
       return;
     }
-    logger.info("Events" + ((Events) event.getTargetInstance()).getName() + " is being created");
     final Events events = (Events) event.getTargetInstance();
-
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
     cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, events.getExecuteon()));
     cEvents.add(Restrictions.eq(Events.PROPERTY_TABLE, events.getTable()));
@@ -57,9 +55,7 @@ public class EventsHandler extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    logger.info("Events " + event.getTargetInstance().getId() + " is being updated");
     final Events events = (Events) event.getTargetInstance();
-
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
     cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, events.getExecuteon()));
     cEvents.add(Restrictions.eq(Events.PROPERTY_TABLE, events.getTable()));
@@ -81,7 +77,5 @@ public class EventsHandler extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    logger.info("Events " + event.getTargetInstance().getId() + " is being deleted");
-
   }
 }

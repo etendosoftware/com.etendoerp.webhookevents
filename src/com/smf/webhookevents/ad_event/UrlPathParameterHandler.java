@@ -67,7 +67,9 @@ public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
     if (Constants.TYPE_VALUE_STRING.equals(pathParam.getTypeValue())) {
       for (String s : pathParam.getValue().split(" ")) {
         if (s.contains(Constants.AT)) {
-          DalUtil.getValueFromPath(pathParam, s.split(Constants.AT)[1]);
+          if (DalUtil.getPropertyFromPath(entity, s.split(Constants.AT)[1]) == null) {
+            throw new Exception(s.split(Constants.AT)[1].toString());
+          }
         }
       }
     } else if (Constants.TYPE_VALUE_COMPUTED.equals(pathParam.getTypeValue())) {
@@ -85,7 +87,9 @@ public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
         throw e1;
       }
     } else if (Constants.TYPE_VALUE_PROPERTY.equals(pathParam.getTypeValue())) {
-      DalUtil.getValueFromPath(pathParam, pathParam.getProperty());
+      if (DalUtil.getPropertyFromPath(entity, pathParam.getProperty()) == null) {
+        throw new Exception(pathParam.getProperty());
+      }
     }
   }
 }
