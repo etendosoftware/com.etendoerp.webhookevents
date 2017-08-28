@@ -3,7 +3,6 @@ package com.smf.webhookevents.webhook_util;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
-import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -13,12 +12,6 @@ import java.util.List;
 
 import javax.enterprise.inject.Any;
 import javax.net.ssl.HttpsURLConnection;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
 import org.apache.log4j.Logger;
 import org.codehaus.jettison.json.JSONArray;
@@ -36,10 +29,6 @@ import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.datamodel.Table;
 import org.openbravo.model.ad.utility.TreeNode;
 import org.openbravo.service.db.DalConnectionProvider;
-import org.w3c.dom.DOMImplementation;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Text;
 
 import com.smf.webhookevents.annotation.InjectHook;
 import com.smf.webhookevents.data.Arguments;
@@ -51,6 +40,8 @@ import com.smf.webhookevents.data.Webhook;
 import com.smf.webhookevents.interfaces.ComputedFunction;
 import com.smf.webhookevents.interfaces.DynamicNode;
 import com.smf.webhookevents.interfaces.IChangeDataHook;
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.xml.DomDriver;
 
 public class WebHookUtil {
   final private static String language = OBContext.getOBContext().getLanguage().getLanguage();
@@ -121,7 +112,6 @@ public class WebHookUtil {
 
     // Verify if can data is json or xml
     String sendData = "";
-    List<JsonXmlData> dataJson = hook.getSmfwheJsonDataList();
     // Get the treeNode
     OBCriteria<TreeNode> cTreeNode = OBDal.getInstance().createCriteria(TreeNode.class);
     cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_TREE + ".id", Constants.TREE_ID));
@@ -139,7 +129,14 @@ public class WebHookUtil {
       jsonResult = (JSONObject) res;
       sendData = jsonResult.toString();
     } else if (hook.getTypedata().equals(Constants.STRING_XML)) {
-      sendData = generateDataParametersXML(bob.getEntityName(), dataJson, bob, logger);
+      Object res = generateDataParametersJSON(cTreeNode.list(), bob, logger);
+      if (hooks != null) {
+        for (IChangeDataHook hookJava : hooks) {
+          res = hookJava.postProcessJSON(res);
+        }
+      }
+      XStream xstream = new XStream(new DomDriver());
+      sendData = xstream.toXML(res);
     }
 
     // Send post request
@@ -234,65 +231,6 @@ public class WebHookUtil {
       throw new Exception(message);
     }
     return jsonMap;
-  }
-
-  /**
-   * Generate a XML data parameter, take a StandardParameter list and return XML with
-   * StandardParameter set
-   *
-   * @param Name
-   *          Name to root node
-   * @param ListParameters
-   *          Standard Parameter list
-   * @param Bob
-   *          BaseOBObject to generate data in XML
-   * @param Logger
-   *          Info logger in log
-   * @return Return data in format XML
-   * @throws Exception
-   */
-  public static String generateDataParametersXML(String name, List<JsonXmlData> listParameters,
-      BaseOBObject bob, Logger logger) throws Exception {
-    StringWriter xml = new StringWriter();
-    try {
-      if (listParameters.isEmpty()) {
-        logger.debug("Empty Standard Parameter List");
-      } else {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        DOMImplementation implementation = builder.getDOMImplementation();
-        Document document = implementation.createDocument(null, name, null);
-        document.setXmlVersion(Constants.XML_VERSION);
-
-        // Main Node
-        Element root = document.getDocumentElement();
-        for (JsonXmlData data : listParameters) {
-          // Item Node
-          Element node = document.createElement(data.getName());
-          Text nodeValueValue = document.createTextNode(DalUtil.getValueFromPath(bob,
-              data.getProperty()).toString());
-          node.appendChild(nodeValueValue);
-          // append itemNode to root
-          root.appendChild(node); // add the element in root node "Document"
-        }
-        // Hook that allows you to modify or change the xml
-        if (hooks != null) {
-          for (IChangeDataHook hook : hooks) {
-            document = hook.postProcessXML(document);
-          }
-        }
-        // Generate XML
-        Transformer transformer = TransformerFactory.newInstance().newTransformer();
-        transformer.transform(new DOMSource(document), new StreamResult(xml));
-      }
-    } catch (Exception e) {
-      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateXml", language),
-          bob.getIdentifier());
-      logger.error(message, e);
-      throw new Exception(message);
-    }
-
-    return xml.toString();
   }
 
   /**
