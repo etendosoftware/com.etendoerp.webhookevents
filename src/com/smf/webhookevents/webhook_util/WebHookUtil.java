@@ -150,6 +150,7 @@ public class WebHookUtil {
     logger.debug("nSending " + hook.getSmfwheEvents().getMethod() + "request to URL : " + url);
     logger.debug("Post Data : " + sendData);
     logger.debug("Response Code : " + responseCode);
+    logger.debug("Response:" + con.getContent());
 
     BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
     String output;
