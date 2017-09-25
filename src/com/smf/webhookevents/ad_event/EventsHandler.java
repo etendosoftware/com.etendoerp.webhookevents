@@ -35,7 +35,7 @@ public class EventsHandler extends EntityPersistenceEventObserver {
     }
     final Events events = (Events) event.getTargetInstance();
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
-    cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, events.getExecuteon()));
+    cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE, events.getSmfwheEventType()));
     cEvents.add(Restrictions.eq(Events.PROPERTY_TABLE, events.getTable()));
 
     if (!cEvents.list().isEmpty()) {
@@ -57,7 +57,7 @@ public class EventsHandler extends EntityPersistenceEventObserver {
     }
     final Events events = (Events) event.getTargetInstance();
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
-    cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, events.getExecuteon()));
+    cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE, events.getSmfwheEventType()));
     cEvents.add(Restrictions.eq(Events.PROPERTY_TABLE, events.getTable()));
     cEvents.add(Restrictions.ne(Events.PROPERTY_ID, events.getId()));
     if (!cEvents.list().isEmpty()) {
