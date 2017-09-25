@@ -40,8 +40,8 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
     }
     try {
       BaseOBObject bob = event.getTargetInstance();
-      List<Events> lEvents = WebHookUtil.eventsFromTableName(Constants.CREATE, bob.getEntity()
-          .getTableName());
+      List<Events> lEvents = WebHookUtil.getEventHandlerClassEvents(Constants.CREATE,
+          bob.getEntity().getTableName());
       if (!lEvents.isEmpty()) {
         QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
 
@@ -68,8 +68,8 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
     }
     try {
       BaseOBObject bob = event.getTargetInstance();
-      List<Events> lEvents = WebHookUtil.eventsFromTableName(Constants.UPDATE, bob.getEntity()
-          .getTableName());
+      List<Events> lEvents = WebHookUtil.getEventHandlerClassEvents(Constants.UPDATE,
+          bob.getEntity().getTableName());
       if (!lEvents.isEmpty()) {
         QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
 
@@ -96,8 +96,8 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
       return;
     }
     try {
-      List<Events> lEvents = WebHookUtil.eventsFromTableName(Constants.DELETE, event
-          .getTargetInstance().getEntity().getTableName());
+      List<Events> lEvents = WebHookUtil.getEventHandlerClassEvents(Constants.DELETE,
+          event.getTargetInstance().getEntity().getTableName());
       if (!lEvents.isEmpty()) {
         OBQuery<BaseOBObject> qBob = null;
         String whereClause = "";
@@ -107,10 +107,9 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
         } else {
           whereClause = " as e where " + events.getHQLWhereClause() + " and id = :id ";
         }
-        qBob = OBDal.getInstance().createQuery(
-            ModelProvider.getInstance()
-                .getEntityByTableName(event.getTargetInstance().getEntity().getTableName())
-                .getName(), whereClause);
+        qBob = OBDal.getInstance().createQuery(ModelProvider.getInstance()
+            .getEntityByTableName(event.getTargetInstance().getEntity().getTableName()).getName(),
+            whereClause);
         qBob.setNamedParameter("id", event.getTargetInstance().getId());
 
         if (!qBob.list().isEmpty()) {

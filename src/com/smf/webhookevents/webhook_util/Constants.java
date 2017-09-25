@@ -20,4 +20,9 @@ public class Constants {
   public final static String METHOD_NAME = "execute";
   public final static String METHOD_NAME_DYNAMIC_NODE = "dynamicNode";
   public final static String TREE_ID = "52112AA1BC1E4F38A103F4AE53F23DA1";
+  public final static String EVENT_HANDLER = "EH";
+  public final static String JAVA = "JAVA";
+  public final static String JAVASCRIPT = "JS";
+  public final static String STORED_PROCEDURE = "SP";
+  public final static String DYNAMIC_EVENT_HANDLER = "DEH";
 }

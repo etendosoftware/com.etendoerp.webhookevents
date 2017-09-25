@@ -297,6 +297,50 @@ public class WebHookUtil {
   }
 
   /**
+   * Returns an Event list from a table name with the event type, and event class.
+   * 
+   * @param eventTypeId
+   *          ID for EventType object (see Constants class for defaults)
+   * @param tableName
+   * @param eventClass
+   *          event class (Event Handler, Stored Procedure, see Constants class or reference list
+   *          for details)
+   * @return
+   */
+  public static List<Events> eventsFromTableName(String eventTypeId, String tableName,
+      String eventClass) {
+    OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
+    cEvents.createAlias(Events.PROPERTY_TABLE, "table");
+    cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
+    cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
+        eventTypeId));
+    cEvents.add(Restrictions.eq(Events.PROPERTY_EVENTCLASS, eventClass));
+    cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
+    return cEvents.list();
+  }
+
+  /**
+   * Returns an event list for all (default) event handler types.
+   * 
+   * @param eventTypeId
+   *          ID for EventType object (see Constants class for defaults)
+   * @param tableName
+   *          Table Name
+   * @return
+   */
+  public static List<Events> getEventHandlerClassEvents(String eventTypeId, String tableName) {
+    OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
+    cEvents.createAlias(Events.PROPERTY_TABLE, "table");
+    cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
+    cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
+        eventTypeId));
+    cEvents.add(Restrictions.in(Events.PROPERTY_EVENTCLASS,
+        new String[] { Constants.DYNAMIC_EVENT_HANDLER, Constants.EVENT_HANDLER }));
+    cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
+    return cEvents.list();
+  }
+
+  /**
    * Return string concat with property value set
    * 
    * @param Value
