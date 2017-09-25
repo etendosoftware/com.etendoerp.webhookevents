@@ -33,6 +33,7 @@ import org.openbravo.service.db.DalConnectionProvider;
 import com.smf.webhookevents.annotation.InjectHook;
 import com.smf.webhookevents.data.Arguments;
 import com.smf.webhookevents.data.ArgumentsData;
+import com.smf.webhookevents.data.EventType;
 import com.smf.webhookevents.data.Events;
 import com.smf.webhookevents.data.JsonXmlData;
 import com.smf.webhookevents.data.UrlPathParam;
@@ -213,8 +214,8 @@ public class WebHookUtil {
             if (Constants.TYPE_VALUE_STRING.equals(node.getTypeValue())) {
               jsonMap.put(node.getName(), replaceValueData(node.getValue(), bob, logger));
             } else if (Constants.TYPE_VALUE_PROPERTY.equals(node.getTypeValue())) {
-              jsonMap.put(node.getName(), DalUtil.getValueFromPath(bob, node.getProperty())
-                  .toString());
+              jsonMap.put(node.getName(),
+                  DalUtil.getValueFromPath(bob, node.getProperty()).toString());
             } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(node.getTypeValue())) {
               // call the function
               jsonMap.put(node.getName(), getValueExecuteMethod(node, bob, logger, dynamicNode));
@@ -278,23 +279,19 @@ public class WebHookUtil {
   }
 
   /**
-   * Return a Events list from BaseOBObject send for parameter
+   * Return an Event list from a table name with the event type.
    * 
-   * @param Action
-   *          Defined in this class
+   * @param eventTypeId
+   *          ID for EventType object (see Constants class for defaults)
    * @param TableName
-   * @return Return the Events list
+   * @return Return the Event list
    */
-  public static List<Events> eventsFromBaseOBObject(String action, String tableName) {
+  public static List<Events> eventsFromTableName(String eventTypeId, String tableName) {
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
     cEvents.createAlias(Events.PROPERTY_TABLE, "table");
     cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
-    if (Constants.CREATE.equals(action) || Constants.UPDATE.equals(action)) {
-      cEvents.add(Restrictions.or(Restrictions.eq(Events.PROPERTY_EXECUTEON, action),
-          Restrictions.eq(Events.PROPERTY_EXECUTEON, Constants.CREATE_OR_UPDATE)));
-    } else {
-      cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, action));
-    }
+    cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
+        eventTypeId));
     cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
     return cEvents.list();
   }
@@ -322,14 +319,13 @@ public class WebHookUtil {
           propertyError = s;
           throw new Exception();
         } else {
-          result.append(
-              s.contains(Constants.AT) ? DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1])
-                  : s).append(" ");
+          result.append(s.contains(Constants.AT)
+              ? DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1]) : s).append(" ");
         }
       }
     } catch (Exception e) {
-      String message = String.format(
-          Utility.messageBD(conn, "smfwhe_errorParserParameter", language), propertyError);
+      String message = String
+          .format(Utility.messageBD(conn, "smfwhe_errorParserParameter", language), propertyError);
       logger.error(message, e);
       throw new Exception(message);
     }
@@ -350,8 +346,8 @@ public class WebHookUtil {
       entities = new Entity[lEvents.size()];
       int i = 0;
       for (Events e : lEvents) {
-        entities[i] = ModelProvider.getInstance().getEntityByTableName(
-            e.getTable().getDBTableName());
+        entities[i] = ModelProvider.getInstance()
+            .getEntityByTableName(e.getTable().getDBTableName());
         i++;
       }
     } catch (Exception e) {
@@ -386,8 +382,8 @@ public class WebHookUtil {
     } else if (computedFunction.equals(compareClass)) {
       recordParam = (UrlPathParam) data;
     }
-    String classMethodName = recordParam == null ? recordData.getJavaClassName() : recordParam
-        .getJavaClassName();
+    String classMethodName = recordParam == null ? recordData.getJavaClassName()
+        : recordParam.getJavaClassName();
     String className = classMethodName;
     Class<?> clazz; // convert string classname to class
     String message = "";
@@ -396,23 +392,23 @@ public class WebHookUtil {
       Object dog = clazz.newInstance(); // invoke empty constructor
       if (dog.getClass().getInterfaces()[0].equals(compareClass)) {
         String methodName = "";
-        if (Constants.TYPE_VALUE_COMPUTED.equals(recordParam == null ? recordData.getTypeValue()
-            : recordParam.getTypeValue())) {
+        if (Constants.TYPE_VALUE_COMPUTED
+            .equals(recordParam == null ? recordData.getTypeValue() : recordParam.getTypeValue())) {
           methodName = Constants.METHOD_NAME;
-        } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(recordParam == null ? recordData
-            .getTypeValue() : recordParam.getTypeValue())) {
+        } else if (Constants.TYPE_VALUE_DYNAMIC_NODE
+            .equals(recordParam == null ? recordData.getTypeValue() : recordParam.getTypeValue())) {
           methodName = Constants.METHOD_NAME_DYNAMIC_NODE;
         }
         Method setNameMethod = dog.getClass().getMethod(methodName, HashMap.class);
         // set the parameters in hashmap
-        HashMap<Object, Object> params = recordParam == null ? getArgumentsForMethodData(
-            recordData.getSmfwheArgsDataList(), bob, logger) : getArgumentsForMethod(
-            recordParam.getSmfwheArgsList(), bob, logger);
+        HashMap<Object, Object> params = recordParam == null
+            ? getArgumentsForMethodData(recordData.getSmfwheArgsDataList(), bob, logger)
+            : getArgumentsForMethod(recordParam.getSmfwheArgsList(), bob, logger);
         result = setNameMethod.invoke(dog, params); // pass arg
       } else {
-        message = String
-            .format(Utility.messageBD(conn, "smfwhe_errorParserClassMethodName", language),
-                classMethodName);
+        message = String.format(
+            Utility.messageBD(conn, "smfwhe_errorParserClassMethodName", language),
+            classMethodName);
         throw new Exception(message);
       }
     } catch (Exception e) {

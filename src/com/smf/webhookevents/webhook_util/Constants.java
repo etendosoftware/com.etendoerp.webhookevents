@@ -7,10 +7,9 @@ public class Constants {
   public final static String AT = "@";
   public final static String STRING_JSON = "JSON";
   public final static String STRING_XML = "XML";
-  public final static String CREATE = "C";
-  public final static String UPDATE = "U";
-  public final static String DELETE = "D";
-  public final static String CREATE_OR_UPDATE = "CU";
+  public final static String CREATE = "AC7B2E7BC9E4430BB346FD59BD9497C2";
+  public final static String UPDATE = "6092170021514006BD0F371BB599CC2F";
+  public final static String DELETE = "7F9DCD9FD812411CA2803F0E082AFF4D";
   public final static String XML_VERSION = "1.0";
   public final static String TYPE_PARAMETER_PATH = "P";
   public final static String TYPE_PARAMETER_HEADER = "H";

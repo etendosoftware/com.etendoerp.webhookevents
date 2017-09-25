@@ -40,7 +40,7 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
     }
     try {
       BaseOBObject bob = event.getTargetInstance();
-      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.CREATE, bob.getEntity()
+      List<Events> lEvents = WebHookUtil.eventsFromTableName(Constants.CREATE, bob.getEntity()
           .getTableName());
       if (!lEvents.isEmpty()) {
         QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
@@ -68,7 +68,7 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
     }
     try {
       BaseOBObject bob = event.getTargetInstance();
-      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.UPDATE, bob.getEntity()
+      List<Events> lEvents = WebHookUtil.eventsFromTableName(Constants.UPDATE, bob.getEntity()
           .getTableName());
       if (!lEvents.isEmpty()) {
         QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
@@ -96,7 +96,7 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
       return;
     }
     try {
-      List<Events> lEvents = WebHookUtil.eventsFromBaseOBObject(Constants.DELETE, event
+      List<Events> lEvents = WebHookUtil.eventsFromTableName(Constants.DELETE, event
           .getTargetInstance().getEntity().getTableName());
       if (!lEvents.isEmpty()) {
         OBQuery<BaseOBObject> qBob = null;
