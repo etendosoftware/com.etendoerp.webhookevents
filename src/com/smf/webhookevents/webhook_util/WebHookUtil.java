@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.codehaus.jettison.json.JSONObject;
 import org.hibernate.criterion.Restrictions;
 import org.openbravo.base.model.Entity;
 import org.openbravo.base.model.ModelProvider;
+import org.openbravo.base.provider.OBProvider;
 import org.openbravo.base.structure.BaseOBObject;
 import org.openbravo.dal.core.DalUtil;
 import org.openbravo.dal.core.OBContext;
@@ -28,6 +30,7 @@ import org.openbravo.database.ConnectionProvider;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.datamodel.Table;
 import org.openbravo.model.ad.utility.TreeNode;
+import org.openbravo.model.common.enterprise.Organization;
 import org.openbravo.service.db.DalConnectionProvider;
 
 import com.smf.webhookevents.annotation.InjectHook;
@@ -36,6 +39,7 @@ import com.smf.webhookevents.data.ArgumentsData;
 import com.smf.webhookevents.data.EventType;
 import com.smf.webhookevents.data.Events;
 import com.smf.webhookevents.data.JsonXmlData;
+import com.smf.webhookevents.data.QueueEventHook;
 import com.smf.webhookevents.data.UrlPathParam;
 import com.smf.webhookevents.data.Webhook;
 import com.smf.webhookevents.interfaces.ComputedFunction;
@@ -53,6 +57,88 @@ public class WebHookUtil {
   @InjectHook
   @Any
   private static List<IChangeDataHook> hooks;
+
+  /**
+   * Inserts an event record in the queue.
+   * 
+   * @param tableId
+   *          Table the event is defined for
+   * @param eventTypeId
+   *          (On Create/Update/Delete, see Constant class for defaults).
+   * @param eventClass
+   *          Event Handler,Java,Stored Procedure(see Constant class or Reference List)
+   * @param recordId
+   *          ID of the record affected
+   */
+  public static void queueEvent(String tableId, String eventTypeId, String eventClass,
+      String recordId) {
+    Table table = OBDal.getInstance().get(Table.class, tableId);
+    EventType eventType = OBDal.getInstance().get(EventType.class, eventTypeId);
+
+    queueEvent(table, eventType, eventClass, recordId);
+
+  }
+
+  /**
+   * Inserts an event record in the queue. Special for events handlers, include Event Handler and
+   * Dynamic Event Handler Types
+   * 
+   * @param tableName
+   *          Table Name the event is defined for
+   * @param tableId
+   *          Table ID the event is defined for
+   * @param eventTypeId
+   *          (On Create/Update/Delete, see Constant class for defaults).
+   * @param recordId
+   *          ID of the record affected
+   */
+  public static void queueEventFromEventHandler(String tableName, String tableId,
+      String eventTypeId, String recordId) {
+    List<Events> lEvents = WebHookUtil.getEventHandlerClassEvents(eventTypeId, tableName);
+    if (!lEvents.isEmpty()) {
+      QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
+
+      obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
+      obj.setCreationDate(new Date());
+      obj.setUpdated(new Date());
+      obj.setRecord(recordId);
+      obj.setTable(OBDal.getInstance().get(Table.class, tableId));
+      obj.setSmfwheEvents(lEvents.get(0));
+
+      OBDal.getInstance().save(obj);
+    }
+  }
+
+  /**
+   * Inserts an event record in the queue.
+   * 
+   * @param table
+   *          Table the event is defined for
+   * @param eventType
+   *          (On Create/Update/Delete, see Constant class for defaults).
+   * @param eventClass
+   *          Event Handler,Java,Stored Procedure(see Constant class or Reference List)
+   * @param recordId
+   *          ID of the record affected
+   */
+  public static void queueEvent(Table table, EventType eventType, String eventClass,
+      String recordId) {
+    // TODO add parameters event class and event type
+    List<Events> lEvents = WebHookUtil.eventsFromTableName(eventType.getId(),
+        table.getDBTableName());
+    if (!lEvents.isEmpty()) {
+      QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
+
+      obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
+      obj.setCreationDate(new Date());
+      obj.setUpdated(new Date());
+      obj.setRecord(recordId);
+      obj.setTable(table);
+      obj.setSmfwheEvents(lEvents.get(0));
+
+      OBDal.getInstance().save(obj);
+    }
+  }
 
   /**
    * Call the all webhook defined in this event
