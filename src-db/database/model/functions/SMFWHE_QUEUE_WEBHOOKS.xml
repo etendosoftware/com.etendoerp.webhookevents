@@ -33,7 +33,6 @@
   v_Result NUMBER:=1; -- Success
   v_Message VARCHAR2(2000):='';
   v_event_id VARCHAR2(32);
-  v_event_validation NUMBER;
   BEGIN
     BEGIN
       --Smfwhe_Queue_Webhooks - Validation Process Extension Point
@@ -58,11 +57,11 @@
       smfwhe_queueeventhook_id := get_uuid();
 
       -- Validate Event
-      SELECT COUNT(*) INTO v_event_validation 
-      FROM DUAL 
-      WHERE EXISTS (SELECT 1 FROM SMFWHE_EVENTS WHERE event_class = 'SP' and smfwhe_event_type_id = p_event_type and ad_table_id = table_id);
+      SELECT SMFWHE_EVENTS_ID INTO v_event_id 
+      FROM SMFWHE_EVENTS 
+      WHERE event_class = 'SP' and smfwhe_event_type_id = p_event_type and ad_table_id = table_id;
 
-      IF (v_event_validation > 0) THEN
+      IF (v_event_id IS NOT NULL AND v_event_id != '') THEN
         --Insert data in queue
         INSERT INTO smfwhe_queueeventhook(
               smfwhe_queueeventhook_id, ad_client_id, ad_org_id, isactive, 

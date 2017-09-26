@@ -29,6 +29,7 @@ import org.openbravo.dal.service.OBDal;
 import org.openbravo.database.ConnectionProvider;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.datamodel.Table;
+import org.openbravo.model.ad.utility.Tree;
 import org.openbravo.model.ad.utility.TreeNode;
 import org.openbravo.model.common.enterprise.Organization;
 import org.openbravo.service.db.DalConnectionProvider;
@@ -202,7 +203,8 @@ public class WebHookUtil {
     String sendData = "";
     // Get the treeNode
     OBCriteria<TreeNode> cTreeNode = OBDal.getInstance().createCriteria(TreeNode.class);
-    cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_TREE + ".id", Constants.TREE_ID));
+    cTreeNode.createAlias(TreeNode.PROPERTY_TREE, "tree");
+    cTreeNode.add(Restrictions.eq("tree." + Tree.PROPERTY_NAME, Constants.TREE_NAME));
     cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_REPORTSET, "0"));
     cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_ACTIVE, true));
     WebHookInitializer.initialize();
@@ -238,7 +240,6 @@ public class WebHookUtil {
     logger.debug("nSending " + hook.getSmfwheEvents().getMethod() + "request to URL : " + url);
     logger.debug("Post Data : " + sendData);
     logger.debug("Response Code : " + responseCode);
-    logger.debug("Response:" + con.getContent());
 
     BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
     String output;

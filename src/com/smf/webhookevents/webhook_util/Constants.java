@@ -19,7 +19,7 @@ public class Constants {
   public final static String TYPE_VALUE_DYNAMIC_NODE = "D";
   public final static String METHOD_NAME = "execute";
   public final static String METHOD_NAME_DYNAMIC_NODE = "dynamicNode";
-  public final static String TREE_ID = "52112AA1BC1E4F38A103F4AE53F23DA1";
+  public final static String TREE_NAME = "smfwhe_json_data";
   public final static String EVENT_HANDLER = "EH";
   public final static String JAVA = "JAVA";
   public final static String JAVASCRIPT = "JS";
