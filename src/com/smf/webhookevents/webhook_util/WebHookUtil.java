@@ -123,9 +123,8 @@ public class WebHookUtil {
    */
   public static void queueEvent(Table table, EventType eventType, String eventClass,
       String recordId) {
-    // TODO add parameters event class and event type
     List<Events> lEvents = WebHookUtil.eventsFromTableName(eventType.getId(),
-        table.getDBTableName());
+        table.getDBTableName(), eventClass);
     if (!lEvents.isEmpty()) {
       QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
 
