@@ -9,8 +9,10 @@ import org.openbravo.client.kernel.BaseActionHandler;
 import com.smf.webhookevents.webhook_util.WebHookUtil;
 
 /**
- * Queues an event from a javascript call.
- * 
+ * Queues an event from a javascript call. To call, use:
+ * OB.RemoteCallManager.call('com.smf.webhookevents.actionHandlers.queueEventFromJSActionHandler', {
+ * tableId: tableId, eventTypeId: eventTypeId, eventClass: eventClass, recordId: recordId }, {},
+ * callback);
  *
  */
 public class queueEventFromJSActionHandler extends BaseActionHandler {
