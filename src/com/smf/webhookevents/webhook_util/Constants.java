@@ -8,7 +8,7 @@ public class Constants {
   public final static String STRING_JSON = "JSON";
   public final static String STRING_XML = "XML";
   public final static String CREATE = "AC7B2E7BC9E4430BB346FD59BD9497C2";
-  public final static String UPDATE = "6092170021514006BD0F371BB599CC2F";
+  public final static String UPDATE = "476223272B3341F1A9A6D9FFABB4CF25";
   public final static String DELETE = "7F9DCD9FD812411CA2803F0E082AFF4D";
   public final static String XML_VERSION = "1.0";
   public final static String TYPE_PARAMETER_PATH = "P";

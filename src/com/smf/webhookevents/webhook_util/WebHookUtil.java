@@ -123,19 +123,21 @@ public class WebHookUtil {
    */
   public static void queueEvent(Table table, EventType eventType, String eventClass,
       String recordId) {
-    List<Events> lEvents = WebHookUtil.eventsFromTableName(eventType.getId(),
-        table.getDBTableName(), eventClass);
-    if (!lEvents.isEmpty()) {
-      QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
+    if (eventType != null && table != null) {
+      List<Events> lEvents = WebHookUtil.eventsFromTableName(eventType.getId(),
+          table.getDBTableName(), eventClass);
+      if (!lEvents.isEmpty()) {
+        QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
 
-      obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
-      obj.setCreationDate(new Date());
-      obj.setUpdated(new Date());
-      obj.setRecord(recordId);
-      obj.setTable(table);
-      obj.setSmfwheEvents(lEvents.get(0));
+        obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
+        obj.setCreationDate(new Date());
+        obj.setUpdated(new Date());
+        obj.setRecord(recordId);
+        obj.setTable(table);
+        obj.setSmfwheEvents(lEvents.get(0));
 
-      OBDal.getInstance().save(obj);
+        OBDal.getInstance().save(obj);
+      }
     }
   }
 
