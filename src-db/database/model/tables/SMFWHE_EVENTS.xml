@@ -37,10 +37,6 @@
         <default/>
         <onCreateDefault/>
       </column>
-      <column name="EXECUTEON" primaryKey="false" required="true" type="VARCHAR" size="60" autoIncrement="false">
-        <default/>
-        <onCreateDefault/>
-      </column>
       <column name="AD_TABLE_ID" primaryKey="false" required="true" type="VARCHAR" size="32" autoIncrement="false">
         <default/>
         <onCreateDefault/>
@@ -57,6 +53,18 @@
         <default/>
         <onCreateDefault/>
       </column>
+      <column name="SMFWHE_EVENT_TYPE_ID" primaryKey="false" required="false" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="EVENT_CLASS" primaryKey="false" required="true" type="VARCHAR" size="60" autoIncrement="false">
+        <default><![CDATA[EH]]></default>
+        <onCreateDefault/>
+      </column>
+      <column name="DYNAMIC_EVENT_JAVACLASS" primaryKey="false" required="false" type="VARCHAR" size="300" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
       <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_EVENTS_AD_CLIENT">
         <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
       </foreign-key>
@@ -68,6 +76,9 @@
       </foreign-key>
       <foreign-key foreignTable="AD_TABLE" name="SMFWHE_EVENTS_AD_TABLE">
         <reference local="AD_TABLE_ID" foreign="AD_TABLE_ID"/>
+      </foreign-key>
+      <foreign-key foreignTable="SMFWHE_EVENT_TYPE" name="SMFWHE_EVENTS_EVENT_TYPE">
+        <reference local="SMFWHE_EVENT_TYPE_ID" foreign="SMFWHE_EVENT_TYPE_ID"/>
       </foreign-key>
     </table>
   </database>

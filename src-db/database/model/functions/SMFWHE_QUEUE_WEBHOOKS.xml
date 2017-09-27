@@ -7,7 +7,7 @@
       <parameter name="table_id" type="VARCHAR" mode="in">
         <default/>
       </parameter>
-      <parameter name="event_id" type="VARCHAR" mode="in">
+      <parameter name="p_event_type" type="VARCHAR" mode="in">
         <default/>
       </parameter>
       <body><![CDATA[/*************************************************************************
@@ -32,6 +32,7 @@
   v_count NUMBER;
   v_Result NUMBER:=1; -- Success
   v_Message VARCHAR2(2000):='';
+  v_event_id VARCHAR2(32);
   BEGIN
     BEGIN
       --Smfwhe_Queue_Webhooks - Validation Process Extension Point
@@ -54,12 +55,20 @@
       
       --Start Process 
       smfwhe_queueeventhook_id := get_uuid();
-      --Insert data in queue
-      INSERT INTO smfwhe_queueeventhook(
-            smfwhe_queueeventhook_id, ad_client_id, ad_org_id, isactive, 
-            created, createdby, updated, updatedby, record, ad_table_id,smfwhe_events_id)
-      VALUES (smfwhe_queueeventhook_id, '0', '0','Y', 
-            now(), '100', now(), '100', record_id, table_id,event_id);
+
+      -- Validate Event
+      SELECT SMFWHE_EVENTS_ID INTO v_event_id 
+      FROM SMFWHE_EVENTS 
+      WHERE event_class = 'SP' and smfwhe_event_type_id = p_event_type and ad_table_id = table_id;
+
+      IF (v_event_id IS NOT NULL AND v_event_id != '') THEN
+        --Insert data in queue
+        INSERT INTO smfwhe_queueeventhook(
+              smfwhe_queueeventhook_id, ad_client_id, ad_org_id, isactive, 
+              created, createdby, updated, updatedby, record, ad_table_id,smfwhe_events_id)
+        VALUES (smfwhe_queueeventhook_id, '0', '0','Y', 
+              now(), '100', now(), '100', record_id, table_id,v_event_id);
+      END IF;
       --End Process
 
       --Smfwhe_Queue_Webhooks - Finish_Process Extension Point

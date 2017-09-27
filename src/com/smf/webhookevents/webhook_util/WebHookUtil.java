@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,7 +20,9 @@ import org.codehaus.jettison.json.JSONObject;
 import org.hibernate.criterion.Restrictions;
 import org.openbravo.base.model.Entity;
 import org.openbravo.base.model.ModelProvider;
+import org.openbravo.base.provider.OBProvider;
 import org.openbravo.base.structure.BaseOBObject;
+import org.openbravo.base.util.OBClassLoader;
 import org.openbravo.dal.core.DalUtil;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
@@ -27,17 +30,22 @@ import org.openbravo.dal.service.OBDal;
 import org.openbravo.database.ConnectionProvider;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.datamodel.Table;
+import org.openbravo.model.ad.utility.Tree;
 import org.openbravo.model.ad.utility.TreeNode;
+import org.openbravo.model.common.enterprise.Organization;
 import org.openbravo.service.db.DalConnectionProvider;
 
 import com.smf.webhookevents.annotation.InjectHook;
 import com.smf.webhookevents.data.Arguments;
 import com.smf.webhookevents.data.ArgumentsData;
+import com.smf.webhookevents.data.EventType;
 import com.smf.webhookevents.data.Events;
 import com.smf.webhookevents.data.JsonXmlData;
+import com.smf.webhookevents.data.QueueEventHook;
 import com.smf.webhookevents.data.UrlPathParam;
 import com.smf.webhookevents.data.Webhook;
 import com.smf.webhookevents.interfaces.ComputedFunction;
+import com.smf.webhookevents.interfaces.DynamicEventHandler;
 import com.smf.webhookevents.interfaces.DynamicNode;
 import com.smf.webhookevents.interfaces.IChangeDataHook;
 import com.thoughtworks.xstream.XStream;
@@ -52,6 +60,109 @@ public class WebHookUtil {
   @InjectHook
   @Any
   private static List<IChangeDataHook> hooks;
+
+  /**
+   * Inserts an event record in the queue.
+   * 
+   * @param tableId
+   *          Table the event is defined for
+   * @param eventTypeId
+   *          (On Create/Update/Delete, see Constant class for defaults).
+   * @param eventClass
+   *          Event Handler,Java,Stored Procedure(see Constant class or Reference List)
+   * @param recordId
+   *          ID of the record affected
+   */
+  public static void queueEvent(String tableId, String eventTypeId, String eventClass,
+      String recordId) {
+    Table table = OBDal.getInstance().get(Table.class, tableId);
+    EventType eventType = OBDal.getInstance().get(EventType.class, eventTypeId);
+
+    queueEvent(table, eventType, eventClass, recordId);
+
+  }
+
+  /**
+   * Inserts an event record in the queue. Special for events handlers, include Event Handler and
+   * Dynamic Event Handler Types
+   * 
+   * @param tableName
+   *          Table Name the event is defined for
+   * @param tableId
+   *          Table ID the event is defined for
+   * @param eventTypeId
+   *          (On Create/Update/Delete, see Constant class for defaults).
+   * @param recordId
+   *          ID of the record affected
+   */
+  public static void queueEventFromEventHandler(String tableName, String tableId,
+      String eventTypeId, String recordId) {
+    List<Events> lEvents = WebHookUtil.getEventHandlerClassEvents(eventTypeId, tableName);
+    if (!lEvents.isEmpty()) {
+      QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
+      Events event = lEvents.get(0);
+      String javaClass = event.getDynamicEventJavaclass();
+      boolean dynamicEventSuccess = true;
+
+      if (javaClass != null && !"".equals(javaClass)) {
+        try {
+          @SuppressWarnings("unchecked")
+          final Class<DynamicEventHandler> dynamicEventHandlerClass = (Class<DynamicEventHandler>) OBClassLoader
+              .getInstance().loadClass(javaClass);
+          final DynamicEventHandler dynamicEventHandler = dynamicEventHandlerClass.newInstance();
+
+          dynamicEventSuccess = dynamicEventHandler.execute(event.getTable(),
+              event.getSmfwheEventType(), recordId);
+
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+          dynamicEventSuccess = false;
+        }
+      }
+
+      if (dynamicEventSuccess) {
+        obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
+        obj.setCreationDate(new Date());
+        obj.setUpdated(new Date());
+        obj.setRecord(recordId);
+        obj.setTable(OBDal.getInstance().get(Table.class, tableId));
+        obj.setSmfwheEvents(event);
+
+        OBDal.getInstance().save(obj);
+      }
+    }
+  }
+
+  /**
+   * Inserts an event record in the queue.
+   * 
+   * @param table
+   *          Table the event is defined for
+   * @param eventType
+   *          (On Create/Update/Delete, see Constant class for defaults).
+   * @param eventClass
+   *          Event Handler,Java,Stored Procedure(see Constant class or Reference List)
+   * @param recordId
+   *          ID of the record affected
+   */
+  public static void queueEvent(Table table, EventType eventType, String eventClass,
+      String recordId) {
+    if (eventType != null && table != null) {
+      List<Events> lEvents = WebHookUtil.eventsFromTableName(eventType.getId(),
+          table.getDBTableName(), eventClass);
+      if (!lEvents.isEmpty()) {
+        QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
+
+        obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
+        obj.setCreationDate(new Date());
+        obj.setUpdated(new Date());
+        obj.setRecord(recordId);
+        obj.setTable(table);
+        obj.setSmfwheEvents(lEvents.get(0));
+
+        OBDal.getInstance().save(obj);
+      }
+    }
+  }
 
   /**
    * Call the all webhook defined in this event
@@ -114,7 +225,8 @@ public class WebHookUtil {
     String sendData = "";
     // Get the treeNode
     OBCriteria<TreeNode> cTreeNode = OBDal.getInstance().createCriteria(TreeNode.class);
-    cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_TREE + ".id", Constants.TREE_ID));
+    cTreeNode.createAlias(TreeNode.PROPERTY_TREE, "tree");
+    cTreeNode.add(Restrictions.eq("tree." + Tree.PROPERTY_NAME, Constants.TREE_NAME));
     cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_REPORTSET, "0"));
     cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_ACTIVE, true));
     WebHookInitializer.initialize();
@@ -150,7 +262,6 @@ public class WebHookUtil {
     logger.debug("nSending " + hook.getSmfwheEvents().getMethod() + "request to URL : " + url);
     logger.debug("Post Data : " + sendData);
     logger.debug("Response Code : " + responseCode);
-    logger.debug("Response:" + con.getContent());
 
     BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
     String output;
@@ -213,8 +324,8 @@ public class WebHookUtil {
             if (Constants.TYPE_VALUE_STRING.equals(node.getTypeValue())) {
               jsonMap.put(node.getName(), replaceValueData(node.getValue(), bob, logger));
             } else if (Constants.TYPE_VALUE_PROPERTY.equals(node.getTypeValue())) {
-              jsonMap.put(node.getName(), DalUtil.getValueFromPath(bob, node.getProperty())
-                  .toString());
+              jsonMap.put(node.getName(),
+                  DalUtil.getValueFromPath(bob, node.getProperty()).toString());
             } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(node.getTypeValue())) {
               // call the function
               jsonMap.put(node.getName(), getValueExecuteMethod(node, bob, logger, dynamicNode));
@@ -278,23 +389,63 @@ public class WebHookUtil {
   }
 
   /**
-   * Return a Events list from BaseOBObject send for parameter
+   * Return an Event list from a table name with the event type.
    * 
-   * @param Action
-   *          Defined in this class
+   * @param eventTypeId
+   *          ID for EventType object (see Constants class for defaults)
    * @param TableName
-   * @return Return the Events list
+   * @return Return the Event list
    */
-  public static List<Events> eventsFromBaseOBObject(String action, String tableName) {
+  public static List<Events> eventsFromTableName(String eventTypeId, String tableName) {
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
     cEvents.createAlias(Events.PROPERTY_TABLE, "table");
     cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
-    if (Constants.CREATE.equals(action) || Constants.UPDATE.equals(action)) {
-      cEvents.add(Restrictions.or(Restrictions.eq(Events.PROPERTY_EXECUTEON, action),
-          Restrictions.eq(Events.PROPERTY_EXECUTEON, Constants.CREATE_OR_UPDATE)));
-    } else {
-      cEvents.add(Restrictions.eq(Events.PROPERTY_EXECUTEON, action));
-    }
+    cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
+        eventTypeId));
+    cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
+    return cEvents.list();
+  }
+
+  /**
+   * Returns an Event list from a table name with the event type, and event class.
+   * 
+   * @param eventTypeId
+   *          ID for EventType object (see Constants class for defaults)
+   * @param tableName
+   * @param eventClass
+   *          event class (Event Handler, Stored Procedure, see Constants class or reference list
+   *          for details)
+   * @return
+   */
+  public static List<Events> eventsFromTableName(String eventTypeId, String tableName,
+      String eventClass) {
+    OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
+    cEvents.createAlias(Events.PROPERTY_TABLE, "table");
+    cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
+    cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
+        eventTypeId));
+    cEvents.add(Restrictions.eq(Events.PROPERTY_EVENTCLASS, eventClass));
+    cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
+    return cEvents.list();
+  }
+
+  /**
+   * Returns an event list for all (default) event handler types.
+   * 
+   * @param eventTypeId
+   *          ID for EventType object (see Constants class for defaults)
+   * @param tableName
+   *          Table Name
+   * @return
+   */
+  public static List<Events> getEventHandlerClassEvents(String eventTypeId, String tableName) {
+    OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
+    cEvents.createAlias(Events.PROPERTY_TABLE, "table");
+    cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
+    cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
+        eventTypeId));
+    cEvents.add(Restrictions.in(Events.PROPERTY_EVENTCLASS,
+        new String[] { Constants.DYNAMIC_EVENT_HANDLER, Constants.EVENT_HANDLER }));
     cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
     return cEvents.list();
   }
@@ -322,14 +473,13 @@ public class WebHookUtil {
           propertyError = s;
           throw new Exception();
         } else {
-          result.append(
-              s.contains(Constants.AT) ? DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1])
-                  : s).append(" ");
+          result.append(s.contains(Constants.AT)
+              ? DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1]) : s).append(" ");
         }
       }
     } catch (Exception e) {
-      String message = String.format(
-          Utility.messageBD(conn, "smfwhe_errorParserParameter", language), propertyError);
+      String message = String
+          .format(Utility.messageBD(conn, "smfwhe_errorParserParameter", language), propertyError);
       logger.error(message, e);
       throw new Exception(message);
     }
@@ -350,8 +500,8 @@ public class WebHookUtil {
       entities = new Entity[lEvents.size()];
       int i = 0;
       for (Events e : lEvents) {
-        entities[i] = ModelProvider.getInstance().getEntityByTableName(
-            e.getTable().getDBTableName());
+        entities[i] = ModelProvider.getInstance()
+            .getEntityByTableName(e.getTable().getDBTableName());
         i++;
       }
     } catch (Exception e) {
@@ -386,8 +536,8 @@ public class WebHookUtil {
     } else if (computedFunction.equals(compareClass)) {
       recordParam = (UrlPathParam) data;
     }
-    String classMethodName = recordParam == null ? recordData.getJavaClassName() : recordParam
-        .getJavaClassName();
+    String classMethodName = recordParam == null ? recordData.getJavaClassName()
+        : recordParam.getJavaClassName();
     String className = classMethodName;
     Class<?> clazz; // convert string classname to class
     String message = "";
@@ -396,23 +546,23 @@ public class WebHookUtil {
       Object dog = clazz.newInstance(); // invoke empty constructor
       if (dog.getClass().getInterfaces()[0].equals(compareClass)) {
         String methodName = "";
-        if (Constants.TYPE_VALUE_COMPUTED.equals(recordParam == null ? recordData.getTypeValue()
-            : recordParam.getTypeValue())) {
+        if (Constants.TYPE_VALUE_COMPUTED
+            .equals(recordParam == null ? recordData.getTypeValue() : recordParam.getTypeValue())) {
           methodName = Constants.METHOD_NAME;
-        } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(recordParam == null ? recordData
-            .getTypeValue() : recordParam.getTypeValue())) {
+        } else if (Constants.TYPE_VALUE_DYNAMIC_NODE
+            .equals(recordParam == null ? recordData.getTypeValue() : recordParam.getTypeValue())) {
           methodName = Constants.METHOD_NAME_DYNAMIC_NODE;
         }
         Method setNameMethod = dog.getClass().getMethod(methodName, HashMap.class);
         // set the parameters in hashmap
-        HashMap<Object, Object> params = recordParam == null ? getArgumentsForMethodData(
-            recordData.getSmfwheArgsDataList(), bob, logger) : getArgumentsForMethod(
-            recordParam.getSmfwheArgsList(), bob, logger);
+        HashMap<Object, Object> params = recordParam == null
+            ? getArgumentsForMethodData(recordData.getSmfwheArgsDataList(), bob, logger)
+            : getArgumentsForMethod(recordParam.getSmfwheArgsList(), bob, logger);
         result = setNameMethod.invoke(dog, params); // pass arg
       } else {
-        message = String
-            .format(Utility.messageBD(conn, "smfwhe_errorParserClassMethodName", language),
-                classMethodName);
+        message = String.format(
+            Utility.messageBD(conn, "smfwhe_errorParserClassMethodName", language),
+            classMethodName);
         throw new Exception(message);
       }
     } catch (Exception e) {
