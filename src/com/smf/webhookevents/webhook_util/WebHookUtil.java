@@ -22,6 +22,7 @@ import org.openbravo.base.model.Entity;
 import org.openbravo.base.model.ModelProvider;
 import org.openbravo.base.provider.OBProvider;
 import org.openbravo.base.structure.BaseOBObject;
+import org.openbravo.base.util.OBClassLoader;
 import org.openbravo.dal.core.DalUtil;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
@@ -44,6 +45,7 @@ import com.smf.webhookevents.data.QueueEventHook;
 import com.smf.webhookevents.data.UrlPathParam;
 import com.smf.webhookevents.data.Webhook;
 import com.smf.webhookevents.interfaces.ComputedFunction;
+import com.smf.webhookevents.interfaces.DynamicEventHandler;
 import com.smf.webhookevents.interfaces.DynamicNode;
 import com.smf.webhookevents.interfaces.IChangeDataHook;
 import com.thoughtworks.xstream.XStream;
@@ -98,15 +100,35 @@ public class WebHookUtil {
     List<Events> lEvents = WebHookUtil.getEventHandlerClassEvents(eventTypeId, tableName);
     if (!lEvents.isEmpty()) {
       QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
+      Events event = lEvents.get(0);
+      String javaClass = event.getDynamicEventJavaclass();
+      boolean dynamicEventSuccess = true;
 
-      obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
-      obj.setCreationDate(new Date());
-      obj.setUpdated(new Date());
-      obj.setRecord(recordId);
-      obj.setTable(OBDal.getInstance().get(Table.class, tableId));
-      obj.setSmfwheEvents(lEvents.get(0));
+      if (javaClass != null && !"".equals(javaClass)) {
+        try {
+          @SuppressWarnings("unchecked")
+          final Class<DynamicEventHandler> dynamicEventHandlerClass = (Class<DynamicEventHandler>) OBClassLoader
+              .getInstance().loadClass(javaClass);
+          final DynamicEventHandler dynamicEventHandler = dynamicEventHandlerClass.newInstance();
 
-      OBDal.getInstance().save(obj);
+          dynamicEventSuccess = dynamicEventHandler.execute(event.getTable(),
+              event.getSmfwheEventType(), recordId);
+
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+          dynamicEventSuccess = false;
+        }
+      }
+
+      if (dynamicEventSuccess) {
+        obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
+        obj.setCreationDate(new Date());
+        obj.setUpdated(new Date());
+        obj.setRecord(recordId);
+        obj.setTable(OBDal.getInstance().get(Table.class, tableId));
+        obj.setSmfwheEvents(event);
+
+        OBDal.getInstance().save(obj);
+      }
     }
   }
 
