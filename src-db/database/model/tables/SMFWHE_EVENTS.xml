@@ -61,6 +61,10 @@
         <default><![CDATA[EH]]></default>
         <onCreateDefault/>
       </column>
+      <column name="DYNAMIC_EVENT_JAVACLASS" primaryKey="false" required="false" type="VARCHAR" size="300" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
       <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_EVENTS_AD_CLIENT">
         <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
       </foreign-key>
