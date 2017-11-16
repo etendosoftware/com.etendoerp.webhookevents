@@ -55,8 +55,9 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
           if (!qBob.list().isEmpty()) {
             WebHookUtil.callWebHook(event, qBob.list().get(0), log);
             String message = String.format(
-                Utility.messageBD(conn, "smfwhe_SendCallWebHook", language), qBob.list().get(0)
-                    .getIdentifier());
+                Utility.messageBD(conn, "smfwhe_SendCallWebHook", language), event.getName(), qBob
+                    .list().get(0).getEntityName().toString()
+                    + " " + qBob.list().get(0).getIdentifier());
             logger.logln(message);
           }
           OBDal.getInstance().remove(obj);
@@ -67,8 +68,10 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
           }
         } catch (Exception ex) {
           String message = String.format(
-              Utility.messageBD(conn, "smfwhe_errorSendCallWebHook", language), qBob == null
-                  || qBob.list().isEmpty() ? "" : qBob.list().get(0).getIdentifier());
+              Utility.messageBD(conn, "smfwhe_errorSendCallWebHook", language), event.getName(),
+              qBob == null || qBob.list().isEmpty() ? "" : qBob.list().get(0).getEntityName()
+                  .toString()
+                  + " " + qBob.list().get(0).getIdentifier());
           log.error(message, ex);
           logger.logln(message);
           i++;
@@ -77,8 +80,10 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
       OBDal.getInstance().flush();
     } catch (Exception e) {
       String message = String.format(
-          Utility.messageBD(conn, "smfwhe_errorSendCallWebHook", language), qBob == null
-              || qBob.list().isEmpty() ? "" : qBob.list().get(0).getIdentifier());
+          Utility.messageBD(conn, "smfwhe_errorSendCallWebHook", language), event.getName(),
+          qBob == null || qBob.list().isEmpty() ? "" : qBob.list().get(0).getEntityName()
+              .toString()
+              + " " + qBob.list().get(0).getIdentifier());
       log.error(message, e);
       logger.logln(message);
       throw e;
