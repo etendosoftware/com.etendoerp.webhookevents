@@ -11,6 +11,10 @@ import org.openbravo.client.kernel.event.EntityNewEvent;
 import org.openbravo.client.kernel.event.EntityPersistenceEventObserver;
 import org.openbravo.client.kernel.event.EntityUpdateEvent;
 import org.openbravo.dal.core.DalUtil;
+import org.openbravo.dal.core.OBContext;
+import org.openbravo.database.ConnectionProvider;
+import org.openbravo.erpCommon.utility.Utility;
+import org.openbravo.service.db.DalConnectionProvider;
 
 import com.smf.webhookevents.data.ArgumentsData;
 import com.smf.webhookevents.webhook_util.Constants;
@@ -19,6 +23,8 @@ public class ArgumentsDataHandler extends EntityPersistenceEventObserver {
   private static Entity[] entities = { ModelProvider.getInstance().getEntity(
       ArgumentsData.ENTITY_NAME) };
   protected Logger logger = Logger.getLogger(this.getClass());
+  final private static String language = OBContext.getOBContext().getLanguage().getLanguage();
+  final private static ConnectionProvider conn = new DalConnectionProvider(false);
 
   @Override
   protected Entity[] getObservedEntities() {
@@ -62,10 +68,14 @@ public class ArgumentsDataHandler extends EntityPersistenceEventObserver {
   }
 
   public void valid(Entity entity, ArgumentsData arg) throws Exception {
+    String message = "";
     for (String s : arg.getValue().split(" ")) {
       if (s.contains(Constants.AT)) {
         if (DalUtil.getPropertyFromPath(entity, s.split(Constants.AT)[1]) == null) {
-          throw new Exception(s.split(Constants.AT)[1].toString());
+          message = String.format(Utility.messageBD(conn, "smfwhe_ErrorProperty", language),
+              s.split(Constants.AT)[1].toString());
+          // throw new Exception(s.split(Constants.AT)[1].toString());
+          throw new Exception(message);
         }
       }
     }

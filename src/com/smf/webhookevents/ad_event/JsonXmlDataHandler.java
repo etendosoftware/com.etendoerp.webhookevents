@@ -13,6 +13,10 @@ import org.openbravo.client.kernel.event.EntityNewEvent;
 import org.openbravo.client.kernel.event.EntityPersistenceEventObserver;
 import org.openbravo.client.kernel.event.EntityUpdateEvent;
 import org.openbravo.dal.core.DalUtil;
+import org.openbravo.dal.core.OBContext;
+import org.openbravo.database.ConnectionProvider;
+import org.openbravo.erpCommon.utility.Utility;
+import org.openbravo.service.db.DalConnectionProvider;
 
 import com.smf.webhookevents.data.JsonXmlData;
 import com.smf.webhookevents.webhook_util.Constants;
@@ -21,6 +25,8 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
   private static Entity[] entities = { ModelProvider.getInstance().getEntity(
       JsonXmlData.ENTITY_NAME) };
   protected Logger logger = Logger.getLogger(this.getClass());
+  final private static String language = OBContext.getOBContext().getLanguage().getLanguage();
+  final private static ConnectionProvider conn = new DalConnectionProvider(false);
 
   @Override
   protected Entity[] getObservedEntities() {
@@ -68,11 +74,15 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
   }
 
   public void valid(Entity entity, JsonXmlData pathParam) throws Exception {
+    String message = "";
     if (Constants.TYPE_VALUE_STRING.equals(pathParam.getTypeValue())) {
       for (String s : pathParam.getValue().split(" ")) {
         if (s.contains(Constants.AT)) {
           if (DalUtil.getPropertyFromPath(entity, s.split(Constants.AT)[1]) == null) {
-            throw new Exception(s.split(Constants.AT)[1].toString());
+            message = String.format(Utility.messageBD(conn, "smfwhe_ErrorProperty", language),
+                s.split(Constants.AT)[1].toString());
+            // throw new Exception(s.split(Constants.AT)[1].toString());
+            throw new Exception(message);
           }
         }
       }
@@ -99,7 +109,10 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
       }
     } else if (Constants.TYPE_VALUE_PROPERTY.equals(pathParam.getTypeValue())) {
       if (DalUtil.getPropertyFromPath(entity, pathParam.getProperty()) == null) {
-        throw new Exception(pathParam.getProperty());
+        message = String.format(Utility.messageBD(conn, "smfwhe_ErrorProperty", language),
+            pathParam.getProperty());
+        // throw new Exception(pathParam.getProperty());
+        throw new Exception(message);
       }
     }
   }
