@@ -18,8 +18,8 @@ import com.smf.webhookevents.data.JsonXmlData;
 import com.smf.webhookevents.webhook_util.Constants;
 
 public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
-  private static Entity[] entities = { ModelProvider.getInstance().getEntity(
-      JsonXmlData.ENTITY_NAME) };
+  private static Entity[] entities = {
+      ModelProvider.getInstance().getEntity(JsonXmlData.ENTITY_NAME) };
   protected Logger logger = Logger.getLogger(this.getClass());
 
   @Override
@@ -68,7 +68,8 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
   }
 
   public void valid(Entity entity, JsonXmlData pathParam) throws Exception {
-    if (Constants.TYPE_VALUE_STRING.equals(pathParam.getTypeValue())) {
+    if (Constants.TYPE_VALUE_STRING.equals(pathParam.getTypeValue())
+        && pathParam.getValue() != null) {
       for (String s : pathParam.getValue().split(" ")) {
         if (s.contains(Constants.AT)) {
           if (DalUtil.getPropertyFromPath(entity, s.split(Constants.AT)[1]) == null) {
@@ -85,11 +86,11 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
         if (dog.getClass().getInterfaces()[0]
             .equals(com.smf.webhookevents.interfaces.DynamicNode.class)) {
           String methodName = "";
-          if (Constants.TYPE_VALUE_COMPUTED.equals(pathParam == null ? pathParam.getTypeValue()
-              : pathParam.getTypeValue())) {
+          if (Constants.TYPE_VALUE_COMPUTED
+              .equals(pathParam == null ? pathParam.getTypeValue() : pathParam.getTypeValue())) {
             methodName = Constants.METHOD_NAME;
-          } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(pathParam == null ? pathParam
-              .getTypeValue() : pathParam.getTypeValue())) {
+          } else if (Constants.TYPE_VALUE_DYNAMIC_NODE
+              .equals(pathParam == null ? pathParam.getTypeValue() : pathParam.getTypeValue())) {
             methodName = Constants.METHOD_NAME_DYNAMIC_NODE;
           }
           dog.getClass().getMethod(methodName, HashMap.class);
