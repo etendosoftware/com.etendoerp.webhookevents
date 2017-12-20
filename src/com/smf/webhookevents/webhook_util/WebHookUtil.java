@@ -30,8 +30,6 @@ import org.openbravo.dal.service.OBDal;
 import org.openbravo.database.ConnectionProvider;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.datamodel.Table;
-import org.openbravo.model.ad.utility.Tree;
-import org.openbravo.model.ad.utility.TreeNode;
 import org.openbravo.model.common.enterprise.Organization;
 import org.openbravo.service.db.DalConnectionProvider;
 
@@ -223,16 +221,10 @@ public class WebHookUtil {
 
     // Verify if can data is json or xml
     String sendData = "";
-    // Get the treeNode
-    OBCriteria<TreeNode> cTreeNode = OBDal.getInstance().createCriteria(TreeNode.class);
-    cTreeNode.createAlias(TreeNode.PROPERTY_TREE, "tree");
-    cTreeNode.add(Restrictions.eq("tree." + Tree.PROPERTY_NAME, Constants.TREE_NAME));
-    cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_REPORTSET, "0"));
-    cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_ACTIVE, true));
     WebHookInitializer.initialize();
     if (hook.getTypedata().equals(Constants.STRING_JSON)) {
       JSONObject jsonResult = null;
-      Object res = generateDataParametersJSON(cTreeNode.list(), bob, logger);
+      Object res = generateDataParametersJSON(hook.getSmfwheJsonDataList(), bob, logger);
       if (hooks != null) {
         for (IChangeDataHook hookJava : hooks) {
           res = hookJava.postProcessJSON(res);
@@ -241,7 +233,7 @@ public class WebHookUtil {
       jsonResult = (JSONObject) res;
       sendData = jsonResult.toString();
     } else if (hook.getTypedata().equals(Constants.STRING_XML)) {
-      Object res = generateDataParametersJSON(cTreeNode.list(), bob, logger);
+      Object res = generateDataParametersJSON(hook.getSmfwheJsonDataList(), bob, logger);
       if (hooks != null) {
         for (IChangeDataHook hookJava : hooks) {
           res = hookJava.postProcessJSON(res);
@@ -281,7 +273,7 @@ public class WebHookUtil {
    * StandardParameter set
    * 
    * @param ListParameters
-   *          TreeNode list
+   *          JsonXmlData list
    * @param Bob
    *          BaseOBObject to generate data in XML
    * @param Logger
@@ -289,26 +281,26 @@ public class WebHookUtil {
    * @return Return data in format JSON
    * @throws Exception
    */
-  public static Object generateDataParametersJSON(List<TreeNode> list, BaseOBObject bob,
+  public static Object generateDataParametersJSON(List<JsonXmlData> list, BaseOBObject bob,
       Logger logger) throws Exception {
     JSONObject jsonMap = new JSONObject();
-    JsonXmlData node = null;
     LinkedList<Object> staticValues = new LinkedList<Object>();
     try {
-      for (TreeNode treeNode : list) {
-        node = OBDal.getInstance().get(JsonXmlData.class, treeNode.getNode());
+      for (JsonXmlData node : list) {
         if (node.isSummaryLevel()) {
-          OBCriteria<TreeNode> cTreeNode = OBDal.getInstance().createCriteria(TreeNode.class);
-          cTreeNode.add(Restrictions.eq(TreeNode.PROPERTY_REPORTSET, treeNode.getNode()));
+          OBCriteria<JsonXmlData> cParentNodes = OBDal.getInstance()
+              .createCriteria(JsonXmlData.class);
+          cParentNodes.add(Restrictions.eq(JsonXmlData.PROPERTY_PARENT, node));
           if (node.isArray()) {
-            Object res = generateDataParametersJSON(cTreeNode.list(), bob, logger);
+            Object res = generateDataParametersJSON(cParentNodes.list(), bob, logger);
             if (res instanceof LinkedList) {
               jsonMap.put(node.getName(), new JSONArray((LinkedList<?>) res));
             } else {
               jsonMap.put(node.getName(), new JSONArray().put(res));
             }
           } else {
-            jsonMap.put(node.getName(), generateDataParametersJSON(cTreeNode.list(), bob, logger));
+            jsonMap.put(node.getName(),
+                generateDataParametersJSON(cParentNodes.list(), bob, logger));
           }
         } else {
           if (node.getName() == null || node.getName().isEmpty()) {
