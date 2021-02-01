@@ -1,0 +1,57 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.smf</groupId>
+  <artifactId>webhookevents</artifactId>
+  <version>1.1.0</version>
+  <packaging>pom</packaging>
+
+  <name>Webhook Events</name>
+  <url>http://smfconsulting.es</url>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.smf</groupId>
+      <artifactId>classic.core.ob</artifactId>
+      <version>[20.2.1,20.2.2)</version>
+      <type>zip</type>
+    </dependency>
+  </dependencies>
+
+  <repositories>
+    <repository>
+      <id>smf</id>
+      <url>https://repo.futit.cloud/repository/smf-releases/</url>
+    </repository>
+  </repositories>
+
+  <distributionManagement>
+    <repository>
+      <id>smf</id>
+      <url>https://repo.futit.cloud/repository/smf-releases/</url>
+    </repository>
+  </distributionManagement>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <appendAssemblyId>false</appendAssemblyId>
+          <finalName>${project.groupId}.${project.artifactId}</finalName>
+          <descriptors>
+            <descriptor>${basedir}/assembly.xml</descriptor>
+          </descriptors>
+        </configuration>
+        <executions>
+          <execution>
+            <id>create-archive</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
