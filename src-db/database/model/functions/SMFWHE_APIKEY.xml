@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+  <database name="FUNCTION SMFWHE_APIKEY">
+    <function name="SMFWHE_APIKEY" type="VARCHAR">
+      <body><![CDATA[BEGIN
+    return (SELECT CONCAT(MD5((RANDOM())::text), MD5((RANDOM())::text)));
+END SMFWHE_APIKEY
+]]></body>
+    </function>
+  </database>

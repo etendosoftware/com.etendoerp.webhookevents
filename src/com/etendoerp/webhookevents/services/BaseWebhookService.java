@@ -15,12 +15,13 @@
  *
  */
 
-package com.etendoerp.webhookevents.interfaces;
+package com.etendoerp.webhookevents.services;
 
-public interface IChangeDataHook {
+import java.util.Map;
 
-  public Object postProcessJSON(Object obj) throws Exception;
-
-  public Object postProcessXML(Object xmlObject) throws Exception;
-
+/**
+ * Each developed webhook must extends this abstract class to be a valid webhook class
+ */
+public abstract class BaseWebhookService {
+  public abstract void get(Map<String, String> parameter, Map<String, String> responseVars);
 }

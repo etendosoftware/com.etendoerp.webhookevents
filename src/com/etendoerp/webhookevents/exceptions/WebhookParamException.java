@@ -15,12 +15,13 @@
  *
  */
 
-package com.etendoerp.webhookevents.interfaces;
+package com.etendoerp.webhookevents.exceptions;
 
-public interface IChangeDataHook {
-
-  public Object postProcessJSON(Object obj) throws Exception;
-
-  public Object postProcessXML(Object xmlObject) throws Exception;
-
+/**
+ * Exception throwed in case of problems with params
+ */
+public class WebhookParamException extends Exception {
+  public WebhookParamException(String message) {
+    super(message);
+  }
 }

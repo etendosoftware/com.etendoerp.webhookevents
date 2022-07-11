@@ -15,12 +15,13 @@
  *
  */
 
-package com.etendoerp.webhookevents.interfaces;
+package com.etendoerp.webhookevents.exceptions;
 
-public interface IChangeDataHook {
-
-  public Object postProcessJSON(Object obj) throws Exception;
-
-  public Object postProcessXML(Object xmlObject) throws Exception;
-
+/**
+ * Exception throwed in case of trigger a unexisting trigger
+ */
+public class WebhookNotfoundException extends Exception {
+  public WebhookNotfoundException(String message) {
+    super(message);
+  }
 }

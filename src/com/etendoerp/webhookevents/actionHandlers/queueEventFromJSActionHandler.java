@@ -19,11 +19,10 @@ package com.etendoerp.webhookevents.actionHandlers;
 
 import java.util.Map;
 
+import com.etendoerp.webhookevents.webhook_util.WebHookUtil;
 import org.codehaus.jettison.json.JSONObject;
 import org.openbravo.base.exception.OBException;
 import org.openbravo.client.kernel.BaseActionHandler;
-
-import com.etendoerp.webhookevents.webhook_util.WebHookUtil;
 
 /**
  * Queues an event from a javascript call. To call, use:

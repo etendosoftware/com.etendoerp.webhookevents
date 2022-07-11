@@ -31,6 +31,9 @@ import java.util.List;
 import javax.enterprise.inject.Any;
 import javax.net.ssl.HttpsURLConnection;
 
+import com.etendoerp.webhookevents.interfaces.DynamicEventHandler;
+import com.etendoerp.webhookevents.interfaces.DynamicNode;
+import com.etendoerp.webhookevents.interfaces.IChangeDataHook;
 import org.apache.log4j.Logger;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
@@ -60,17 +63,14 @@ import com.etendoerp.webhookevents.data.QueueEventHook;
 import com.etendoerp.webhookevents.data.UrlPathParam;
 import com.etendoerp.webhookevents.data.Webhook;
 import com.etendoerp.webhookevents.interfaces.ComputedFunction;
-import com.etendoerp.webhookevents.interfaces.DynamicEventHandler;
-import com.etendoerp.webhookevents.interfaces.DynamicNode;
-import com.etendoerp.webhookevents.interfaces.IChangeDataHook;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 
 public class WebHookUtil {
   final private static String language = OBContext.getOBContext().getLanguage().getLanguage();
   final private static ConnectionProvider conn = new DalConnectionProvider(false);
-  final private static Class<ComputedFunction> computedFunction = com.etendoerp.webhookevents.interfaces.ComputedFunction.class;
-  final private static Class<DynamicNode> dynamicNode = com.etendoerp.webhookevents.interfaces.DynamicNode.class;
+  final private static Class<ComputedFunction> computedFunction = ComputedFunction.class;
+  final private static Class<DynamicNode> dynamicNode = DynamicNode.class;
 
   @InjectHook
   @Any
