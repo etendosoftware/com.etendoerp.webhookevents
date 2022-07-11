@@ -1,4 +1,4 @@
-package com.smf.webhookevents.webhook_util;
+package com.etendoerp.webhookevents.webhook_util;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -33,27 +33,27 @@ import org.openbravo.model.ad.datamodel.Table;
 import org.openbravo.model.common.enterprise.Organization;
 import org.openbravo.service.db.DalConnectionProvider;
 
-import com.smf.webhookevents.annotation.InjectHook;
-import com.smf.webhookevents.data.Arguments;
-import com.smf.webhookevents.data.ArgumentsData;
-import com.smf.webhookevents.data.EventType;
-import com.smf.webhookevents.data.Events;
-import com.smf.webhookevents.data.JsonXmlData;
-import com.smf.webhookevents.data.QueueEventHook;
-import com.smf.webhookevents.data.UrlPathParam;
-import com.smf.webhookevents.data.Webhook;
-import com.smf.webhookevents.interfaces.ComputedFunction;
-import com.smf.webhookevents.interfaces.DynamicEventHandler;
-import com.smf.webhookevents.interfaces.DynamicNode;
-import com.smf.webhookevents.interfaces.IChangeDataHook;
+import com.etendoerp.webhookevents.annotation.InjectHook;
+import com.etendoerp.webhookevents.data.Arguments;
+import com.etendoerp.webhookevents.data.ArgumentsData;
+import com.etendoerp.webhookevents.data.EventType;
+import com.etendoerp.webhookevents.data.Events;
+import com.etendoerp.webhookevents.data.JsonXmlData;
+import com.etendoerp.webhookevents.data.QueueEventHook;
+import com.etendoerp.webhookevents.data.UrlPathParam;
+import com.etendoerp.webhookevents.data.Webhook;
+import com.etendoerp.webhookevents.interfaces.ComputedFunction;
+import com.etendoerp.webhookevents.interfaces.DynamicEventHandler;
+import com.etendoerp.webhookevents.interfaces.DynamicNode;
+import com.etendoerp.webhookevents.interfaces.IChangeDataHook;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 
 public class WebHookUtil {
   final private static String language = OBContext.getOBContext().getLanguage().getLanguage();
   final private static ConnectionProvider conn = new DalConnectionProvider(false);
-  final private static Class<ComputedFunction> computedFunction = com.smf.webhookevents.interfaces.ComputedFunction.class;
-  final private static Class<DynamicNode> dynamicNode = com.smf.webhookevents.interfaces.DynamicNode.class;
+  final private static Class<ComputedFunction> computedFunction = com.etendoerp.webhookevents.interfaces.ComputedFunction.class;
+  final private static Class<DynamicNode> dynamicNode = com.etendoerp.webhookevents.interfaces.DynamicNode.class;
 
   @InjectHook
   @Any

@@ -1,4 +1,4 @@
-package com.smf.webhookevents.ad_event;
+package com.etendoerp.webhookevents.ad_event;
 
 import javax.enterprise.event.Observes;
 
@@ -10,8 +10,8 @@ import org.openbravo.client.kernel.event.EntityNewEvent;
 import org.openbravo.client.kernel.event.EntityPersistenceEventObserver;
 import org.openbravo.client.kernel.event.EntityUpdateEvent;
 
-import com.smf.webhookevents.webhook_util.Constants;
-import com.smf.webhookevents.webhook_util.WebHookUtil;
+import com.etendoerp.webhookevents.webhook_util.Constants;
+import com.etendoerp.webhookevents.webhook_util.WebHookUtil;
 
 public class GenericEventHook extends EntityPersistenceEventObserver {
   protected Logger logger = Logger.getLogger(this.getClass());

@@ -1,4 +1,4 @@
-package com.smf.webhookevents.ad_event;
+package com.etendoerp.webhookevents.ad_event;
 
 import java.util.HashMap;
 
@@ -18,12 +18,12 @@ import org.openbravo.database.ConnectionProvider;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.service.db.DalConnectionProvider;
 
-import com.smf.webhookevents.data.JsonXmlData;
-import com.smf.webhookevents.webhook_util.Constants;
+import com.etendoerp.webhookevents.data.UrlPathParam;
+import com.etendoerp.webhookevents.webhook_util.Constants;
 
-public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
-  private static Entity[] entities = {
-      ModelProvider.getInstance().getEntity(JsonXmlData.ENTITY_NAME) };
+public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
+  private static Entity[] entities = { ModelProvider.getInstance().getEntity(
+      UrlPathParam.ENTITY_NAME) };
   protected Logger logger = Logger.getLogger(this.getClass());
   final private static String language = OBContext.getOBContext().getLanguage().getLanguage();
   final private static ConnectionProvider conn = new DalConnectionProvider(false);
@@ -37,13 +37,11 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    final JsonXmlData dataParam = (JsonXmlData) event.getTargetInstance();
+    final UrlPathParam pathParam = (UrlPathParam) event.getTargetInstance();
     try {
       Entity entity = ModelProvider.getInstance().getEntityByTableName(
-          dataParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
-      if (!dataParam.isSummaryLevel()) {
-        valid(entity, dataParam);
-      }
+          pathParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
+      valid(entity, pathParam);
     } catch (Exception e) {
       logger.error(e.toString(), e);
       throw new OBException(e);
@@ -54,13 +52,11 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
     if (!isValidEvent(event)) {
       return;
     }
-    final JsonXmlData dataParam = (JsonXmlData) event.getTargetInstance();
+    final UrlPathParam pathParam = (UrlPathParam) event.getTargetInstance();
     try {
       Entity entity = ModelProvider.getInstance().getEntityByTableName(
-          dataParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
-      if (!dataParam.isSummaryLevel()) {
-        valid(entity, dataParam);
-      }
+          pathParam.getSmfwheWebhook().getSmfwheEvents().getTable().getDBTableName());
+      valid(entity, pathParam);
     } catch (Exception e) {
       logger.error(e.toString(), e);
       throw new OBException(e);
@@ -73,10 +69,9 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
     }
   }
 
-  public void valid(Entity entity, JsonXmlData pathParam) throws Exception {
+  public void valid(Entity entity, UrlPathParam pathParam) throws Exception {
     String message = "";
-    if (Constants.TYPE_VALUE_STRING.equals(pathParam.getTypeValue())
-        && pathParam.getValue() != null) {
+    if (Constants.TYPE_VALUE_STRING.equals(pathParam.getTypeValue())) {
       for (String s : pathParam.getValue().split(" ")) {
         if (s.contains(Constants.AT)) {
           if (DalUtil.getPropertyFromPath(entity, s.split(Constants.AT)[1]) == null) {
@@ -87,22 +82,15 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
           }
         }
       }
-    } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(pathParam.getTypeValue())) {
+    } else if (Constants.TYPE_VALUE_COMPUTED.equals(pathParam.getTypeValue())) {
       String className = pathParam.getJavaClassName();
       Class<?> clazz; // convert string classname to class
       try {
         clazz = Class.forName(className);
         Object dog = clazz.newInstance(); // invoke empty constructor
         if (dog.getClass().getInterfaces()[0]
-            .equals(com.smf.webhookevents.interfaces.DynamicNode.class)) {
-          String methodName = "";
-          if (Constants.TYPE_VALUE_COMPUTED
-              .equals(pathParam == null ? pathParam.getTypeValue() : pathParam.getTypeValue())) {
-            methodName = Constants.METHOD_NAME;
-          } else if (Constants.TYPE_VALUE_DYNAMIC_NODE
-              .equals(pathParam == null ? pathParam.getTypeValue() : pathParam.getTypeValue())) {
-            methodName = Constants.METHOD_NAME_DYNAMIC_NODE;
-          }
+            .equals(com.etendoerp.webhookevents.interfaces.ComputedFunction.class)) {
+          String methodName = Constants.METHOD_NAME;
           dog.getClass().getMethod(methodName, HashMap.class);
         }
       } catch (Exception e1) {

@@ -1,4 +1,4 @@
-package com.smf.webhookevents.interfaces;
+package com.etendoerp.webhookevents.interfaces;
 
 
 public interface IChangeDataHook {

@@ -1,4 +1,4 @@
-package com.smf.webhookevents.webhook_util;
+package com.etendoerp.webhookevents.webhook_util;
 
 public class Constants {
   public final static String START_PARAMETER = "?";

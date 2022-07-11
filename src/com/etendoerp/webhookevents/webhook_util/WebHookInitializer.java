@@ -1,4 +1,4 @@
-package com.smf.webhookevents.webhook_util;
+package com.etendoerp.webhookevents.webhook_util;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -12,7 +12,7 @@ import javax.enterprise.util.AnnotationLiteral;
 
 import org.openbravo.base.weld.WeldUtils;
 
-import com.smf.webhookevents.annotation.InjectHook;
+import com.etendoerp.webhookevents.annotation.InjectHook;
 
 public class WebHookInitializer {
   @SuppressWarnings("serial")

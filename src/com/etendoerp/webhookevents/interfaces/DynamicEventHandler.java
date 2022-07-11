@@ -1,8 +1,8 @@
-package com.smf.webhookevents.interfaces;
+package com.etendoerp.webhookevents.interfaces;
 
 import org.openbravo.model.ad.datamodel.Table;
 
-import com.smf.webhookevents.data.EventType;
+import com.etendoerp.webhookevents.data.EventType;
 
 /**
  * Class to extend when defining Dynamic Event Handlers. The execute() methods can return false in

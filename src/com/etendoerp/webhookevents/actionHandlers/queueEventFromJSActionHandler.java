@@ -1,4 +1,4 @@
-package com.smf.webhookevents.actionHandlers;
+package com.etendoerp.webhookevents.actionHandlers;
 
 import java.util.Map;
 
@@ -6,11 +6,11 @@ import org.codehaus.jettison.json.JSONObject;
 import org.openbravo.base.exception.OBException;
 import org.openbravo.client.kernel.BaseActionHandler;
 
-import com.smf.webhookevents.webhook_util.WebHookUtil;
+import com.etendoerp.webhookevents.webhook_util.WebHookUtil;
 
 /**
  * Queues an event from a javascript call. To call, use:
- * OB.RemoteCallManager.call('com.smf.webhookevents.actionHandlers.queueEventFromJSActionHandler', {
+ * OB.RemoteCallManager.call('com.etendoerp.webhookevents.actionHandlers.queueEventFromJSActionHandler', {
  * tableId: tableId, eventTypeId: eventTypeId, eventClass: eventClass, recordId: recordId }, {},
  * callback);
  *

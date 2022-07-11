@@ -1,4 +1,4 @@
-package com.smf.webhookevents.ad_process;
+package com.etendoerp.webhookevents.ad_process;
 
 import org.apache.log4j.Logger;
 import org.hibernate.ScrollableResults;
@@ -15,9 +15,9 @@ import org.openbravo.scheduling.ProcessLogger;
 import org.openbravo.service.db.DalBaseProcess;
 import org.openbravo.service.db.DalConnectionProvider;
 
-import com.smf.webhookevents.data.Events;
-import com.smf.webhookevents.data.QueueEventHook;
-import com.smf.webhookevents.webhook_util.WebHookUtil;
+import com.etendoerp.webhookevents.data.Events;
+import com.etendoerp.webhookevents.data.QueueEventHook;
+import com.etendoerp.webhookevents.webhook_util.WebHookUtil;
 
 public class DequeueEventsFromQueue extends DalBaseProcess {
   final private static String language = OBContext.getOBContext().getLanguage().getLanguage();

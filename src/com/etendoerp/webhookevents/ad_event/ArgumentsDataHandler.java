@@ -1,4 +1,4 @@
-package com.smf.webhookevents.ad_event;
+package com.etendoerp.webhookevents.ad_event;
 
 import javax.enterprise.event.Observes;
 
@@ -16,8 +16,8 @@ import org.openbravo.database.ConnectionProvider;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.service.db.DalConnectionProvider;
 
-import com.smf.webhookevents.data.ArgumentsData;
-import com.smf.webhookevents.webhook_util.Constants;
+import com.etendoerp.webhookevents.data.ArgumentsData;
+import com.etendoerp.webhookevents.webhook_util.Constants;
 
 public class ArgumentsDataHandler extends EntityPersistenceEventObserver {
   private static Entity[] entities = { ModelProvider.getInstance().getEntity(
