@@ -21,6 +21,8 @@ import java.util.HashMap;
 
 import javax.enterprise.event.Observes;
 
+import com.etendoerp.webhookevents.interfaces.ComputedFunction;
+import com.etendoerp.webhookevents.webhook_util.Constants;
 import org.apache.log4j.Logger;
 import org.openbravo.base.exception.OBException;
 import org.openbravo.base.model.Entity;
@@ -36,7 +38,6 @@ import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.service.db.DalConnectionProvider;
 
 import com.etendoerp.webhookevents.data.UrlPathParam;
-import com.etendoerp.webhookevents.webhook_util.Constants;
 
 public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
   private static Entity[] entities = { ModelProvider.getInstance().getEntity(
@@ -106,7 +107,7 @@ public class UrlPathParameterHandler extends EntityPersistenceEventObserver {
         clazz = Class.forName(className);
         Object dog = clazz.newInstance(); // invoke empty constructor
         if (dog.getClass().getInterfaces()[0]
-            .equals(com.etendoerp.webhookevents.interfaces.ComputedFunction.class)) {
+            .equals(ComputedFunction.class)) {
           String methodName = Constants.METHOD_NAME;
           dog.getClass().getMethod(methodName, HashMap.class);
         }

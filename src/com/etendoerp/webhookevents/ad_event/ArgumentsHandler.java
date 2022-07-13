@@ -19,6 +19,7 @@ package com.etendoerp.webhookevents.ad_event;
 
 import javax.enterprise.event.Observes;
 
+import com.etendoerp.webhookevents.webhook_util.Constants;
 import org.apache.log4j.Logger;
 import org.openbravo.base.exception.OBException;
 import org.openbravo.base.model.Entity;
@@ -34,7 +35,6 @@ import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.service.db.DalConnectionProvider;
 
 import com.etendoerp.webhookevents.data.Arguments;
-import com.etendoerp.webhookevents.webhook_util.Constants;
 
 public class ArgumentsHandler extends EntityPersistenceEventObserver {
   private static Entity[] entities = { ModelProvider.getInstance().getEntity(Arguments.ENTITY_NAME) };

@@ -15,12 +15,13 @@
  *
  */
 
-package com.etendoerp.webhookevents.interfaces;
+package com.etendoerp.webhookevents.exceptions;
 
-public interface IChangeDataHook {
-
-  public Object postProcessJSON(Object obj) throws Exception;
-
-  public Object postProcessXML(Object xmlObject) throws Exception;
-
+/**
+ * Exception throwed in case of an auth exception
+ */
+public class WebhookAuthException extends Exception {
+  public WebhookAuthException(String message) {
+    super(message);
+  }
 }

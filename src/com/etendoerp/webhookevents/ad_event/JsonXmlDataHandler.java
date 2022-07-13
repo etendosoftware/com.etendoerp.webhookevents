@@ -21,6 +21,8 @@ import java.util.HashMap;
 
 import javax.enterprise.event.Observes;
 
+import com.etendoerp.webhookevents.interfaces.DynamicNode;
+import com.etendoerp.webhookevents.webhook_util.Constants;
 import org.apache.log4j.Logger;
 import org.openbravo.base.exception.OBException;
 import org.openbravo.base.model.Entity;
@@ -36,7 +38,6 @@ import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.service.db.DalConnectionProvider;
 
 import com.etendoerp.webhookevents.data.JsonXmlData;
-import com.etendoerp.webhookevents.webhook_util.Constants;
 
 public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
   private static Entity[] entities = {
@@ -111,7 +112,7 @@ public class JsonXmlDataHandler extends EntityPersistenceEventObserver {
         clazz = Class.forName(className);
         Object dog = clazz.newInstance(); // invoke empty constructor
         if (dog.getClass().getInterfaces()[0]
-            .equals(com.etendoerp.webhookevents.interfaces.DynamicNode.class)) {
+            .equals(DynamicNode.class)) {
           String methodName = "";
           if (Constants.TYPE_VALUE_COMPUTED
               .equals(pathParam == null ? pathParam.getTypeValue() : pathParam.getTypeValue())) {
