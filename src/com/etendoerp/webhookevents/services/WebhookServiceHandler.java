@@ -45,12 +45,16 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Main servlet handler for webhooks. This servlet routes webhooks request configured action
  */
 public class WebhookServiceHandler extends HttpBaseServlet {
   private static final Logger log = LogManager.getLogger();
+  enum HttpMethod {
+    GET, POST, PUT, DELETE
+  }
 
   /**
    * Method to handle auth methods and cases
@@ -187,30 +191,42 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   }
 
   /**
-   * Handler of GET requests. This is the entry point of the functionality
-   *
+   * Handle the request
+   * @param httpMethod
+   *    Http method of the request
    * @param request
-   *     an {@link HttpServletRequest} object that
-   *     contains the request the client has made
-   *     of the servlet
+   *   Http request object
    * @param response
-   *     an {@link HttpServletResponse} object that
-   *     contains the response the servlet sends
-   *     to the client
+   *   Http response object
    */
-  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+  private void handleRequest(HttpMethod httpMethod, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
     try {
       String apikey = request.getParameter("apikey");
       var access = checkKey(apikey);
-
       String name = request.getParameter("name");
       var webHook = getAction(name, access);
       var action = getInstance(webHook.getJavaClass());
+      JSONObject body;
+      try {
+        if (httpMethod == HttpMethod.GET) {
+          body = new JSONObject();
+          for (String key : request.getParameterMap().keySet()) {
+            body.put(key, request.getParameter(key));
+          }
+        } else {
+          body = new JSONObject(request.getReader().lines().collect(Collectors.joining()));
+        }
+      } catch (JSONException e) {
+        var message = Utility.messageBD(new DalConnectionProvider(false),
+            "smfwhe_cannotCollectData", OBContext.getOBContext().getLanguage().getLanguage());
+        log.error(message);
+        throw new WebhookParamException(message);
+      }
 
       Map<String, String> requestVars = new HashMap<>();
       var paramList = webHook.getSmfwheDefinedwebhookParamList();
       for (DefinedWebhookParam param : paramList) {
-        String val = request.getParameter(param.getName());
+        var val = body.getString(param.getName());
         if (param.isRequired() && val == null) {
           var message = Utility.messageBD(new DalConnectionProvider(false),
               "smfwhe_missingParameter", OBContext.getOBContext().getLanguage().getLanguage());
@@ -243,5 +259,37 @@ public class WebhookServiceHandler extends HttpBaseServlet {
         throw new OBException(ex);
       }
     }
+  }
+
+  /**
+   * Handler of GET requests.
+   *
+   * @param request
+   *     an {@link HttpServletRequest} object that
+   *     contains the request the client has made
+   *     of the servlet
+   * @param response
+   *     an {@link HttpServletResponse} object that
+   *     contains the response the servlet sends
+   *     to the client
+   */
+  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+    handleRequest(HttpMethod.GET, request, response);
+  }
+
+  /**
+   * Handler of POST requests.
+   *
+   * @param request
+   *     an {@link HttpServletRequest} object that
+   *     contains the request the client has made
+   *     of the servlet
+   * @param response
+   *     an {@link HttpServletResponse} object that
+   *     contains the response the servlet sends
+   *     to the client
+   */
+  public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+    handleRequest(HttpMethod.POST, request, response);
   }
 }
