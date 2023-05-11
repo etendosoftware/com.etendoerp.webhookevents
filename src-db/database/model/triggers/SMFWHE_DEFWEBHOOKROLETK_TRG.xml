@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+  <database name="TRIGGER SMFWHE_DEFWEBHOOKROLETK_TRG">
+    <trigger name="SMFWHE_DEFWEBHOOKROLETK_TRG" table="SMFWHE_DEFINEDWEBHOOK_TOKEN" fires="after" insert="true" update="false" delete="false" foreach="row">
+      <body><![CDATA[BEGIN
+ UPDATE smfwhe_definedwebhook_token 
+ SET apikey = (select smfwhe_apikey() from DUAL) 
+ WHERE smfwhe_definedwebhook_token_id = :NEW.smfwhe_definedwebhook_token_id ;
+ RETURN NEW;
+END SMFWHE_DEFWEBHOOKROLETK_TRG
+]]></body>
+    </trigger>
+  </database>
