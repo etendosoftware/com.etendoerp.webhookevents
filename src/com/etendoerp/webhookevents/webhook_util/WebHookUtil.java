@@ -454,7 +454,7 @@ public class WebHookUtil {
     cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
         eventTypeId));
     cEvents.add(Restrictions.in(Events.PROPERTY_EVENTCLASS,
-        new String[] { Constants.DYNAMIC_EVENT_HANDLER, Constants.EVENT_HANDLER }));
+        (Object[]) new String[]{ Constants.DYNAMIC_EVENT_HANDLER, Constants.EVENT_HANDLER }));
     cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
     return cEvents.list();
   }
