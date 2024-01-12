@@ -17,12 +17,15 @@
 
 package com.etendoerp.webhookevents.services;
 
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
+import com.etendoerp.webhookevents.data.DefinedwebhookRole;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 import com.etendoerp.webhookevents.exceptions.WebhookAuthException;
 import com.etendoerp.webhookevents.exceptions.WebhookNotfoundException;
 import com.etendoerp.webhookevents.exceptions.WebhookParamException;
+import com.smf.securewebservices.utils.SecureWebServicesUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,7 +38,10 @@ import org.openbravo.base.util.OBClassLoader;
 import org.openbravo.base.weld.WeldUtils;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
+import org.openbravo.database.SessionInfo;
 import org.openbravo.erpCommon.utility.Utility;
+import org.openbravo.model.ad.access.Role;
+import org.openbravo.model.ad.access.UserRoles;
 import org.openbravo.service.db.DalConnectionProvider;
 
 import javax.servlet.ServletException;
@@ -64,20 +70,39 @@ public class WebhookServiceHandler extends HttpBaseServlet {
    *
    * @return Token object
    */
-  private DefinedwebhookToken checkKey(String apikey) throws WebhookAuthException {
+  private DefinedwebhookToken checkUserSecurity(String apikey, String token) throws WebhookAuthException {
     try {
-      OBContext.setAdminMode();
+      // Check access by token
       var keyCriteria = OBDal.getInstance()
           .createCriteria(DefinedwebhookToken.class)
           .setFilterOnReadableClients(false)
-          .setFilterOnReadableOrganization(false);
+          .setFilterOnReadableOrganization(false)
+          .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, false));
       keyCriteria.add(Restrictions.eq(DefinedwebhookToken.PROPERTY_APIKEY, apikey));
       DefinedwebhookToken access = (DefinedwebhookToken) keyCriteria.uniqueResult();
+      if(access == null && token != null) {
+        try {
+          DecodedJWT decodedToken = SecureWebServicesUtils.decodeToken(token);
+          if (decodedToken != null) {
+            String roleId = decodedToken.getClaim("role").asString();
+            String userId = decodedToken.getClaim("user").asString();
+            var userRole = OBDal.getInstance().createQuery(UserRoles.class, "as e where e.role.id = :roleId and e.userContact.id = :userId")
+                .setNamedParameter("roleId", roleId)
+                .setNamedParameter("userId", userId)
+                .uniqueResult();
+            access = (DefinedwebhookToken) OBDal.getInstance().createCriteria(DefinedwebhookToken.class)
+                .setFilterOnReadableClients(false)
+                .setFilterOnReadableOrganization(false)
+                .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, true))
+                .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_USERROLE, userRole))
+                .uniqueResult();
+          }
+        } catch (Exception e) {
+          log.debug("Error decoding token", e);
+        }
+      }
       if (access == null) {
-        var message = Utility.messageBD(new DalConnectionProvider(false),
-            "smfwhe_apiKeyNotFound", OBContext.getOBContext().getLanguage().getLanguage());
-        log.error(message);
-        throw new WebhookAuthException(message);
+        return null;
       }
       var userRole = access.getUserRole();
       OBContext.setOBContext(userRole.getUserContact().getId(), userRole.getRole().getId(), userRole.getClient().getId(), userRole.getOrganization().getId());
@@ -92,8 +117,6 @@ public class WebhookServiceHandler extends HttpBaseServlet {
    *
    * @param name
    *     Webhook name
-   * @param access
-   *     Token Object to check allowance
    *
    * @return OBObject of the called webhook
    *
@@ -102,7 +125,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
    * @exception WebhookAuthException
    *     Exception triggered in case of auth issues
    */
-  private DefinedWebHook getAction(String name, DefinedwebhookToken access) throws WebhookNotfoundException, WebhookAuthException {
+  private DefinedWebHook getAction(String name) throws WebhookNotfoundException, WebhookAuthException {
     var criteria = OBDal.getInstance().createQuery(DefinedWebHook.class, "name = :name");
     criteria.setNamedParameter("name", name);
     var action = (DefinedWebHook) criteria.uniqueResult();
@@ -111,14 +134,6 @@ public class WebhookServiceHandler extends HttpBaseServlet {
           "smfwhe_actionNotFound", OBContext.getOBContext().getLanguage().getLanguage());
       log.error(message);
       throw new WebhookNotfoundException(message);
-    }
-    if (action.getSmfwheDefinedwebhookAccessList().stream()
-        .filter(p -> p.getSmfwheDefinedwebhookToken().getId().compareTo(access.getId()) == 0)
-        .count() == 0) {
-      var message = Utility.messageBD(new DalConnectionProvider(false),
-          "smfwhe_unauthorizedToken", OBContext.getOBContext().getLanguage().getLanguage());
-      log.error(message);
-      throw new WebhookAuthException(message);
     }
     return action;
   }
@@ -201,10 +216,45 @@ public class WebhookServiceHandler extends HttpBaseServlet {
    */
   private void handleRequest(HttpMethod httpMethod, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
     try {
-      String apikey = request.getParameter("apikey");
-      var access = checkKey(apikey);
+      OBContext.setAdminMode();
+      // Check if webhook exists
       String name = request.getParameter("name");
-      var webHook = getAction(name, access);
+      var webHook = getAction(name);
+
+      // Get JWT token if exists
+      String authStr = request.getHeader("Authorization");
+      String token = null;
+      if (authStr != null && authStr.startsWith("Bearer ")) {
+        token = authStr.substring(7);
+      }
+      // Get API Key if exists
+      String apikey = request.getParameter("apikey");
+      // Check if user is allowed to call webhook
+      var definedwebhookToken = checkUserSecurity(apikey, token);
+      boolean allow = false;
+      if(definedwebhookToken != null) {
+        allow = webHook.getSmfwheDefinedwebhookAccessList()
+          .stream()
+          .filter(p -> p.getSmfwheDefinedwebhookToken()
+              .getId()
+              .compareTo(definedwebhookToken.getId()) == 0)
+          .count() == 1;
+      }
+      if(!allow) {
+        // Check if user is allowed to call webhook by role
+        var groupAccess = checkGroupSecurity(request, token, webHook);
+        if(groupAccess != null) {
+          allow = true;
+        }
+      }
+      if(!allow) {
+        // User is not allowed to call webhook
+        var message = Utility.messageBD(new DalConnectionProvider(false),
+            "smfwhe_unauthorizedToken", OBContext.getOBContext().getLanguage().getLanguage());
+        log.error(message);
+        throw new WebhookNotfoundException(message);
+      }
+      // Get handler
       var action = getInstance(webHook.getJavaClass());
       JSONObject body;
       try {
@@ -259,6 +309,42 @@ public class WebhookServiceHandler extends HttpBaseServlet {
         throw new OBException(ex);
       }
     }
+  }
+
+  private DefinedwebhookRole checkGroupSecurity(HttpServletRequest request, String token,
+      DefinedWebHook webHook) {
+    try {
+      DecodedJWT decodedToken = SecureWebServicesUtils.decodeToken(token);
+      String userId = decodedToken.getClaim("user").asString();
+      String roleId = decodedToken.getClaim("role").asString();
+      String orgId = decodedToken.getClaim("organization").asString();
+      String warehouseId = decodedToken.getClaim("warehouse").asString();
+      String clientId = decodedToken.getClaim("client").asString();
+      if (userId == null || userId.isEmpty() || roleId == null || roleId.isEmpty() || orgId == null
+          || orgId.isEmpty() || warehouseId == null || warehouseId.isEmpty() || clientId == null || clientId.isEmpty()) {
+        throw new OBException("SWS - Token is not valid");
+      }
+      log.debug("SWS accessed by userId " + userId);
+      OBContext.setOBContext(
+          SecureWebServicesUtils.createContext(userId, roleId, orgId, warehouseId, clientId));
+      OBContext.setOBContextInSession(request, OBContext.getOBContext());
+      SessionInfo.setUserId(userId);
+      SessionInfo.setProcessType("WS");
+      SessionInfo.setProcessId("DAL");
+
+      if (decodedToken != null) {
+        Role role = OBDal.getInstance().get(Role.class, roleId);
+        return (DefinedwebhookRole) OBDal.getInstance().createCriteria(DefinedwebhookRole.class)
+            .setFilterOnReadableClients(false)
+            .setFilterOnReadableOrganization(false)
+            .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_SMFWHEDEFINEDWEBHOOK, webHook))
+            .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_ROLE, role))
+            .uniqueResult();
+      }
+    } catch (Exception e) {
+      log.debug("Error decoding token", e);
+    }
+    return null;
   }
 
   /**
