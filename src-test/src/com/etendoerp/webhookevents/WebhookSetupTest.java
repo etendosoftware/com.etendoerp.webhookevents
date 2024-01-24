@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import java.net.HttpURLConnection;
 
 import org.hibernate.criterion.Restrictions;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +25,15 @@ import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
 public class WebhookSetupTest extends WeldBaseTest {
+  WebhookUtils webhookUtils;
+  DefinedWebHook webhook;
+  DefinedwebhookToken token;
+  DefinedWebhookParam webhookParamName;
+  DefinedWebhookParam webhookParamDescription;
+  DefinedWebhookParam webhookParamRule;
+  DefinedwebhookAccess webhookAccess;
+  Alert alert;
+
   @Override
   @Before
   public void setUp() throws Exception {
@@ -37,71 +47,86 @@ public class WebhookSetupTest extends WeldBaseTest {
         OBContext.getOBContext().getRole().getId()
     );
     RequestContext.get().setVariableSecureApp(vsa);
+    webhookUtils = new WebhookUtils();
   }
 
   @Test
   @DisplayName("[WHE-002] Create Api Token")
   public void testCreateApiToken() {
-    WebhookUtils webhookUtils = new WebhookUtils();
-    DefinedwebhookToken token = webhookUtils.createApiToken();
+    try {
+      token = webhookUtils.createApiToken();
 
-    assertEquals("Etendo token", token.getName());
-    assertNotNull(token.getAPIKey());
-
-    webhookUtils.deleteWebhookToken(token);
+      assertEquals("Etendo token", token.getName());
+      assertNotNull(token.getAPIKey());
+    } finally {
+      webhookUtils.addObjectToDelete(token);
+    }
   }
 
   @Test
   @DisplayName("[WHE-003] Setup Webhook")
   public void testSetupWebhook() {
-    WebhookUtils webhookUtils = new WebhookUtils();
-    DefinedWebHook webhook = webhookUtils.createWebhook();
+    try {
+      webhook = webhookUtils.createWebhook();
 
-    assertEquals("Alert", webhook.getName());
-    assertEquals("Create an alert with custom message", webhook.getDescription());
-    assertEquals("JAVA", webhook.getEventClass());
-
-    webhookUtils.deleteWebhook(webhook);
+      assertEquals("Alert", webhook.getName());
+      assertEquals("Create an alert with custom message", webhook.getDescription());
+      assertEquals("JAVA", webhook.getEventClass());
+    } finally {
+      webhookUtils.addObjectToDelete(webhook);
+    }
   }
 
   @Test
   @DisplayName("[WHE-006], [WHE-007], [WHE-010] Configure Webhook params & access token, and create alert with webhook")
   public void testConfigureWebhookParams() {
-    WebhookUtils webhookUtils = new WebhookUtils();
-    DefinedWebHook webhook = webhookUtils.createWebhook();
-    DefinedwebhookToken token = webhookUtils.createApiToken();
-    DefinedWebhookParam webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME);
-    DefinedWebhookParam webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION);
-    DefinedWebhookParam webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE);
-    DefinedwebhookAccess webhookAccess = webhookUtils.createWebhookAccess(webhook, token);
+    try {
+      webhook = webhookUtils.createWebhook();
+      token = webhookUtils.createApiToken();
+      webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME);
+      webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION);
+      webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE);
+      webhookAccess = webhookUtils.createWebhookAccess(webhook, token);
 
+      OBDal.getInstance().commitAndClose();
+
+      webhookUtils.assertWebhookParams(webhookParamName.getName(), webhookParamDescription.getName(),
+          webhookParamRule.getName());
+      assertEquals(WebhookUtils.EXPECTED_TOKEN_NAME, webhookAccess.getSmfwheDefinedwebhookToken().getName());
+
+      String baseUrl = WebhookUtils.BASE_URL;
+      String name = webhook.getName();
+      String apiKey = token.getAPIKey();
+      String description = webhook.getDescription();
+      String rule = WebhookUtils.ALERT_RULE;
+
+      WebhookHttpResponse response = webhookUtils.sendGetRequest(baseUrl, name, apiKey, description, rule);
+      String alertId = response.getMessage();
+      assertNotNull(alertId);
+      assertEquals(HttpURLConnection.HTTP_OK, response.getStatusCode());
+
+      OBCriteria<Alert> alertCriteria = OBDal.getInstance().createCriteria(Alert.class);
+      alertCriteria.add(Restrictions.eq(Alert.ID, alertId));
+      alertCriteria.setMaxResults(1);
+
+      alert = (Alert) alertCriteria.uniqueResult();
+      assertEquals(description, alert.getDescription());
+      assertEquals(rule, alert.getAlertRule().getId());
+      assertEquals(alertId, alert.getId());
+    } finally {
+      webhookUtils.addObjectToDelete(webhookAccess);
+      webhookUtils.addObjectToDelete(token);
+      webhookUtils.addObjectToDelete(webhookParamName);
+      webhookUtils.addObjectToDelete(webhookParamDescription);
+      webhookUtils.addObjectToDelete(webhookParamRule);
+      webhookUtils.addObjectToDelete(webhook);
+      webhookUtils.addObjectToDelete(alert);
+    }
+  }
+
+  @After
+  public void tearDown() {
+    webhookUtils.deleteAll();
     OBDal.getInstance().commitAndClose();
-
-    webhookUtils.assertWebhookParams(webhookParamName.getName(), webhookParamDescription.getName(),
-        webhookParamRule.getName());
-    assertEquals(WebhookUtils.EXPECTED_TOKEN_NAME, webhookAccess.getSmfwheDefinedwebhookToken().getName());
-
-    String baseUrl = WebhookUtils.BASE_URL;
-    String name = webhook.getName();
-    String apiKey = token.getAPIKey();
-    String description = webhook.getDescription();
-    String rule = WebhookUtils.ALERT_RULE;
-
-    WebhookHttpResponse response = webhookUtils.sendGetRequest(baseUrl, name, apiKey, description, rule);
-    String alertId = response.getMessage();
-    assertNotNull(alertId);
-    assertEquals(HttpURLConnection.HTTP_OK, response.getStatusCode());
-
-    OBCriteria<Alert> alertCriteria = OBDal.getInstance().createCriteria(Alert.class);
-    alertCriteria.add(Restrictions.eq(Alert.ID, alertId));
-    alertCriteria.setMaxResults(1);
-
-    Alert alert = (Alert) alertCriteria.uniqueResult();
-    assertEquals(description, alert.getDescription());
-    assertEquals(rule, alert.getAlertRule().getId());
-    assertEquals(alertId, alert.getId());
-
-    webhookUtils.deleteAll(webhookAccess, token, webhookParamName, webhookParamDescription, webhookParamRule, webhook,
-        alert);
   }
 }

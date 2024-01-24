@@ -9,6 +9,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -181,9 +185,9 @@ public class WebhookUtils {
   }
 
   public void assertWebhookParams(String name, String description, String rule) {
-    assertEquals("name", name);
-    assertEquals("description", description);
-    assertEquals("rule", rule);
+    assertEquals(PARAM_NAME, name);
+    assertEquals(PARAM_DESCRIPTION, description);
+    assertEquals(PARAM_RULE, rule);
   }
 
   public void deleteWebhook(DefinedWebHook webhook) {
@@ -216,19 +220,19 @@ public class WebhookUtils {
     OBDal.getInstance().flush();
   }
 
-  protected void deleteAll(DefinedwebhookAccess webhookAccess, DefinedwebhookToken token,
-      DefinedWebhookParam paramName, DefinedWebhookParam paramDescription, DefinedWebhookParam paramRule,
-      DefinedWebHook webhook, Alert alert) {
-    if (webhookAccess != null) {
-      deleteWebhookAccess(webhookAccess);
+  private final List<Object> objectsToDelete = new ArrayList<>();
+
+  public void addObjectToDelete(Object object) {
+    objectsToDelete.add(object);
+  }
+
+  public void deleteAll() {
+    for (Object object : objectsToDelete) {
+      if (object != null) {
+        OBDal.getInstance().remove(object);
+        OBDal.getInstance().flush();
+      }
     }
-    deleteWebhookToken(token);
-    deleteWebhookParam(paramName);
-    deleteWebhookParam(paramDescription);
-    deleteWebhookParam(paramRule);
-    deleteWebhook(webhook);
-    if (alert != null) {
-      deleteAlert(alert);
-    }
+    objectsToDelete.clear();
   }
 }
