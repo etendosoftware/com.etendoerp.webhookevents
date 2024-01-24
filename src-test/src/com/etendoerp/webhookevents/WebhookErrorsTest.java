@@ -42,9 +42,9 @@ public class WebhookErrorsTest extends WeldBaseTest {
     WebhookUtils webhookUtils = new WebhookUtils();
     DefinedWebHook webhook = webhookUtils.createWebhook();
     DefinedwebhookToken token = webhookUtils.createApiToken();
-    DefinedWebhookParam webhookParamName = webhookUtils.createWebhookParam(webhook, "name");
-    DefinedWebhookParam webhookParamDescription = webhookUtils.createWebhookParam(webhook, "description");
-    DefinedWebhookParam webhookParamRule = webhookUtils.createWebhookParam(webhook, "rule");
+    DefinedWebhookParam webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME);
+    DefinedWebhookParam webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION);
+    DefinedWebhookParam webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE);
     DefinedwebhookAccess webhookAccess = webhookUtils.createWebhookAccess(webhook, token);
 
     OBDal.getInstance().commitAndClose();
@@ -73,9 +73,9 @@ public class WebhookErrorsTest extends WeldBaseTest {
     WebhookUtils webhookUtils = new WebhookUtils();
     DefinedWebHook webhook = webhookUtils.createWebhook();
     DefinedwebhookToken token = webhookUtils.createApiToken();
-    DefinedWebhookParam webhookParamName = webhookUtils.createWebhookParam(webhook, "name");
-    DefinedWebhookParam webhookParamDescription = webhookUtils.createWebhookParam(webhook, "description");
-    DefinedWebhookParam webhookParamRule = webhookUtils.createWebhookParam(webhook, "rule");
+    DefinedWebhookParam webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME);
+    DefinedWebhookParam webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION);
+    DefinedWebhookParam webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE);
     DefinedwebhookAccess webhookAccess = webhookUtils.createWebhookAccess(webhook, token);
 
     OBDal.getInstance().commitAndClose();
@@ -104,9 +104,9 @@ public class WebhookErrorsTest extends WeldBaseTest {
     WebhookUtils webhookUtils = new WebhookUtils();
     DefinedWebHook webhook = webhookUtils.createWebhook();
     DefinedwebhookToken token = webhookUtils.createApiToken();
-    DefinedWebhookParam webhookParamName = webhookUtils.createWebhookParam(webhook, "name");
-    DefinedWebhookParam webhookParamDescription = webhookUtils.createWebhookParam(webhook, "description");
-    DefinedWebhookParam webhookParamRule = webhookUtils.createWebhookParam(webhook, "rule");
+    DefinedWebhookParam webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME);
+    DefinedWebhookParam webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION);
+    DefinedWebhookParam webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE);
 
     OBDal.getInstance().commitAndClose();
 
@@ -132,9 +132,9 @@ public class WebhookErrorsTest extends WeldBaseTest {
     WebhookUtils webhookUtils = new WebhookUtils();
     DefinedWebHook webhook = webhookUtils.createWebhook();
     DefinedwebhookToken token = webhookUtils.createApiToken();
-    DefinedWebhookParam webhookParamName = webhookUtils.createWebhookParam(webhook, "name");
-    DefinedWebhookParam webhookParamDescription = webhookUtils.createWebhookParam(webhook, "description");
-    DefinedWebhookParam webhookParamRule = webhookUtils.createWebhookParam(webhook, "rule");
+    DefinedWebhookParam webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME);
+    DefinedWebhookParam webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION);
+    DefinedWebhookParam webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE);
     DefinedwebhookAccess webhookAccess = webhookUtils.createWebhookAccess(webhook, token);
 
     OBDal.getInstance().commitAndClose();

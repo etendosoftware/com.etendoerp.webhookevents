@@ -10,6 +10,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.openbravo.base.provider.OBProvider;
 import org.openbravo.dal.service.OBDal;
@@ -30,11 +31,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class WebhookUtils {
   private static final Logger log4j = Logger.getLogger(WebhookSetupTest.class);
 
-  final static String USER_ROLE_FBADMIN = "451EF9CDDFE54DEEAF5636CCADC0D7BB";
-  final static String AD_ORG_ID = "0"; // *
-  final static String BASE_URL = "http://localhost:8080/etendo/webhooks/";
-  final static String ALERT_RULE = "1000013"; // Products without defined price
-  final static String EXPECTED_TOKEN_NAME = "Etendo token";
+  static final String USER_ROLE_FBADMIN = "451EF9CDDFE54DEEAF5636CCADC0D7BB";
+  static final String AD_ORG_ID = "0"; // *
+  static final String BASE_URL = "http://localhost:8080/etendo/webhooks/";
+  static final String ALERT_RULE = "1000013"; // Products without defined price
+  static final String EXPECTED_TOKEN_NAME = "Etendo token";
+  static final String PARAM_NAME = "name";
+  static final String PARAM_DESCRIPTION = "description";
+  static final String PARAM_RULE = "rule";
 
   public DefinedwebhookToken createApiToken() {
     DefinedwebhookToken token = OBProvider.getInstance().get(DefinedwebhookToken.class);
@@ -137,7 +141,7 @@ public class WebhookUtils {
     try {
       String urlString = baseUrl + "?name=" + URLEncoder.encode(name, StandardCharsets.UTF_8) +
           "&apikey=" + URLEncoder.encode(apiKey, StandardCharsets.UTF_8);
-      if (description != null && !description.isEmpty()) {
+      if (StringUtils.isNotBlank(description)) {
         urlString += "&description=" + URLEncoder.encode(description, StandardCharsets.UTF_8);
       }
       urlString += "&rule=" + URLEncoder.encode(rule, StandardCharsets.UTF_8);
@@ -151,7 +155,7 @@ public class WebhookUtils {
       if (responseCode == HttpURLConnection.HTTP_OK) {
         BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String inputLine;
-        StringBuffer content = new StringBuffer();
+        StringBuilder content = new StringBuilder();
         while ((inputLine = in.readLine()) != null) {
           content.append(inputLine);
         }
@@ -161,7 +165,7 @@ public class WebhookUtils {
       } else {
         BufferedReader errorReader = new BufferedReader(new InputStreamReader(con.getErrorStream()));
         String errorInputLine;
-        StringBuffer errorContent = new StringBuffer();
+        StringBuilder errorContent = new StringBuilder();
         while ((errorInputLine = errorReader.readLine()) != null) {
           errorContent.append(errorInputLine);
         }
