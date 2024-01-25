@@ -18,7 +18,6 @@ import org.openbravo.base.provider.OBProvider;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.model.ad.access.User;
 import org.openbravo.model.ad.access.UserRoles;
-import org.openbravo.model.ad.alert.Alert;
 import org.openbravo.model.ad.system.Client;
 import org.openbravo.model.common.enterprise.Organization;
 import org.openbravo.test.base.TestConstants;
@@ -41,6 +40,10 @@ public class WebhookUtils {
   static final String PARAM_NAME = "name";
   static final String PARAM_DESCRIPTION = "description";
   static final String PARAM_RULE = "rule";
+  static final String WEBHOOK_NAME = "Alert";
+  static final String WEBHOOK_DESCRIPTION = "Create an alert with custom message";
+  static final String WEBHOOK_JAVACLASS = "com.etendoerp.webhookevents.ad_alert.AdAlertWebhookService";
+  static final String WEBHOOK_EVENTCLASS = "JAVA";
 
   public DefinedwebhookToken createApiToken() {
     DefinedwebhookToken token = OBProvider.getInstance().get(DefinedwebhookToken.class);
@@ -74,13 +77,13 @@ public class WebhookUtils {
     User user = OBDal.getInstance().get(User.class, TestConstants.Users.ADMIN);
 
     try {
-      webHook.setName("Alert");
+      webHook.setName(WEBHOOK_NAME);
       webHook.setClient(client);
       webHook.setOrganization(org);
       webHook.setCreatedBy(user);
-      webHook.setDescription("Create an alert with custom message");
-      webHook.setJavaClass("com.etendoerp.webhookevents.ad_alert.AdAlertWebhookService");
-      webHook.setEventClass("JAVA");
+      webHook.setDescription(WEBHOOK_DESCRIPTION);
+      webHook.setJavaClass(WEBHOOK_JAVACLASS);
+      webHook.setEventClass(WEBHOOK_EVENTCLASS);
 
       OBDal.getInstance().save(webHook);
       OBDal.getInstance().flush();
