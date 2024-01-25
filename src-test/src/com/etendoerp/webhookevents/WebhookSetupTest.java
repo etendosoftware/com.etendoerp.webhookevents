@@ -56,7 +56,7 @@ public class WebhookSetupTest extends WeldBaseTest {
     try {
       token = webhookUtils.createApiToken();
 
-      assertEquals("Etendo token", token.getName());
+      assertEquals(WebhookUtils.EXPECTED_TOKEN_NAME, token.getName());
       assertNotNull(token.getAPIKey());
     } finally {
       webhookUtils.addObjectToDelete(token);
@@ -69,9 +69,9 @@ public class WebhookSetupTest extends WeldBaseTest {
     try {
       webhook = webhookUtils.createWebhook();
 
-      assertEquals("Alert", webhook.getName());
-      assertEquals("Create an alert with custom message", webhook.getDescription());
-      assertEquals("JAVA", webhook.getEventClass());
+      assertEquals(WebhookUtils.WEBHOOK_NAME, webhook.getName());
+      assertEquals(WebhookUtils.WEBHOOK_DESCRIPTION, webhook.getDescription());
+      assertEquals(WebhookUtils.WEBHOOK_EVENTCLASS, webhook.getEventClass());
     } finally {
       webhookUtils.addObjectToDelete(webhook);
     }
