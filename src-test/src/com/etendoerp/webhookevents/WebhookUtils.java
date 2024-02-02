@@ -40,6 +40,7 @@ public class WebhookUtils {
   static final String PARAM_NAME = "name";
   static final String PARAM_DESCRIPTION = "description";
   static final String PARAM_RULE = "rule";
+  static final String PARAM_NO_REQUIRED = "noRequired";
   static final String WEBHOOK_NAME = "Alert";
   static final String WEBHOOK_DESCRIPTION = "Create an alert with custom message";
   static final String WEBHOOK_JAVACLASS = "com.etendoerp.webhookevents.ad_alert.AdAlertWebhookService";
@@ -95,7 +96,7 @@ public class WebhookUtils {
     return webHook;
   }
 
-  public DefinedWebhookParam createWebhookParam(DefinedWebHook webhook, String name) {
+  public DefinedWebhookParam createWebhookParam(DefinedWebHook webhook, String name, boolean isRequired) {
     DefinedWebhookParam webhookParam = OBProvider.getInstance().get(DefinedWebhookParam.class);
     Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.FB_GRP);
     Organization org = OBDal.getInstance().get(Organization.class, WebhookUtils.AD_ORG_ID);
@@ -107,6 +108,7 @@ public class WebhookUtils {
       webhookParam.setClient(client);
       webhookParam.setOrganization(org);
       webhookParam.setCreatedBy(user);
+      webhookParam.setRequired(isRequired);
 
       OBDal.getInstance().save(webhookParam);
       OBDal.getInstance().flush();
@@ -189,6 +191,14 @@ public class WebhookUtils {
     assertEquals(PARAM_NAME, name);
     assertEquals(PARAM_DESCRIPTION, description);
     assertEquals(PARAM_RULE, rule);
+  }
+
+  public void assertWebhookParams(String name, String description, String rule, String paramNoRequired) {
+    assertEquals(PARAM_NAME, name);
+    assertEquals(PARAM_DESCRIPTION, description);
+    assertEquals(PARAM_RULE, rule);
+    assertEquals(PARAM_NO_REQUIRED, paramNoRequired);
+
   }
 
   private final List<Object> objectsToDelete = new ArrayList<>();

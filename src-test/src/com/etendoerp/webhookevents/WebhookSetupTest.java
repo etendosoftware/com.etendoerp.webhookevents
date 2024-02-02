@@ -83,9 +83,9 @@ public class WebhookSetupTest extends WeldBaseTest {
     try {
       webhook = webhookUtils.createWebhook();
       token = webhookUtils.createApiToken();
-      webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME);
-      webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION);
-      webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE);
+      webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
+      webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
+      webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE, true);
       webhookAccess = webhookUtils.createWebhookAccess(webhook, token);
 
       OBDal.getInstance().commitAndClose();
@@ -121,6 +121,56 @@ public class WebhookSetupTest extends WeldBaseTest {
       webhookUtils.addObjectToDelete(webhookParamRule);
       webhookUtils.addObjectToDelete(webhook);
       webhookUtils.addObjectToDelete(alert);
+    }
+  }
+
+  @Test
+  @DisplayName("[WHE-015] Make a Get Request without a parameter marked as no required")
+  public void testMakeGetRequestWithMissingParameterNotRequired() {
+    DefinedWebhookParam webhookParamNoRequired = null;
+    try {
+      webhook = webhookUtils.createWebhook();
+      token = webhookUtils.createApiToken();
+      webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
+      webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
+      webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE, true);
+      webhookParamNoRequired = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NO_REQUIRED, false);
+      webhookAccess = webhookUtils.createWebhookAccess(webhook, token);
+
+      OBDal.getInstance().commitAndClose();
+
+      webhookUtils.assertWebhookParams(webhookParamName.getName(), webhookParamDescription.getName(),
+          webhookParamRule.getName(), webhookParamNoRequired.getName());
+      assertEquals(WebhookUtils.EXPECTED_TOKEN_NAME, webhookAccess.getSmfwheDefinedwebhookToken().getName());
+
+      String baseUrl = WebhookUtils.BASE_URL;
+      String name = webhook.getName();
+      String apiKey = token.getAPIKey();
+      String description = webhook.getDescription();
+      String rule = WebhookUtils.ALERT_RULE;
+
+      // Create alert without the webhook param no required
+      WebhookHttpResponse response = webhookUtils.sendGetRequest(baseUrl, name, apiKey, description, rule);
+      String alertId = response.getMessage();
+      assertNotNull(alertId);
+      assertEquals(HttpURLConnection.HTTP_OK, response.getStatusCode());
+
+      OBCriteria<Alert> alertCriteria = OBDal.getInstance().createCriteria(Alert.class);
+      alertCriteria.add(Restrictions.eq(Alert.ID, alertId));
+      alertCriteria.setMaxResults(1);
+
+      alert = (Alert) alertCriteria.uniqueResult();
+      assertEquals(description, alert.getDescription());
+      assertEquals(rule, alert.getAlertRule().getId());
+      assertEquals(alertId, alert.getId());
+    } finally {
+      webhookUtils.addObjectToDelete(webhookAccess);
+      webhookUtils.addObjectToDelete(token);
+      webhookUtils.addObjectToDelete(webhookParamName);
+      webhookUtils.addObjectToDelete(webhookParamDescription);
+      webhookUtils.addObjectToDelete(webhookParamRule);
+      webhookUtils.addObjectToDelete(webhookParamNoRequired);
+      webhookUtils.addObjectToDelete(webhook);
     }
   }
 
