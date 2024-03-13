@@ -61,6 +61,9 @@ repositories {
 * Ex: implementation "com.sun.mail:javax.mail:1.6.2"
 */
 dependencies {
+   implementation('org.apache.camel:camel-xstream:3.5.0')
+   implementation('com.thoughtworks.xstream:xstream:1.4.12')
+
    implementation('com.etendoerp.platform:etendo-core:[22.1.0,24.1.0)')
 
 }
