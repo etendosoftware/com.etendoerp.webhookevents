@@ -23,6 +23,7 @@ import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 import com.etendoerp.webhookevents.exceptions.WebhookAuthException;
 import com.etendoerp.webhookevents.exceptions.WebhookNotfoundException;
 import com.etendoerp.webhookevents.exceptions.WebhookParamException;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -226,8 +227,11 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       Map<String, String> requestVars = new HashMap<>();
       var paramList = webHook.getSmfwheDefinedwebhookParamList();
       for (DefinedWebhookParam param : paramList) {
-        var val = body.getString(param.getName());
-        if (param.isRequired() && val == null) {
+        String val = null;
+        if(body.has(param.getName())) {
+          val = body.getString(param.getName());
+        }
+        if (param.isRequired() && StringUtils.isEmpty(val)) {
           var message = Utility.messageBD(new DalConnectionProvider(false),
               "smfwhe_missingParameter", OBContext.getOBContext().getLanguage().getLanguage());
           log.error(message);
