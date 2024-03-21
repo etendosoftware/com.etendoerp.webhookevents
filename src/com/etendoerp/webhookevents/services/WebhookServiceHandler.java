@@ -136,14 +136,6 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       log.error(message);
       throw new WebhookNotfoundException(message);
     }
-    if (action.getSmfwheDefinedwebhookAccessList().stream()
-        .filter(p -> p.getSmfwheDefinedwebhookToken().getId().compareTo(access.getId()) == 0)
-        .count() == 0) {
-      var message = Utility.messageBD(new DalConnectionProvider(false),
-          "smfwhe_unauthorizedToken", OBContext.getOBContext().getLanguage().getLanguage());
-      log.error(message);
-      throw new WebhookAuthException(message);
-    }
     return action;
   }
 
