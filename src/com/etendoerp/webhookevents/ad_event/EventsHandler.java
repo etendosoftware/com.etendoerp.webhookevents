@@ -60,11 +60,7 @@ public class EventsHandler extends EntityPersistenceEventObserver {
           "smfwhe_eventAlreadyExists", OBContext.getOBContext().getLanguage().getLanguage()),
           events.getIdentifier());
       logger.info(message);
-      try {
-        throw new OBException(message);
-      } catch (Exception e) {
-        throw e;
-      }
+      throw new OBException(message);
     }
   }
 
@@ -82,17 +78,7 @@ public class EventsHandler extends EntityPersistenceEventObserver {
           "smfwhe_eventAlreadyExists", OBContext.getOBContext().getLanguage().getLanguage()),
           events.getIdentifier());
       logger.info(message);
-      try {
-        throw new OBException(message);
-      } catch (Exception e) {
-        throw e;
-      }
-    }
-  }
-
-  public void onDelete(@Observes EntityDeleteEvent event) {
-    if (!isValidEvent(event)) {
-      return;
+      throw new OBException(message);
     }
   }
 }

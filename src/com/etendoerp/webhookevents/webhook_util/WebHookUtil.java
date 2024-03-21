@@ -19,14 +19,13 @@ package com.etendoerp.webhookevents.webhook_util;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 import javax.enterprise.inject.Any;
 import javax.net.ssl.HttpsURLConnection;
@@ -34,10 +33,14 @@ import javax.net.ssl.HttpsURLConnection;
 import com.etendoerp.webhookevents.interfaces.DynamicEventHandler;
 import com.etendoerp.webhookevents.interfaces.DynamicNode;
 import com.etendoerp.webhookevents.interfaces.IChangeDataHook;
+import org.apache.commons.lang.BooleanUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.hibernate.criterion.Restrictions;
+import org.openbravo.base.exception.OBException;
 import org.openbravo.base.model.Entity;
 import org.openbravo.base.model.ModelProvider;
 import org.openbravo.base.provider.OBProvider;
@@ -67,10 +70,14 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 
 public class WebHookUtil {
-  final private static String language = OBContext.getOBContext().getLanguage().getLanguage();
-  final private static ConnectionProvider conn = new DalConnectionProvider(false);
-  final private static Class<ComputedFunction> computedFunction = ComputedFunction.class;
-  final private static Class<DynamicNode> dynamicNode = DynamicNode.class;
+  private WebHookUtil() {
+  }
+
+  private static final String LANGUAGE = OBContext.getOBContext().getLanguage().getLanguage();
+  private static final ConnectionProvider conn = new DalConnectionProvider(false);
+  private static final Class<ComputedFunction> computedFunction = ComputedFunction.class;
+  private static final Class<DynamicNode> dynamicNode = DynamicNode.class;
+  public static final String TABLE = "table";
 
   @InjectHook
   @Any
@@ -78,15 +85,11 @@ public class WebHookUtil {
 
   /**
    * Inserts an event record in the queue.
-   * 
-   * @param tableId
-   *          Table the event is defined for
-   * @param eventTypeId
-   *          (On Create/Update/Delete, see Constant class for defaults).
-   * @param eventClass
-   *          Event Handler,Java,Stored Procedure(see Constant class or Reference List)
-   * @param recordId
-   *          ID of the record affected
+   *
+   * @param tableId     Table the event is defined for
+   * @param eventTypeId (On Create/Update/Delete, see Constant class for defaults).
+   * @param eventClass  Event Handler,Java,Stored Procedure(see Constant class or Reference List)
+   * @param recordId    ID of the record affected
    */
   public static void queueEvent(String tableId, String eventTypeId, String eventClass,
       String recordId) {
@@ -100,15 +103,11 @@ public class WebHookUtil {
   /**
    * Inserts an event record in the queue. Special for events handlers, include Event Handler and
    * Dynamic Event Handler Types
-   * 
-   * @param tableName
-   *          Table Name the event is defined for
-   * @param tableId
-   *          Table ID the event is defined for
-   * @param eventTypeId
-   *          (On Create/Update/Delete, see Constant class for defaults).
-   * @param recordId
-   *          ID of the record affected
+   *
+   * @param tableName   Table Name the event is defined for
+   * @param tableId     Table ID the event is defined for
+   * @param eventTypeId (On Create/Update/Delete, see Constant class for defaults).
+   * @param recordId    ID of the record affected
    */
   public static void queueEventFromEventHandler(String tableName, String tableId,
       String eventTypeId, String recordId) {
@@ -119,18 +118,21 @@ public class WebHookUtil {
       String javaClass = event.getDynamicEventJavaclass();
       boolean dynamicEventSuccess = true;
 
-      if (javaClass != null && !"".equals(javaClass)) {
+      if (javaClass != null && !StringUtils.isEmpty(javaClass)) {
         try {
-          @SuppressWarnings("unchecked")
-          final Class<DynamicEventHandler> dynamicEventHandlerClass = (Class<DynamicEventHandler>) OBClassLoader
-              .getInstance().loadClass(javaClass);
-          final DynamicEventHandler dynamicEventHandler = dynamicEventHandlerClass.newInstance();
+          @SuppressWarnings("unchecked") final Class<DynamicEventHandler> dynamicEventHandlerClass = (Class<DynamicEventHandler>) OBClassLoader.getInstance()
+              .loadClass(javaClass);
+          final DynamicEventHandler dynamicEventHandler = dynamicEventHandlerClass.getDeclaredConstructor()
+              .newInstance();
 
           dynamicEventSuccess = dynamicEventHandler.execute(event.getTable(),
               event.getSmfwheEventType(), recordId);
 
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+                 NoSuchMethodException e) {
           dynamicEventSuccess = false;
+        } catch (InvocationTargetException e) {
+          throw new OBException(e);
         }
       }
 
@@ -149,15 +151,11 @@ public class WebHookUtil {
 
   /**
    * Inserts an event record in the queue.
-   * 
-   * @param table
-   *          Table the event is defined for
-   * @param eventType
-   *          (On Create/Update/Delete, see Constant class for defaults).
-   * @param eventClass
-   *          Event Handler,Java,Stored Procedure(see Constant class or Reference List)
-   * @param recordId
-   *          ID of the record affected
+   *
+   * @param table      Table the event is defined for
+   * @param eventType  (On Create/Update/Delete, see Constant class for defaults).
+   * @param eventClass Event Handler,Java,Stored Procedure(see Constant class or Reference List)
+   * @param recordId   ID of the record affected
    */
   public static void queueEvent(Table table, EventType eventType, String eventClass,
       String recordId) {
@@ -181,38 +179,32 @@ public class WebHookUtil {
 
   /**
    * Call the all webhook defined in this event
-   * 
-   * @param Event
-   *          Events
-   * @param Bob
-   *          BaseOBObject to generate data (JSON or XML)
-   * @param Logger
-   *          Info logger in log
-   * @throws Exception
+   *
+   * @param event  Events
+   * @param bob    BaseOBObject to generate data (JSON or XML)
+   * @param logger Info logger in log
+   * @throws OBException
    */
-  public static void callWebHook(Events event, BaseOBObject bob, Logger logger) throws Exception {
+  public static void callWebHook(Events event, BaseOBObject bob, Logger logger) throws OBException {
     OBCriteria<Webhook> cWebhook = OBDal.getInstance().createCriteria(Webhook.class);
     cWebhook.add(Restrictions.eq(Webhook.PROPERTY_SMFWHEEVENTS, event));
     for (Webhook hook : cWebhook.list()) {
       try {
-        if (hook.isActive()) {
+        if (BooleanUtils.isTrue(hook.isActive())) {
           sendEvent(hook, bob, logger);
         }
       } catch (Exception e) {
-        throw new Exception(e);
+        throw new OBException(e);
       }
     }
   }
 
   /**
    * Send the request to url to notify defined in webhook
-   * 
-   * @param Hook
-   *          Webhook defined in events
-   * @param Bob
-   *          BaseOBObject to generate data (JSON or XML)
-   * @param Logger
-   *          Info logger in log
+   *
+   * @param hook   Webhook defined in events
+   * @param bob    BaseOBObject to generate data (JSON or XML)
+   * @param logger Info logger in log
    * @throws Exception
    */
   public static void sendEvent(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
@@ -220,16 +212,10 @@ public class WebHookUtil {
     OBCriteria<UrlPathParam> cUrlPathParam = OBDal.getInstance().createCriteria(UrlPathParam.class);
     cUrlPathParam.add(Restrictions.eq(UrlPathParam.PROPERTY_TYPEPARAMETER, "P"));
 
-    String url = generateUrlParameter(cUrlPathParam.list(), hook.getUrlnotify(), bob, logger)
-        .toLowerCase();
+    String url = generateUrlParameter(cUrlPathParam.list(), hook.getUrlnotify(), bob,
+        logger).toLowerCase();
     URL obj = new URL(url);
-    HttpURLConnection con = null;
-    if (url.contains("http")) {
-      con = (HttpURLConnection) obj.openConnection();
-    } else if (url.contains("https")) {
-      con = (HttpsURLConnection) obj.openConnection();
-    }
-
+    HttpURLConnection con = getConnection(url, obj);
     // Setting basic post request
     cUrlPathParam = OBDal.getInstance().createCriteria(UrlPathParam.class);
     cUrlPathParam.add(Restrictions.eq(UrlPathParam.PROPERTY_TYPEPARAMETER, "H"));
@@ -240,24 +226,9 @@ public class WebHookUtil {
     String sendData = "";
     WebHookInitializer.initialize();
     if (hook.getTypedata().equals(Constants.STRING_JSON)) {
-      JSONObject jsonResult = null;
-      Object res = generateDataParametersJSON(hook.getSmfwheJsonDataList(), bob, logger);
-      if (hooks != null) {
-        for (IChangeDataHook hookJava : hooks) {
-          res = hookJava.postProcessJSON(res);
-        }
-      }
-      jsonResult = (JSONObject) res;
-      sendData = jsonResult.toString();
+      sendData = getJSONToSend(hook, bob, logger);
     } else if (hook.getTypedata().equals(Constants.STRING_XML)) {
-      Object res = generateDataParametersJSON(hook.getSmfwheJsonDataList(), bob, logger);
-      if (hooks != null) {
-        for (IChangeDataHook hookJava : hooks) {
-          res = hookJava.postProcessJSON(res);
-        }
-      }
-      XStream xstream = new XStream(new DomDriver());
-      sendData = xstream.toXML(res);
+      sendData = getXMLToSend(hook, bob, logger);
     }
 
     // Send post request
@@ -274,8 +245,7 @@ public class WebHookUtil {
 
     BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
     String output;
-    StringBuffer response = new StringBuffer();
-
+    StringBuilder response = new StringBuilder();
     while ((output = in.readLine()) != null) {
       response.append(output);
     }
@@ -285,96 +255,156 @@ public class WebHookUtil {
     logger.debug(response.toString());
   }
 
+  private static String getXMLToSend(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
+    String sendData;
+    Object res = generateDataParametersJSON(hook.getSmfwheJsonDataList(), bob, logger);
+    if (hooks != null) {
+      for (IChangeDataHook hookJava : hooks) {
+        res = hookJava.postProcessJSON(res);
+      }
+    }
+    XStream xstream = new XStream(new DomDriver());
+    sendData = xstream.toXML(res);
+    return sendData;
+  }
+
+  private static String getJSONToSend(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
+    String sendData;
+    JSONObject jsonResult = null;
+    Object res = generateDataParametersJSON(hook.getSmfwheJsonDataList(), bob, logger);
+    if (hooks != null) {
+      for (IChangeDataHook hookJava : hooks) {
+        res = hookJava.postProcessJSON(res);
+      }
+    }
+    jsonResult = (JSONObject) res;
+    sendData = jsonResult.toString();
+    return sendData;
+  }
+
+  private static HttpURLConnection getConnection(String url, URL obj) throws IOException {
+    HttpURLConnection con = null;
+    if (url.contains("http")) {
+      con = (HttpURLConnection) obj.openConnection();
+    } else if (url.contains("https")) {
+      con = (HttpsURLConnection) obj.openConnection();
+    }
+    if (con == null) {
+      throw new OBException("Invalid URL: " + url);
+    }
+    return con;
+  }
+
   /**
    * Generate a JSON data parameter, take a StandardParameter list and return json with
    * StandardParameter set
-   * 
-   * @param ListParameters
-   *          JsonXmlData list
-   * @param Bob
-   *          BaseOBObject to generate data in XML
-   * @param Logger
-   *          Info logger in log
+   *
+   * @param list   JsonXmlData list
+   * @param bob    BaseOBObject to generate data in XML
+   * @param logger Info logger in log
    * @return Return data in format JSON
    * @throws Exception
    */
   public static Object generateDataParametersJSON(List<JsonXmlData> list, BaseOBObject bob,
       Logger logger) throws Exception {
     JSONObject jsonMap = new JSONObject();
-    LinkedList<Object> staticValues = new LinkedList<Object>();
+    LinkedList<Object> staticValues = new LinkedList<>();
     try {
       for (JsonXmlData node : list) {
-        if (node.isSummaryLevel()) {
-          OBCriteria<JsonXmlData> cParentNodes = OBDal.getInstance()
-              .createCriteria(JsonXmlData.class);
-          cParentNodes.add(Restrictions.eq(JsonXmlData.PROPERTY_PARENT, node));
-          if (node.isArray()) {
-            Object res = generateDataParametersJSON(cParentNodes.list(), bob, logger);
-            if (res instanceof LinkedList) {
-              jsonMap.put(node.getName(), new JSONArray((LinkedList<?>) res));
-            } else {
-              jsonMap.put(node.getName(), new JSONArray().put(res));
-            }
-          } else {
-            jsonMap.put(node.getName(),
-                generateDataParametersJSON(cParentNodes.list(), bob, logger));
-          }
-        } else {
-          if (node.getName() == null || node.getName().isEmpty()) {
-            if (Constants.TYPE_VALUE_STRING.equals(node.getTypeValue())) {
-              staticValues.add(replaceValueData(node.getValue(), bob, logger));
-            } else if (Constants.TYPE_VALUE_PROPERTY.equals(node.getTypeValue())) {
-              staticValues.add(DalUtil.getValueFromPath(bob, node.getProperty()).toString());
-            } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(node.getTypeValue())) {
-              // call the function
-              staticValues.add(getValueExecuteMethod(node, bob, logger, dynamicNode));
-            }
-          } else {
-            if (Constants.TYPE_VALUE_STRING.equals(node.getTypeValue())) {
-              jsonMap.put(node.getName(), replaceValueData(node.getValue(), bob, logger));
-            } else if (Constants.TYPE_VALUE_PROPERTY.equals(node.getTypeValue())) {
-              jsonMap.put(node.getName(),
-                  DalUtil.getValueFromPath(bob, node.getProperty()).toString());
-            } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(node.getTypeValue())) {
-              // call the function
-              jsonMap.put(node.getName(), getValueExecuteMethod(node, bob, logger, dynamicNode));
-            }
-          }
-        }
+        handleJsonNode(bob, logger, node, jsonMap, staticValues);
       }
       if (!staticValues.isEmpty()) {
         return staticValues;
       }
     } catch (Exception e) {
-      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateJson", language),
+      String message = String.format(Utility.messageBD(conn, "smfwhe_errorGenerateJson", LANGUAGE),
           bob.getIdentifier());
       logger.error(message, e);
-      throw new Exception(message);
+      throw new OBException(message);
     }
     return jsonMap;
+  }
+
+  private static void handleJsonNode(BaseOBObject bob, Logger logger, JsonXmlData node,
+      JSONObject jsonMap, LinkedList<Object> staticValues) throws Exception {
+    if (BooleanUtils.isTrue(node.isSummaryLevel())) {
+      OBCriteria<JsonXmlData> cParentNodes = OBDal.getInstance()
+          .createCriteria(JsonXmlData.class);
+      cParentNodes.add(Restrictions.eq(JsonXmlData.PROPERTY_PARENT, node));
+      if (BooleanUtils.isTrue(node.isArray())) {
+        Object res = generateDataParametersJSON(cParentNodes.list(), bob, logger);
+        if (res instanceof LinkedList) {
+          jsonMap.put(node.getName(), new JSONArray((LinkedList<?>) res));
+        } else {
+          jsonMap.put(node.getName(), new JSONArray().put(res));
+        }
+      } else {
+        jsonMap.put(node.getName(),
+            generateDataParametersJSON(cParentNodes.list(), bob, logger));
+      }
+    } else {
+      if (node.getName() == null || node.getName().isEmpty()) {
+        addStaticValue(bob, logger, node, staticValues);
+      } else {
+        addValue(bob, logger, node, jsonMap);
+      }
+    }
+  }
+
+  private static void addValue(BaseOBObject bob, Logger logger, JsonXmlData node,
+      JSONObject jsonMap) throws JSONException {
+    String typeValue = node.getTypeValue();
+    Object valueToAdd;
+    if (Constants.TYPE_VALUE_STRING.equals(typeValue)) {
+      valueToAdd = replaceValueData(node.getValue(), bob, logger);
+    } else if (Constants.TYPE_VALUE_PROPERTY.equals(typeValue)) {
+      valueToAdd = DalUtil.getValueFromPath(bob, node.getProperty()).toString();
+    } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(typeValue)) {
+      valueToAdd = getValueExecuteMethod(node, bob, logger, dynamicNode);
+    } else {
+      valueToAdd = null;
+    }
+    if (valueToAdd != null) {
+      jsonMap.put(node.getName(), valueToAdd);
+    }
+  }
+
+  private static void addStaticValue(BaseOBObject bob, Logger logger, JsonXmlData node,
+      LinkedList<Object> staticValues) {
+    String typeValue = node.getTypeValue();
+    Object valueToAdd;
+    if (Constants.TYPE_VALUE_STRING.equals(typeValue)) {
+      valueToAdd = replaceValueData(node.getValue(), bob, logger);
+    } else if (Constants.TYPE_VALUE_PROPERTY.equals(typeValue)) {
+      valueToAdd = DalUtil.getValueFromPath(bob, node.getProperty()).toString();
+    } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(typeValue)) {
+      valueToAdd = getValueExecuteMethod(node, bob, logger, dynamicNode);
+    } else {
+      valueToAdd = null;
+    }
+    if (valueToAdd != null) {
+      staticValues.add(valueToAdd);
+    }
   }
 
   /**
    * Generate a UrlPathParam, take a UrlPathParam list and return url modify you can added in the
    * url
-   * 
-   * @param lUrlPathParam
-   *          Url Path Parameter list
-   * @param url
-   *          Url to send request
-   * @param bob
-   *          BaseOBObject
-   * @param logger
-   *          Logger in log
+   *
+   * @param lUrlPathParam Url Path Parameter list
+   * @param url           Url to send request
+   * @param bob           BaseOBObject
+   * @param logger        Logger in log
    * @return Return the url with parameters set
    * @throws Exception
    */
   public static String generateUrlParameter(List<UrlPathParam> lUrlPathParam, String url,
-      BaseOBObject bob, Logger logger) throws Exception {
+      BaseOBObject bob, Logger logger) throws OBException {
     String result = url;
     for (UrlPathParam param : lUrlPathParam) {
       try {
-        if (param.isActive() && Constants.TYPE_PARAMETER_PATH.equals(param.getTypeParameter())) {
+        if (BooleanUtils.isTrue(param.isActive()) && Constants.TYPE_PARAMETER_PATH.equals(
+            param.getTypeParameter())) {
           if (Constants.TYPE_VALUE_STRING.equals(param.getTypeValue())) {
             result = result.replace("{" + param.getName() + "}",
                 replaceValueData(param.getValue(), bob, logger));
@@ -389,9 +419,9 @@ public class WebHookUtil {
         }
       } catch (Exception e) {
         String message = String.format(
-            Utility.messageBD(conn, "smfwhe_errorReplacePathParameter", language), param.getName());
+            Utility.messageBD(conn, "smfwhe_errorReplacePathParameter", LANGUAGE), param.getName());
         logger.error(message, e);
-        throw new Exception(message);
+        throw new OBException(message);
       }
     }
     return result;
@@ -399,37 +429,34 @@ public class WebHookUtil {
 
   /**
    * Return an Event list from a table name with the event type.
-   * 
-   * @param eventTypeId
-   *          ID for EventType object (see Constants class for defaults)
-   * @param TableName
+   *
+   * @param eventTypeId ID for EventType object (see Constants class for defaults)
+   * @param tableName
    * @return Return the Event list
    */
   public static List<Events> eventsFromTableName(String eventTypeId, String tableName) {
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
-    cEvents.createAlias(Events.PROPERTY_TABLE, "table");
+    cEvents.createAlias(Events.PROPERTY_TABLE, TABLE);
     cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
     cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
         eventTypeId));
-    cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
+    cEvents.add(Restrictions.eq(TABLE + "." + Table.PROPERTY_DBTABLENAME, tableName));
     return cEvents.list();
   }
 
   /**
    * Returns an Event list from a table name with the event type, and event class.
-   * 
-   * @param eventTypeId
-   *          ID for EventType object (see Constants class for defaults)
+   *
+   * @param eventTypeId ID for EventType object (see Constants class for defaults)
    * @param tableName
-   * @param eventClass
-   *          event class (Event Handler, Stored Procedure, see Constants class or reference list
-   *          for details)
+   * @param eventClass  event class (Event Handler, Stored Procedure, see Constants class or reference list
+   *                    for details)
    * @return
    */
   public static List<Events> eventsFromTableName(String eventTypeId, String tableName,
       String eventClass) {
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
-    cEvents.createAlias(Events.PROPERTY_TABLE, "table");
+    cEvents.createAlias(Events.PROPERTY_TABLE, TABLE);
     cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
     cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
         eventTypeId));
@@ -440,64 +467,60 @@ public class WebHookUtil {
 
   /**
    * Returns an event list for all (default) event handler types.
-   * 
-   * @param eventTypeId
-   *          ID for EventType object (see Constants class for defaults)
-   * @param tableName
-   *          Table Name
+   *
+   * @param eventTypeId ID for EventType object (see Constants class for defaults)
+   * @param tableName   Table Name
    * @return
    */
   public static List<Events> getEventHandlerClassEvents(String eventTypeId, String tableName) {
     OBCriteria<Events> cEvents = OBDal.getInstance().createCriteria(Events.class);
-    cEvents.createAlias(Events.PROPERTY_TABLE, "table");
+    cEvents.createAlias(Events.PROPERTY_TABLE, TABLE);
     cEvents.add(Restrictions.eq(Events.PROPERTY_ACTIVE, true));
     cEvents.add(Restrictions.eq(Events.PROPERTY_SMFWHEEVENTTYPE + "." + EventType.PROPERTY_ID,
         eventTypeId));
     cEvents.add(Restrictions.in(Events.PROPERTY_EVENTCLASS,
-        (Object[]) new String[]{ Constants.DYNAMIC_EVENT_HANDLER, Constants.EVENT_HANDLER }));
+        (Object[]) new String[] { Constants.DYNAMIC_EVENT_HANDLER, Constants.EVENT_HANDLER }));
     cEvents.add(Restrictions.eq("table." + Table.PROPERTY_DBTABLENAME, tableName));
     return cEvents.list();
   }
 
   /**
    * Return string concat with property value set
-   * 
-   * @param Value
-   *          String value defined in user defined data
-   * @param Bob
-   *          BaseOBObject to get the events defined
-   * @param Logger
-   *          Info logger in log
+   *
+   * @param value  String value defined in user defined data
+   * @param bob    BaseOBObject to get the events defined
+   * @param logger Info logger in log
    * @return Return a string with parameters set
    * @throws Exception
    */
   public static String replaceValueData(String value, BaseOBObject bob, Logger logger)
-      throws Exception {
+      throws OBException {
     StringBuilder result = new StringBuilder();
     String propertyError = null;
     try {
       for (String s : value.split(" ")) {
-        if (s.contains(Constants.AT)
-            && DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1]) == null) {
+        if (s.contains(Constants.AT) && DalUtil.getValueFromPath(bob,
+            s.split(Constants.AT)[1]) == null) {
           propertyError = s;
-          throw new Exception();
+          throw new OBException();
         } else {
-          result.append(s.contains(Constants.AT)
-              ? DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1]) : s).append(" ");
+          result.append(s.contains(Constants.AT) ?
+              DalUtil.getValueFromPath(bob, s.split(Constants.AT)[1]) :
+              s).append(" ");
         }
       }
     } catch (Exception e) {
-      String message = String
-          .format(Utility.messageBD(conn, "smfwhe_errorParserParameter", language), propertyError);
+      String message = String.format(
+          Utility.messageBD(conn, "smfwhe_errorParserParameter", LANGUAGE), propertyError);
       logger.error(message, e);
-      throw new Exception(message);
+      throw new OBException(message);
     }
-    return result.toString().substring(0, result.length() - 1);
+    return result.substring(0, result.length() - 1);
   }
 
   /**
    * Array of entities defined in events
-   * 
+   *
    * @return Return array of entities defined in events
    */
   public static Entity[] getEntities() {
@@ -523,20 +546,16 @@ public class WebHookUtil {
 
   /**
    * Execute the method and return the string for set in json or xml
-   * 
-   * @param Data
-   *          This is an object JsonXmlData or UrlPathParam
-   * @param Bob
-   *          BaseOBObject to get the events defined
-   * @param Logger
-   *          Info logger in log
-   * @param CompareClass
-   *          class name for compare with interface extend
+   *
+   * @param data         This is an object JsonXmlData or UrlPathParam
+   * @param bob          BaseOBObject to get the events defined
+   * @param logger       Info logger in log
+   * @param compareClass class name for compare with interface extend
    * @return Return the string for set in json or xml
    * @throws Exception
    */
   public static Object getValueExecuteMethod(Object data, BaseOBObject bob, Logger logger,
-      Object compareClass) throws Exception {
+      Object compareClass) throws OBException {
     Object result = null;
     JsonXmlData recordData = null;
     UrlPathParam recordParam = null;
@@ -545,56 +564,59 @@ public class WebHookUtil {
     } else if (computedFunction.equals(compareClass)) {
       recordParam = (UrlPathParam) data;
     }
-    String classMethodName = recordParam == null ? recordData.getJavaClassName()
-        : recordParam.getJavaClassName();
-    String className = classMethodName;
+    if (recordData == null && recordParam == null) {
+      throw new OBException("Data is null");
+    }
+    String classMethodName = recordParam == null ?
+        recordData.getJavaClassName() :
+        recordParam.getJavaClassName();
     Class<?> clazz; // convert string classname to class
     String message = "";
     try {
-      clazz = Class.forName(className);
-      Object dog = clazz.newInstance(); // invoke empty constructor
+      clazz = Class.forName(classMethodName);
+      Object dog = clazz.getDeclaredConstructor().newInstance();
       if (dog.getClass().getInterfaces()[0].equals(compareClass)) {
-        String methodName = "";
-        if (Constants.TYPE_VALUE_COMPUTED
-            .equals(recordParam == null ? recordData.getTypeValue() : recordParam.getTypeValue())) {
-          methodName = Constants.METHOD_NAME;
-        } else if (Constants.TYPE_VALUE_DYNAMIC_NODE
-            .equals(recordParam == null ? recordData.getTypeValue() : recordParam.getTypeValue())) {
-          methodName = Constants.METHOD_NAME_DYNAMIC_NODE;
-        }
-        Method setNameMethod = dog.getClass().getMethod(methodName, HashMap.class);
+        Method setNameMethod = getMethod(recordParam, recordData, dog);
         // set the parameters in hashmap
-        HashMap<Object, Object> params = recordParam == null
-            ? getArgumentsForMethodData(recordData.getSmfwheArgsDataList(), bob, logger)
-            : getArgumentsForMethod(recordParam.getSmfwheArgsList(), bob, logger);
+        Map<Object, Object> params = recordParam == null ?
+            getArgumentsForMethodData(recordData.getSmfwheArgsDataList(), bob, logger) :
+            getArgumentsForMethod(recordParam.getSmfwheArgsList(), bob, logger);
         result = setNameMethod.invoke(dog, params); // pass arg
       } else {
         message = String.format(
-            Utility.messageBD(conn, "smfwhe_errorParserClassMethodName", language),
+            Utility.messageBD(conn, "smfwhe_errorParserClassMethodName", LANGUAGE),
             classMethodName);
-        throw new Exception(message);
+        throw new OBException(message);
       }
     } catch (Exception e) {
       logger.error(message, e);
-      throw e;
+      throw new OBException(e);
     }
     return result;
   }
 
+  private static Method getMethod(UrlPathParam recordParam, JsonXmlData recordData, Object dog)
+      throws NoSuchMethodException {
+    String methodName = "";
+    if (Constants.TYPE_VALUE_COMPUTED.equals(
+        recordParam == null ? recordData.getTypeValue() : recordParam.getTypeValue())) {
+      methodName = Constants.METHOD_NAME;
+    } else if (Constants.TYPE_VALUE_DYNAMIC_NODE.equals(
+        recordParam == null ? recordData.getTypeValue() : recordParam.getTypeValue())) {
+      methodName = Constants.METHOD_NAME_DYNAMIC_NODE;
+    }
+    return dog.getClass().getMethod(methodName, HashMap.class);
+  }
+
   /**
-   * 
-   * @param Con
-   *          HttpURLConnection
-   * @param lUrlPathParam
-   *          List the UrlPathParam
-   * @param Logger
-   *          Info logger in log
-   * @param Bob
-   *          BaseOBObject to get the events defined
+   * @param con           HttpURLConnection
+   * @param lUrlPathParam List the UrlPathParam
+   * @param logger        Info logger in log
+   * @param bob           BaseOBObject to get the events defined
    * @throws Exception
    */
   public static void setHeaderConnection(HttpURLConnection con, List<UrlPathParam> lUrlPathParam,
-      Logger logger, BaseOBObject bob) throws Exception {
+      Logger logger, BaseOBObject bob) throws OBException {
     String result = "";
     for (UrlPathParam param : lUrlPathParam) {
       if (Constants.TYPE_VALUE_STRING.equals(param.getTypeValue())) {
@@ -611,21 +633,18 @@ public class WebHookUtil {
 
   /**
    * Get the arguments for method
-   * 
-   * @param Param
-   *          List the arguments for method
-   * @param Bob
-   *          BaseOBObject to get the events defined
-   * @param Logger
-   *          Info logger in log
+   *
+   * @param args   List the arguments for method
+   * @param bob    BaseOBObject to get the events defined
+   * @param logger Info logger in log
    * @return Return the hashmap with parameters for execute method
    * @throws Exception
    */
-  public static HashMap<Object, Object> getArgumentsForMethod(List<Arguments> args,
-      BaseOBObject bob, Logger logger) throws Exception {
-    HashMap<Object, Object> result = new HashMap<Object, Object>();
+  public static Map<Object, Object> getArgumentsForMethod(List<Arguments> args, BaseOBObject bob,
+      Logger logger) throws OBException {
+    HashMap<Object, Object> result = new HashMap<>();
     for (Arguments arg : args) {
-      if (arg.isActive()) {
+      if (BooleanUtils.isTrue(arg.isActive())) {
         result.put(arg.getName(), replaceValueData(arg.getValueParameter(), bob, logger));
       }
     }
@@ -634,21 +653,18 @@ public class WebHookUtil {
 
   /**
    * Get the arguments for method
-   * 
-   * @param Param
-   *          List the arguments for method
-   * @param Bob
-   *          BaseOBObject to get the events defined
-   * @param Logger
-   *          Info logger in log
+   *
+   * @param args   List the arguments for method
+   * @param bob    BaseOBObject to get the events defined
+   * @param logger Info logger in log
    * @return Return the hashmap with parameters for execute method
    * @throws Exception
    */
-  public static HashMap<Object, Object> getArgumentsForMethodData(List<ArgumentsData> args,
-      BaseOBObject bob, Logger logger) throws Exception {
-    HashMap<Object, Object> result = new HashMap<Object, Object>();
+  public static Map<Object, Object> getArgumentsForMethodData(List<ArgumentsData> args,
+      BaseOBObject bob, Logger logger) {
+    HashMap<Object, Object> result = new HashMap<>();
     for (ArgumentsData arg : args) {
-      if (arg.isActive()) {
+      if (BooleanUtils.isTrue(arg.isActive())) {
         result.put(arg.getName(), replaceValueData(arg.getValue(), bob, logger));
       }
     }

@@ -366,7 +366,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
    *                 to the client
    */
   @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, javax.servlet.ServletException {
+  public void doGet(HttpServletRequest request, HttpServletResponse response) {
     try {
       handleRequest(HttpMethod.GET, request, response);
     } catch (IOException e) {
@@ -386,7 +386,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
    *                 to the client
    */
   @Override
-  public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException, javax.servlet.ServletException {
+  public void doPost(HttpServletRequest request, HttpServletResponse response) {
     try {
       handleRequest(HttpMethod.POST, request, response);
     } catch (IOException e) {

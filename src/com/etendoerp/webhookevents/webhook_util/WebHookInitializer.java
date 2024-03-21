@@ -27,45 +27,38 @@ import javax.enterprise.inject.Any;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.util.AnnotationLiteral;
 
+import org.apache.log4j.Logger;
+import org.openbravo.base.exception.OBException;
 import org.openbravo.base.weld.WeldUtils;
 
 import com.etendoerp.webhookevents.annotation.InjectHook;
 
 public class WebHookInitializer {
-  @SuppressWarnings("serial")
+
+  private static final Logger log = Logger.getLogger(WebHookInitializer.class);
   private static final AnnotationLiteral<Any> ANY = new AnnotationLiteral<Any>() {
   };
   private static WebHookInitializer instance = null;
 
   private WebHookInitializer() {
-    WebHookUtil webHookUtil = new WebHookUtil();
     Class<?> main = WebHookUtil.class;
     for (Field field : main.getDeclaredFields()) {
       if (field.isAnnotationPresent(InjectHook.class)) {
-        field.setAccessible(true);
         ParameterizedType listHooksType = (ParameterizedType) field.getGenericType();
         Class<?> currentHook = (Class<?>) listHooksType.getActualTypeArguments()[0];
         final Set<Bean<?>> beans = WeldUtils.getStaticInstanceBeanManager().getBeans(currentHook,
             ANY);
-        List<Object> addToField = new ArrayList<Object>();
+        List<Object> addToField = new ArrayList<>();
         for (Bean<?> bean : beans) {
           try {
             Object reference = WeldUtils.getStaticInstanceBeanManager()
                 .getReference(bean, currentHook,
                     WeldUtils.getStaticInstanceBeanManager().createCreationalContext(null));
             addToField.add(reference);
-          } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-          } catch (SecurityException e) {
-            e.printStackTrace();
+          } catch (IllegalArgumentException | SecurityException e) {
+            log.error(e.getMessage(), e);
+            throw new OBException(e);
           }
-        }
-        try {
-          field.set(webHookUtil, addToField);
-        } catch (IllegalArgumentException e) {
-          e.printStackTrace();
-        } catch (IllegalAccessException e) {
-          e.printStackTrace();
         }
       }
     }

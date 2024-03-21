@@ -17,10 +17,12 @@
 
 package com.etendoerp.webhookevents.interfaces;
 
-import java.util.HashMap;
+import org.openbravo.base.exception.OBException;
+
+import java.util.Map;
 
 public interface ComputedFunction {
 
-  public String execute(HashMap<Object, Object> params) throws Exception;
+  public String execute(Map<Object, Object> params) throws OBException;
 
 }
