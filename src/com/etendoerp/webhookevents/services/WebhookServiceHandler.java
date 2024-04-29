@@ -292,7 +292,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     }
     if (!allow) {
       // Check if user is allowed to call webhook by role
-      var groupAccess = checkGroupSecurity(request, token, webHook);
+      var groupAccess = checkRoleSecurity(request, token, webHook);
       if (groupAccess != null) {
         allow = true;
       }
@@ -321,7 +321,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     return body;
   }
 
-  private DefinedwebhookRole checkGroupSecurity(HttpServletRequest request, String token,
+  private DefinedwebhookRole checkRoleSecurity(HttpServletRequest request, String token,
       DefinedWebHook webHook) {
     try {
       DecodedJWT decodedToken = SecureWebServicesUtils.decodeToken(token);

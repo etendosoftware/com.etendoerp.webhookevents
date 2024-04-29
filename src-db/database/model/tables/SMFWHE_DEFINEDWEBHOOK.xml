@@ -70,5 +70,6 @@
         <unique-column name="NAME"/>
       </unique>
       <check name="SMFWHE_DEFINEDWEBHOOK_IA_CHK"><![CDATA[ISACTIVE IN ('Y', 'N')]]></check>
+      <check name="SMFWHE_DEFWEBHOOK_AGA_CHK"><![CDATA[ALLOW_GROUP_ACCESS IN ('Y', 'N')]]></check>
     </table>
   </database>
