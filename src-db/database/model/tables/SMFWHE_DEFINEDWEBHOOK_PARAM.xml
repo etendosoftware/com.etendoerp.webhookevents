@@ -49,6 +49,9 @@
         <default/>
         <onCreateDefault/>
       </column>
+      <foreign-key foreignTable="AD_MODULE" name="SMFWHE_DEFWEBHK_PARAM_MOD_FK">
+        <reference local="AD_MODULE_ID" foreign="AD_MODULE_ID"/>
+      </foreign-key>
       <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_DEFWEBHOOKPAR_AD_CLIENT">
         <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
       </foreign-key>
