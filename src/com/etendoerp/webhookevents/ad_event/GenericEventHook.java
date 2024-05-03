@@ -46,7 +46,7 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
       WebHookUtil.queueEventFromEventHandler(bob.getEntity().getTableName(),
           bob.getEntity().getTableId(), Constants.CREATE, (String) bob.get("id"));
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error(e);
     }
   }
 
@@ -59,7 +59,7 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
       WebHookUtil.queueEventFromEventHandler(bob.getEntity().getTableName(),
           bob.getEntity().getTableId(), Constants.UPDATE, (String) bob.get("id"));
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error(e);
     }
 
   }
@@ -73,7 +73,7 @@ public class GenericEventHook extends EntityPersistenceEventObserver {
       WebHookUtil.queueEventFromEventHandler(bob.getEntity().getTableName(),
           bob.getEntity().getTableId(), Constants.DELETE, (String) bob.get("id"));
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error(e);
     }
   }
 }

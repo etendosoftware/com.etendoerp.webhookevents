@@ -15,7 +15,7 @@
  *
  */
 
-package com.etendoerp.webhookevents.actionHandlers;
+package com.etendoerp.webhookevents.action_handlers;
 
 import java.util.Map;
 
@@ -26,12 +26,12 @@ import org.openbravo.client.kernel.BaseActionHandler;
 
 /**
  * Queues an event from a javascript call. To call, use:
- * OB.RemoteCallManager.call('com.etendoerp.webhookevents.actionHandlers.queueEventFromJSActionHandler', {
+ * OB.RemoteCallManager.call('com.etendoerp.webhookevents.action_handlers.QueueEventFromJSActionHandler', {
  * tableId: tableId, eventTypeId: eventTypeId, eventClass: eventClass, recordId: recordId }, {},
  * callback);
  *
  */
-public class queueEventFromJSActionHandler extends BaseActionHandler {
+public class QueueEventFromJSActionHandler extends BaseActionHandler {
 
   @Override
   protected JSONObject execute(Map<String, Object> parameters, String content) {
@@ -47,10 +47,7 @@ public class queueEventFromJSActionHandler extends BaseActionHandler {
       WebHookUtil.queueEvent(tableId, eventTypeId, eventClass, recordId);
 
       // create the result
-      JSONObject json = new JSONObject();
-
-      // and return it
-      return json;
+      return new JSONObject();
     } catch (Exception e) {
       throw new OBException(e);
     }

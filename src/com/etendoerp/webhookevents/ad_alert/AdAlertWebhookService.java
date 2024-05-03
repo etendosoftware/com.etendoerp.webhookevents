@@ -31,7 +31,6 @@ import java.util.Map;
  * This service receive a description and a alert rule ID and insert one standard alert
  */
 public class AdAlertWebhookService extends BaseWebhookService {
-  private static final Logger log = LogManager.getLogger();
 
   @Override
   public void get(Map<String, String> parameter, Map<String, String> responseVars) {

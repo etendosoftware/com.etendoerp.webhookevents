@@ -17,10 +17,13 @@
 
 package com.etendoerp.webhookevents.interfaces;
 
+import org.openbravo.base.exception.OBException;
+
 import java.util.HashMap;
+import java.util.Map;
 
 public interface DynamicNode {
 
-  public Object dynamicNode(HashMap<Object, Object> params) throws Exception;
+  public Object dynamicNode(Map<Object, Object> params) throws OBException;
 
 }

@@ -17,10 +17,12 @@
 
 package com.etendoerp.webhookevents.interfaces;
 
+import org.openbravo.base.exception.OBException;
+
 public interface IChangeDataHook {
 
-  public Object postProcessJSON(Object obj) throws Exception;
+  public Object postProcessJSON(Object obj) throws OBException;
 
-  public Object postProcessXML(Object xmlObject) throws Exception;
+  public Object postProcessXML(Object xmlObject) throws OBException;
 
 }

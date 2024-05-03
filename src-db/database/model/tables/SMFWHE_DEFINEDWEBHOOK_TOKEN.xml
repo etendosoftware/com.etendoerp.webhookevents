@@ -49,6 +49,10 @@
         <default><![CDATA[Y]]></default>
         <onCreateDefault/>
       </column>
+      <column name="ROLE_ACCESS" primaryKey="false" required="true" type="CHAR" size="1" autoIncrement="false">
+        <default><![CDATA[N]]></default>
+        <onCreateDefault/>
+      </column>
       <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_DEFWEBHOOKTK_AD_CLIENT">
         <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
       </foreign-key>
@@ -63,5 +67,6 @@
       </unique>
       <check name="SMFWHE_DEFWEBHOOKTK_GAK_CHK"><![CDATA[GETAPIKEY IN ('Y', 'N')]]></check>
       <check name="SMFWHE_DEFWEBHOOKTK_IA_CHK"><![CDATA[ISACTIVE IN ('Y', 'N')]]></check>
+      <check name="SMFWHE_DEFWEBHOOKTK_ROLE_CHK"><![CDATA[ROLE_ACCESS IN ('Y', 'N')]]></check>
     </table>
   </database>

@@ -17,12 +17,16 @@
 
 package com.etendoerp.webhookevents.services;
 
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
+import com.etendoerp.webhookevents.data.DefinedwebhookRole;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 import com.etendoerp.webhookevents.exceptions.WebhookAuthException;
 import com.etendoerp.webhookevents.exceptions.WebhookNotfoundException;
 import com.etendoerp.webhookevents.exceptions.WebhookParamException;
+import com.smf.securewebservices.utils.SecureWebServicesUtils;
+import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -36,10 +40,12 @@ import org.openbravo.base.util.OBClassLoader;
 import org.openbravo.base.weld.WeldUtils;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
+import org.openbravo.database.SessionInfo;
 import org.openbravo.erpCommon.utility.Utility;
+import org.openbravo.model.ad.access.Role;
+import org.openbravo.model.ad.access.UserRoles;
 import org.openbravo.service.db.DalConnectionProvider;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -48,11 +54,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.apache.http.entity.ContentType.APPLICATION_JSON;
+
 /**
  * Main servlet handler for webhooks. This servlet routes webhooks request configured action
  */
 public class WebhookServiceHandler extends HttpBaseServlet {
   private static final Logger log = LogManager.getLogger();
+  public static final String CONTENT_TYPE = "Content-Type";
+
   enum HttpMethod {
     GET, POST, PUT, DELETE
   }
@@ -60,28 +70,49 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Method to handle auth methods and cases
    *
-   * @param apikey
-   *     Received token
-   *
+   * @param apikey Received token
    * @return Token object
    */
-  private DefinedwebhookToken checkKey(String apikey) throws WebhookAuthException {
+  private DefinedwebhookToken checkUserSecurity(String apikey, String token) {
     try {
-      OBContext.setAdminMode();
+      // Check access by token
       var keyCriteria = OBDal.getInstance()
           .createCriteria(DefinedwebhookToken.class)
           .setFilterOnReadableClients(false)
-          .setFilterOnReadableOrganization(false);
+          .setFilterOnReadableOrganization(false)
+          .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, false));
       keyCriteria.add(Restrictions.eq(DefinedwebhookToken.PROPERTY_APIKEY, apikey));
       DefinedwebhookToken access = (DefinedwebhookToken) keyCriteria.uniqueResult();
+      if (access == null && token != null) {
+        try {
+          DecodedJWT decodedToken = SecureWebServicesUtils.decodeToken(token);
+          if (decodedToken != null) {
+            String roleId = decodedToken.getClaim("role").asString();
+            String userId = decodedToken.getClaim("user").asString();
+            var userRole = OBDal.getInstance()
+                .createQuery(UserRoles.class,
+                    "as e where e.role.id = :roleId and e.userContact.id = :userId")
+                .setNamedParameter("roleId", roleId)
+                .setNamedParameter("userId", userId)
+                .uniqueResult();
+            access = (DefinedwebhookToken) OBDal.getInstance()
+                .createCriteria(DefinedwebhookToken.class)
+                .setFilterOnReadableClients(false)
+                .setFilterOnReadableOrganization(false)
+                .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, true))
+                .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_USERROLE, userRole))
+                .uniqueResult();
+          }
+        } catch (Exception e) {
+          log.debug("Error decoding token", e);
+        }
+      }
       if (access == null) {
-        var message = Utility.messageBD(new DalConnectionProvider(false),
-            "smfwhe_apiKeyNotFound", OBContext.getOBContext().getLanguage().getLanguage());
-        log.error(message);
-        throw new WebhookAuthException(message);
+        return null;
       }
       var userRole = access.getUserRole();
-      OBContext.setOBContext(userRole.getUserContact().getId(), userRole.getRole().getId(), userRole.getClient().getId(), userRole.getOrganization().getId());
+      OBContext.setOBContext(userRole.getUserContact().getId(), userRole.getRole().getId(),
+          userRole.getClient().getId(), userRole.getOrganization().getId());
       return access;
     } finally {
       OBContext.restorePreviousMode();
@@ -91,35 +122,20 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Cross filtering to find a called action and if the user is allowed to call it
    *
-   * @param name
-   *     Webhook name
-   * @param access
-   *     Token Object to check allowance
-   *
+   * @param name Webhook name
    * @return OBObject of the called webhook
-   *
-   * @exception WebhookNotfoundException
-   *     Exception triggered in case of unexisting webhook
-   * @exception WebhookAuthException
-   *     Exception triggered in case of auth issues
+   * @throws WebhookNotfoundException Exception triggered in case of unexisting webhook
+   * @throws WebhookAuthException     Exception triggered in case of auth issues
    */
-  private DefinedWebHook getAction(String name, DefinedwebhookToken access) throws WebhookNotfoundException, WebhookAuthException {
+  private DefinedWebHook getAction(String name) throws WebhookNotfoundException {
     var criteria = OBDal.getInstance().createQuery(DefinedWebHook.class, "name = :name");
     criteria.setNamedParameter("name", name);
-    var action = (DefinedWebHook) criteria.uniqueResult();
+    var action = criteria.uniqueResult();
     if (action == null) {
-      var message = Utility.messageBD(new DalConnectionProvider(false),
-          "smfwhe_actionNotFound", OBContext.getOBContext().getLanguage().getLanguage());
+      var message = Utility.messageBD(new DalConnectionProvider(false), "smfwhe_actionNotFound",
+          OBContext.getOBContext().getLanguage().getLanguage());
       log.error(message);
       throw new WebhookNotfoundException(message);
-    }
-    if (action.getSmfwheDefinedwebhookAccessList().stream()
-        .filter(p -> p.getSmfwheDefinedwebhookToken().getId().compareTo(access.getId()) == 0)
-        .count() == 0) {
-      var message = Utility.messageBD(new DalConnectionProvider(false),
-          "smfwhe_unauthorizedToken", OBContext.getOBContext().getLanguage().getLanguage());
-      log.error(message);
-      throw new WebhookAuthException(message);
     }
     return action;
   }
@@ -127,18 +143,13 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Weld helper to load configured webhook handler
    *
-   * @param javaClass
-   *     Java class name of handler. Must extends {@link com.etendoerp.webhookevents.services.BaseWebhookService}
-   *
+   * @param javaClass Java class name of handler. Must extends {@link com.etendoerp.webhookevents.services.BaseWebhookService}
    * @return Instances of handle
-   *
-   * @exception ClassNotFoundException
-   *     triggerd in case of instancing problems
+   * @throws ClassNotFoundException triggerd in case of instancing problems
    */
   private BaseWebhookService getInstance(String javaClass) throws ClassNotFoundException {
 
-    @SuppressWarnings("unchecked") final var handlerClass = (Class<BaseWebhookService>) OBClassLoader
-        .getInstance()
+    @SuppressWarnings("unchecked") final var handlerClass = (Class<BaseWebhookService>) OBClassLoader.getInstance()
         .loadClass(javaClass);
     return WeldUtils.getInstanceFromStaticBeanManager(handlerClass);
 
@@ -147,24 +158,19 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Build an standard json response
    *
-   * @param response
-   *     Http Object needed to obtain the writer
-   * @param code
-   *     HTTP code of the response (200, 203, etc)
-   * @param responseVars
-   *     Map containing key value tuple to include in the response
-   *
-   * @exception JSONException
-   *     Triggered in case of cannot generate a valid JSON String
-   * @exception IOException
-   *     Triggerd in case of issues with response writer
+   * @param response     Http Object needed to obtain the writer
+   * @param code         HTTP code of the response (200, 203, etc)
+   * @param responseVars Map containing key value tuple to include in the response
+   * @throws JSONException Triggered in case of cannot generate a valid JSON String
+   * @throws IOException   Triggerd in case of issues with response writer
    */
-  private void buildResponse(HttpServletResponse response, int code, Map<String, String> responseVars) throws JSONException, IOException {
+  private void buildResponse(HttpServletResponse response, int code,
+      Map<String, String> responseVars) throws JSONException, IOException {
     response.setStatus(code);
-    response.setHeader("Content-Type", "application/json");
+    response.addHeader(CONTENT_TYPE, APPLICATION_JSON.getMimeType());
     JSONObject responseBody = new JSONObject();
-    for (String key : responseVars.keySet()) {
-      responseBody.put(key, responseVars.get(key));
+    for (var entry : responseVars.entrySet()) {
+      responseBody.put(entry.getKey(), entry.getValue());
     }
     PrintWriter out = response.getWriter();
     out.print(responseBody);
@@ -173,19 +179,14 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Build an standard json response
    *
-   * @param response
-   *     Http Object needed to obtain the writer
-   * @param code
-   *     HTTP code of the response (200, 203, etc)
-   * @param responseMessage
-   *     String containing response message
-   *
-   * @exception JSONException
-   *     Triggered in case of cannot generate a valid JSON String
-   * @exception IOException
-   *     Triggerd in case of issues with response writer
+   * @param response        Http Object needed to obtain the writer
+   * @param code            HTTP code of the response (200, 203, etc)
+   * @param responseMessage String containing response message
+   * @throws JSONException Triggered in case of cannot generate a valid JSON String
+   * @throws IOException   Triggerd in case of issues with response writer
    */
-  private void buildResponse(HttpServletResponse response, int code, String responseMessage) throws JSONException, IOException {
+  private void buildResponse(HttpServletResponse response, int code, String responseMessage)
+      throws JSONException, IOException {
     Map<String, String> responseVars = new HashMap<>();
     responseVars.put("message", responseMessage);
     buildResponse(response, code, responseVars);
@@ -193,68 +194,47 @@ public class WebhookServiceHandler extends HttpBaseServlet {
 
   /**
    * Handle the request
-   * @param httpMethod
-   *    Http method of the request
-   * @param request
-   *   Http request object
-   * @param response
-   *   Http response object
+   *
+   * @param httpMethod Http method of the request
+   * @param request    Http request object
+   * @param response   Http response object
    */
-  private void handleRequest(HttpMethod httpMethod, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+  private void handleRequest(HttpMethod httpMethod, HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
     try {
-      String apikey = request.getParameter("apikey");
-      var access = checkKey(apikey);
+      OBContext.setAdminMode();
+      // Check if webhook exists
       String name = request.getParameter("name");
-      var webHook = getAction(name, access);
-      var action = getInstance(webHook.getJavaClass());
-      JSONObject body;
-      try {
-        if (httpMethod == HttpMethod.GET) {
-          body = new JSONObject();
-          for (String key : request.getParameterMap().keySet()) {
-            body.put(key, request.getParameter(key));
-          }
-        } else {
-          body = new JSONObject(request.getReader().lines().collect(Collectors.joining()));
-        }
-      } catch (JSONException e) {
-        var message = Utility.messageBD(new DalConnectionProvider(false),
-            "smfwhe_cannotCollectData", OBContext.getOBContext().getLanguage().getLanguage());
-        log.error(message);
-        throw new WebhookParamException(message);
-      }
+      var webHook = getAction(name);
 
-      Map<String, String> requestVars = new HashMap<>();
-      var paramList = webHook.getSmfwheDefinedwebhookParamList();
-      for (DefinedWebhookParam param : paramList) {
-        String val = null;
-        if(body.has(param.getName())) {
-          val = body.getString(param.getName());
-        }
-        if (param.isRequired() && StringUtils.isEmpty(val)) {
-          var message = Utility.messageBD(new DalConnectionProvider(false),
-              "smfwhe_missingParameter", OBContext.getOBContext().getLanguage().getLanguage());
-          log.error(message);
-          throw new WebhookParamException(message);
-        }
-        if (val != null) {
-          requestVars.put(param.getName(), val);
-        }
+      // Get JWT token if exists
+      String token = obtainToken(request);
+      boolean allow = isAllowed(request, token, webHook);
+      if (!allow) {
+        // User is not allowed to call webhook
+        var message = Utility.messageBD(new DalConnectionProvider(false),
+            "smfwhe_unauthorizedToken", OBContext.getOBContext().getLanguage().getLanguage());
+        log.error(message);
+        throw new WebhookAuthException(message);
       }
+      // Get handler
+      var action = getInstance(webHook.getJavaClass());
+      JSONObject body = extractBodyData(httpMethod, request);
+      Map<String, String> requestParams = getRequestParams(webHook, body);
       Map<String, String> responseVars = new HashMap<>();
-      action.get(requestVars, responseVars);
-      buildResponse(response, HttpStatus.SC_OK , responseVars);
+      action.get(requestParams, responseVars);
+      buildResponse(response, HttpStatus.SC_OK, responseVars);
     } catch (WebhookAuthException e) {
       try {
         buildResponse(response, HttpStatus.SC_UNAUTHORIZED, e.getMessage());
       } catch (JSONException ex) {
-        throw new RuntimeException(ex);
+        throw new OBException(ex);
       }
     } catch (WebhookNotfoundException e) {
       try {
         buildResponse(response, HttpStatus.SC_NOT_FOUND, e.getMessage());
       } catch (JSONException ex) {
-        throw new RuntimeException(ex);
+        throw new OBException(ex);
       }
     } catch (Exception e) {
       try {
@@ -265,35 +245,153 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     }
   }
 
+  private static Map<String, String> getRequestParams(DefinedWebHook webHook, JSONObject body)
+      throws JSONException, WebhookParamException {
+    Map<String, String> requestParams = new HashMap<>();
+    var paramList = webHook.getSmfwheDefinedwebhookParamList();
+    for (DefinedWebhookParam param : paramList) {
+      String val = null;
+      if (body.has(param.getName())) {
+        val = body.getString(param.getName());
+      }
+      if (BooleanUtils.isTrue(param.isRequired()) && StringUtils.isEmpty(val)) {
+        var message = Utility.messageBD(new DalConnectionProvider(false),
+            "smfwhe_missingParameter", OBContext.getOBContext().getLanguage().getLanguage());
+        log.error(message);
+        throw new WebhookParamException(message);
+      }
+      if (val != null) {
+        requestParams.put(param.getName(), val);
+      }
+    }
+    return requestParams;
+  }
+
+  private static String obtainToken(HttpServletRequest request) {
+    String authStr = request.getHeader("Authorization");
+    String token = null;
+    if (authStr != null && authStr.startsWith("Bearer ")) {
+      token = authStr.substring(7);
+    }
+    return token;
+  }
+
+  private boolean isAllowed(HttpServletRequest request, String token, DefinedWebHook webHook) {
+    // Get API Key if exists
+    String apikey = request.getParameter("apikey");
+    // Check if user is allowed to call webhook
+    var definedwebhookToken = checkUserSecurity(apikey, token);
+    boolean allow = false;
+    if (definedwebhookToken != null) {
+      allow = webHook.getSmfwheDefinedwebhookAccessList()
+          .stream()
+          .filter(p -> p.getSmfwheDefinedwebhookToken()
+              .getId()
+              .compareTo(definedwebhookToken.getId()) == 0)
+          .count() == 1;
+    }
+    if (!allow) {
+      // Check if user is allowed to call webhook by role
+      var groupAccess = checkRoleSecurity(request, token, webHook);
+      if (groupAccess != null) {
+        allow = true;
+      }
+    }
+    return allow;
+  }
+
+  private static JSONObject extractBodyData(HttpMethod httpMethod, HttpServletRequest request)
+      throws IOException, WebhookParamException {
+    JSONObject body;
+    try {
+      if (httpMethod == HttpMethod.GET) {
+        body = new JSONObject();
+        for (String key : request.getParameterMap().keySet()) {
+          body.put(key, request.getParameter(key));
+        }
+      } else {
+        body = new JSONObject(request.getReader().lines().collect(Collectors.joining()));
+      }
+    } catch (JSONException e) {
+      var message = Utility.messageBD(new DalConnectionProvider(false),
+          "smfwhe_cannotCollectData", OBContext.getOBContext().getLanguage().getLanguage());
+      log.error(message);
+      throw new WebhookParamException(message);
+    }
+    return body;
+  }
+
+  private DefinedwebhookRole checkRoleSecurity(HttpServletRequest request, String token,
+      DefinedWebHook webHook) {
+    try {
+      DecodedJWT decodedToken = SecureWebServicesUtils.decodeToken(token);
+      String userId = decodedToken.getClaim("user").asString();
+      String roleId = decodedToken.getClaim("role").asString();
+      String orgId = decodedToken.getClaim("organization").asString();
+      String warehouseId = decodedToken.getClaim("warehouse").asString();
+      String clientId = decodedToken.getClaim("client").asString();
+      if (userId == null || userId.isEmpty() || roleId == null || roleId.isEmpty() || orgId == null || orgId.isEmpty() || warehouseId == null || warehouseId.isEmpty() || clientId == null || clientId.isEmpty()) {
+        throw new OBException("SWS - Token is not valid");
+      }
+      log.debug("SWS accessed by userId {}", userId);
+      OBContext.setOBContext(
+          SecureWebServicesUtils.createContext(userId, roleId, orgId, warehouseId, clientId));
+      OBContext.setOBContextInSession(request, OBContext.getOBContext());
+      SessionInfo.setUserId(userId);
+      SessionInfo.setProcessType("WS");
+      SessionInfo.setProcessId("DAL");
+
+      Role role = OBDal.getInstance().get(Role.class, roleId);
+      return (DefinedwebhookRole) OBDal.getInstance()
+          .createCriteria(DefinedwebhookRole.class)
+          .setFilterOnReadableClients(false)
+          .setFilterOnReadableOrganization(false)
+          .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_SMFWHEDEFINEDWEBHOOK, webHook))
+          .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_ROLE, role))
+          .uniqueResult();
+    } catch (Exception e) {
+      log.debug("Error decoding token", e);
+    }
+    return null;
+  }
+
   /**
    * Handler of GET requests.
    *
-   * @param request
-   *     an {@link HttpServletRequest} object that
-   *     contains the request the client has made
-   *     of the servlet
-   * @param response
-   *     an {@link HttpServletResponse} object that
-   *     contains the response the servlet sends
-   *     to the client
+   * @param request  an {@link HttpServletRequest} object that
+   *                 contains the request the client has made
+   *                 of the servlet
+   * @param response an {@link HttpServletResponse} object that
+   *                 contains the response the servlet sends
+   *                 to the client
    */
-  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-    handleRequest(HttpMethod.GET, request, response);
+  @Override
+  public void doGet(HttpServletRequest request, HttpServletResponse response) {
+    try {
+      handleRequest(HttpMethod.GET, request, response);
+    } catch (IOException e) {
+      response.setStatus(HttpStatus.SC_INTERNAL_SERVER_ERROR);
+      response.setHeader(CONTENT_TYPE, APPLICATION_JSON.getMimeType());
+    }
   }
 
   /**
    * Handler of POST requests.
    *
-   * @param request
-   *     an {@link HttpServletRequest} object that
-   *     contains the request the client has made
-   *     of the servlet
-   * @param response
-   *     an {@link HttpServletResponse} object that
-   *     contains the response the servlet sends
-   *     to the client
+   * @param request  an {@link HttpServletRequest} object that
+   *                 contains the request the client has made
+   *                 of the servlet
+   * @param response an {@link HttpServletResponse} object that
+   *                 contains the response the servlet sends
+   *                 to the client
    */
-  public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-    handleRequest(HttpMethod.POST, request, response);
+  @Override
+  public void doPost(HttpServletRequest request, HttpServletResponse response) {
+    try {
+      handleRequest(HttpMethod.POST, request, response);
+    } catch (IOException e) {
+      response.setStatus(HttpStatus.SC_INTERNAL_SERVER_ERROR);
+      response.setHeader(CONTENT_TYPE, APPLICATION_JSON.getMimeType());
+    }
   }
 }

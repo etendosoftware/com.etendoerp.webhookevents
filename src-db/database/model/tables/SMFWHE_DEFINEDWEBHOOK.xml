@@ -53,6 +53,10 @@
         <default/>
         <onCreateDefault/>
       </column>
+      <column name="ALLOW_GROUP_ACCESS" primaryKey="false" required="true" type="CHAR" size="1" autoIncrement="false">
+        <default><![CDATA[N]]></default>
+        <onCreateDefault/>
+      </column>
       <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_DEFWEBHOOK_AD_CLIENT">
         <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
       </foreign-key>
@@ -66,5 +70,6 @@
         <unique-column name="NAME"/>
       </unique>
       <check name="SMFWHE_DEFINEDWEBHOOK_IA_CHK"><![CDATA[ISACTIVE IN ('Y', 'N')]]></check>
+      <check name="SMFWHE_DEFWEBHOOK_AGA_CHK"><![CDATA[ALLOW_GROUP_ACCESS IN ('Y', 'N')]]></check>
     </table>
   </database>
