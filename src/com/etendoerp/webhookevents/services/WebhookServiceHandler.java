@@ -257,6 +257,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       if (BooleanUtils.isTrue(param.isRequired()) && StringUtils.isEmpty(val)) {
         var message = Utility.messageBD(new DalConnectionProvider(false),
             "smfwhe_missingParameter", OBContext.getOBContext().getLanguage().getLanguage());
+        message = String.format(message, param.getName());
         log.error(message);
         throw new WebhookParamException(message);
       }
