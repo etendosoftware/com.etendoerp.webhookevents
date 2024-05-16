@@ -26,6 +26,7 @@ import com.etendoerp.webhookevents.exceptions.WebhookAuthException;
 import com.etendoerp.webhookevents.exceptions.WebhookNotfoundException;
 import com.etendoerp.webhookevents.exceptions.WebhookParamException;
 import com.smf.securewebservices.utils.SecureWebServicesUtils;
+
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
@@ -48,6 +49,7 @@ import org.openbravo.service.db.DalConnectionProvider;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
@@ -70,7 +72,8 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Method to handle auth methods and cases
    *
-   * @param apikey Received token
+   * @param apikey
+   *     Received token
    * @return Token object
    */
   private DefinedwebhookToken checkUserSecurity(String apikey, String token) {
@@ -122,10 +125,13 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Cross filtering to find a called action and if the user is allowed to call it
    *
-   * @param name Webhook name
+   * @param name
+   *     Webhook name
    * @return OBObject of the called webhook
-   * @throws WebhookNotfoundException Exception triggered in case of unexisting webhook
-   * @throws WebhookAuthException     Exception triggered in case of auth issues
+   * @throws WebhookNotfoundException
+   *     Exception triggered in case of unexisting webhook
+   * @throws WebhookAuthException
+   *     Exception triggered in case of auth issues
    */
   private DefinedWebHook getAction(String name) throws WebhookNotfoundException {
     var criteria = OBDal.getInstance().createQuery(DefinedWebHook.class, "name = :name");
@@ -143,9 +149,11 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Weld helper to load configured webhook handler
    *
-   * @param javaClass Java class name of handler. Must extends {@link com.etendoerp.webhookevents.services.BaseWebhookService}
+   * @param javaClass
+   *     Java class name of handler. Must extends {@link com.etendoerp.webhookevents.services.BaseWebhookService}
    * @return Instances of handle
-   * @throws ClassNotFoundException triggerd in case of instancing problems
+   * @throws ClassNotFoundException
+   *     triggerd in case of instancing problems
    */
   private BaseWebhookService getInstance(String javaClass) throws ClassNotFoundException {
 
@@ -158,11 +166,16 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Build an standard json response
    *
-   * @param response     Http Object needed to obtain the writer
-   * @param code         HTTP code of the response (200, 203, etc)
-   * @param responseVars Map containing key value tuple to include in the response
-   * @throws JSONException Triggered in case of cannot generate a valid JSON String
-   * @throws IOException   Triggerd in case of issues with response writer
+   * @param response
+   *     Http Object needed to obtain the writer
+   * @param code
+   *     HTTP code of the response (200, 203, etc)
+   * @param responseVars
+   *     Map containing key value tuple to include in the response
+   * @throws JSONException
+   *     Triggered in case of cannot generate a valid JSON String
+   * @throws IOException
+   *     Triggerd in case of issues with response writer
    */
   private void buildResponse(HttpServletResponse response, int code,
       Map<String, String> responseVars) throws JSONException, IOException {
@@ -179,11 +192,16 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Build an standard json response
    *
-   * @param response        Http Object needed to obtain the writer
-   * @param code            HTTP code of the response (200, 203, etc)
-   * @param responseMessage String containing response message
-   * @throws JSONException Triggered in case of cannot generate a valid JSON String
-   * @throws IOException   Triggerd in case of issues with response writer
+   * @param response
+   *     Http Object needed to obtain the writer
+   * @param code
+   *     HTTP code of the response (200, 203, etc)
+   * @param responseMessage
+   *     String containing response message
+   * @throws JSONException
+   *     Triggered in case of cannot generate a valid JSON String
+   * @throws IOException
+   *     Triggerd in case of issues with response writer
    */
   private void buildResponse(HttpServletResponse response, int code, String responseMessage)
       throws JSONException, IOException {
@@ -195,9 +213,12 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Handle the request
    *
-   * @param httpMethod Http method of the request
-   * @param request    Http request object
-   * @param response   Http response object
+   * @param httpMethod
+   *     Http method of the request
+   * @param request
+   *     Http request object
+   * @param response
+   *     Http response object
    */
   private void handleRequest(HttpMethod httpMethod, HttpServletRequest request,
       HttpServletResponse response) throws IOException {
@@ -322,6 +343,22 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     return body;
   }
 
+  /**
+   * This method checks the security of the role based on the provided HttpServletRequest, token, and DefinedWebHook.
+   * It first decodes the token to get the user ID, role ID, organization ID, warehouse ID, and client ID.
+   * If any of these are null or empty, it throws an OBException indicating that the token is not valid.
+   * It then sets the OBContext based on these IDs and logs the user ID.
+   * It retrieves the Role object based on the role ID and returns the DefinedwebhookRole object that matches the provided DefinedWebHook and the retrieved Role.
+   * If an exception occurs during the execution of the method, it logs the error and returns null.
+   *
+   * @param request
+   *     The HttpServletRequest object that contains the request the client has made of the servlet.
+   * @param token
+   *     The token string to decode and use for setting the OBContext.
+   * @param webHook
+   *     The DefinedWebHook object to match in the getDefinedwebhookRole method.
+   * @return The matching DefinedwebhookRole object, or null if no match is found, an exception occurs, or the token is not valid.
+   */
   private DefinedwebhookRole checkRoleSecurity(HttpServletRequest request, String token,
       DefinedWebHook webHook) {
     try {
@@ -343,13 +380,8 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       SessionInfo.setProcessId("DAL");
 
       Role role = OBDal.getInstance().get(Role.class, roleId);
-      return (DefinedwebhookRole) OBDal.getInstance()
-          .createCriteria(DefinedwebhookRole.class)
-          .setFilterOnReadableClients(false)
-          .setFilterOnReadableOrganization(false)
-          .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_SMFWHEDEFINEDWEBHOOK, webHook))
-          .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_ROLE, role))
-          .uniqueResult();
+
+      return getDefinedwebhookRole(webHook, role);
     } catch (Exception e) {
       log.debug("Error decoding token", e);
     }
@@ -357,14 +389,51 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   }
 
   /**
+   * This method retrieves a DefinedwebhookRole object based on the provided DefinedWebHook and Role objects.
+   * It sets the OBContext to admin mode to bypass security checks, then creates a criteria query on the DefinedwebhookRole class.
+   * The query filters for a DefinedwebhookRole object that has the same DefinedWebHook and Role as the provided ones.
+   * If such a DefinedwebhookRole object is found, it is returned. Otherwise, null is returned.
+   * If an exception occurs during the execution of the method, it is logged and null is returned.
+   * The OBContext is restored to its previous mode at the end of the method, regardless of whether an exception occurred or not.
+   *
+   * @param webHook
+   *     The DefinedWebHook object to match in the query.
+   * @param role
+   *     The Role object to match in the query.
+   * @return The matching DefinedwebhookRole object, or null if no match is found or an exception occurs.
+   */
+  private DefinedwebhookRole getDefinedwebhookRole(DefinedWebHook webHook, Role role) {
+    DefinedwebhookRole definedwebhookRole = null;
+
+    try {
+      OBContext.setAdminMode();
+      definedwebhookRole = (DefinedwebhookRole) OBDal.getInstance()
+          .createCriteria(DefinedwebhookRole.class)
+          .setFilterOnReadableClients(false)
+          .setFilterOnReadableOrganization(false)
+          .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_SMFWHEDEFINEDWEBHOOK, webHook))
+          .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_ROLE, role))
+          .uniqueResult();
+      return definedwebhookRole;
+    } catch (Exception e) {
+      log.error("Error getting definedwebhookRole", e);
+      return null;
+    } finally {
+      OBContext.restorePreviousMode();
+    }
+  }
+
+  /**
    * Handler of GET requests.
    *
-   * @param request  an {@link HttpServletRequest} object that
-   *                 contains the request the client has made
-   *                 of the servlet
-   * @param response an {@link HttpServletResponse} object that
-   *                 contains the response the servlet sends
-   *                 to the client
+   * @param request
+   *     an {@link HttpServletRequest} object that
+   *     contains the request the client has made
+   *     of the servlet
+   * @param response
+   *     an {@link HttpServletResponse} object that
+   *     contains the response the servlet sends
+   *     to the client
    */
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
@@ -379,12 +448,14 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Handler of POST requests.
    *
-   * @param request  an {@link HttpServletRequest} object that
-   *                 contains the request the client has made
-   *                 of the servlet
-   * @param response an {@link HttpServletResponse} object that
-   *                 contains the response the servlet sends
-   *                 to the client
+   * @param request
+   *     an {@link HttpServletRequest} object that
+   *     contains the request the client has made
+   *     of the servlet
+   * @param response
+   *     an {@link HttpServletResponse} object that
+   *     contains the response the servlet sends
+   *     to the client
    */
   @Override
   public void doPost(HttpServletRequest request, HttpServletResponse response) {
