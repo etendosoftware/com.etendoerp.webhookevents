@@ -15,7 +15,11 @@ import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.openbravo.base.provider.OBProvider;
+import org.openbravo.base.secureApp.VariablesSecureApp;
+import org.openbravo.client.kernel.RequestContext;
+import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
+import org.openbravo.model.ad.access.Role;
 import org.openbravo.model.ad.access.User;
 import org.openbravo.model.ad.access.UserRoles;
 import org.openbravo.model.ad.system.Client;
@@ -25,6 +29,7 @@ import org.openbravo.test.base.TestConstants;
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
 import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
+import com.etendoerp.webhookevents.data.DefinedwebhookRole;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,8 +37,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class WebhookUtils {
   private static final Logger log4j = Logger.getLogger(WebhookSetupTest.class);
 
-  static final String USER_ROLE_FBADMIN = "451EF9CDDFE54DEEAF5636CCADC0D7BB";
-  static final String AD_ORG_ID = "0"; // *
+  static final String USER_ROLE_ADMIN = "451EF9CDDFE54DEEAF5636CCADC0D7BB";
   static final String BASE_URL = "http://localhost:8080/etendo/webhooks/";
   static final String ALERT_RULE = "1000013"; // Products without defined price
   static final String EXPECTED_TOKEN_NAME = "Etendo token";
@@ -46,11 +50,16 @@ public class WebhookUtils {
   static final String WEBHOOK_JAVACLASS = "com.etendoerp.webhookevents.ad_alert.AdAlertWebhookService";
   static final String WEBHOOK_EVENTCLASS = "JAVA";
 
+  /**
+   * Creates a new DefinedwebhookToken and sets its attributes.
+   *
+   * @return the created DefinedwebhookToken.
+   */
   public DefinedwebhookToken createApiToken() {
     DefinedwebhookToken token = OBProvider.getInstance().get(DefinedwebhookToken.class);
+    UserRoles userRole = OBDal.getInstance().get(UserRoles.class, USER_ROLE_ADMIN);
     Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.FB_GRP);
-    UserRoles userRole = OBDal.getInstance().get(UserRoles.class, WebhookUtils.USER_ROLE_FBADMIN);
-    Organization org = OBDal.getInstance().get(Organization.class, TestConstants.Orgs.ESP_NORTE);
+    Organization org = OBDal.getInstance().get(Organization.class, TestConstants.Orgs.MAIN);
     User user = OBDal.getInstance().get(User.class, TestConstants.Users.ADMIN);
 
     try {
@@ -70,12 +79,17 @@ public class WebhookUtils {
     return token;
   }
 
+  /**
+   * Creates a new DefinedWebHook and sets its attributes.
+   *
+   * @return the created DefinedWebHook.
+   */
   public DefinedWebHook createWebhook() {
     DefinedWebHook webHook = OBProvider.getInstance().get(DefinedWebHook.class);
 
-    Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.FB_GRP);
-    Organization org = OBDal.getInstance().get(Organization.class, WebhookUtils.AD_ORG_ID);
-    User user = OBDal.getInstance().get(User.class, TestConstants.Users.ADMIN);
+    Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.SYSTEM);
+    Organization org = OBDal.getInstance().get(Organization.class, TestConstants.Orgs.MAIN);
+    User user = OBDal.getInstance().get(User.class, TestConstants.Users.SYSTEM);
 
     try {
       webHook.setName(WEBHOOK_NAME);
@@ -85,6 +99,7 @@ public class WebhookUtils {
       webHook.setDescription(WEBHOOK_DESCRIPTION);
       webHook.setJavaClass(WEBHOOK_JAVACLASS);
       webHook.setEventClass(WEBHOOK_EVENTCLASS);
+      webHook.setAllowGroupAccess(true);
 
       OBDal.getInstance().save(webHook);
       OBDal.getInstance().flush();
@@ -96,10 +111,21 @@ public class WebhookUtils {
     return webHook;
   }
 
+  /**
+   * Creates a new DefinedWebhookParam associated with the given webhook and sets its attributes.
+   *
+   * @param webhook
+   *     the DefinedWebHook to associate with the new webhook parameter.
+   * @param name
+   *     the name of the webhook parameter.
+   * @param isRequired
+   *     whether the webhook parameter is required.
+   * @return the created DefinedWebhookParam.
+   */
   public DefinedWebhookParam createWebhookParam(DefinedWebHook webhook, String name, boolean isRequired) {
     DefinedWebhookParam webhookParam = OBProvider.getInstance().get(DefinedWebhookParam.class);
     Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.FB_GRP);
-    Organization org = OBDal.getInstance().get(Organization.class, WebhookUtils.AD_ORG_ID);
+    Organization org = OBDal.getInstance().get(Organization.class, TestConstants.Orgs.MAIN);
     User user = OBDal.getInstance().get(User.class, TestConstants.Users.ADMIN);
 
     try {
@@ -120,10 +146,19 @@ public class WebhookUtils {
     return webhookParam;
   }
 
+  /**
+   * Creates a new DefinedwebhookAccess associated with the given webhook and token, and sets its attributes.
+   *
+   * @param webhook
+   *     the DefinedWebHook to associate with the new webhook access.
+   * @param token
+   *     the DefinedwebhookToken to associate with the new webhook access.
+   * @return the created DefinedwebhookAccess.
+   */
   public DefinedwebhookAccess createWebhookAccess(DefinedWebHook webhook, DefinedwebhookToken token) {
     DefinedwebhookAccess webhookAccess = OBProvider.getInstance().get(DefinedwebhookAccess.class);
     Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.FB_GRP);
-    Organization org = OBDal.getInstance().get(Organization.class, WebhookUtils.AD_ORG_ID);
+    Organization org = OBDal.getInstance().get(Organization.class, TestConstants.Orgs.MAIN);
     User user = OBDal.getInstance().get(User.class, TestConstants.Users.ADMIN);
 
     try {
@@ -143,6 +178,52 @@ public class WebhookUtils {
     return webhookAccess;
   }
 
+  /**
+   * Creates a new DefinedwebhookRole associated with the given webhook and sets its attributes.
+   *
+   * @param webhook
+   *     the DefinedWebHook to associate with the new webhook role.
+   * @return the created DefinedwebhookRole.
+   */
+  public DefinedwebhookRole createWebhookRole(DefinedWebHook webhook) {
+    DefinedwebhookRole webhookRole = OBProvider.getInstance().get(DefinedwebhookRole.class);
+    Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.FB_GRP);
+    Organization org = OBDal.getInstance().get(Organization.class, TestConstants.Orgs.MAIN);
+    User user = OBDal.getInstance().get(User.class, TestConstants.Users.ADMIN);
+    Role role = OBDal.getInstance().get(Role.class, TestConstants.Roles.FB_GRP_ADMIN);
+
+    try {
+      webhookRole.setSmfwheDefinedwebhook(webhook);
+      webhookRole.setClient(client);
+      webhookRole.setOrganization(org);
+      webhookRole.setCreatedBy(user);
+      webhookRole.setRole(role);
+
+      OBDal.getInstance().save(webhookRole);
+      OBDal.getInstance().flush();
+      OBDal.getInstance().refresh(webhookRole);
+    } catch (Exception e) {
+      log4j.error(e.getMessage());
+      fail(e.getMessage());
+    }
+    return webhookRole;
+  }
+
+  /**
+   * Sends a GET request to the specified URL with the provided parameters and returns the response.
+   *
+   * @param baseUrl
+   *     the base URL to send the request to.
+   * @param name
+   *     the name parameter for the request.
+   * @param apiKey
+   *     the API key parameter for the request.
+   * @param description
+   *     the description parameter for the request.
+   * @param rule
+   *     the rule parameter for the request.
+   * @return a WebhookHttpResponse containing the response code and message.
+   */
   public WebhookHttpResponse sendGetRequest(String baseUrl, String name, String apiKey, String description,
       String rule) {
     try {
@@ -187,12 +268,66 @@ public class WebhookUtils {
     return null;
   }
 
+  /**
+   * Sets up the OBContext for the system user.
+   * This includes setting the user, role, client, and organization, and updating the RequestContext with a VariablesSecureApp instance.
+   */
+  public void setupUserAdmin() {
+    OBContext.setOBContext(TestConstants.Users.ADMIN, TestConstants.Roles.FB_GRP_ADMIN,
+        TestConstants.Clients.FB_GRP, TestConstants.Orgs.ESP_NORTE);
+    VariablesSecureApp vsa = new VariablesSecureApp(
+        OBContext.getOBContext().getUser().getId(),
+        OBContext.getOBContext().getCurrentClient().getId(),
+        OBContext.getOBContext().getCurrentOrganization().getId(),
+        OBContext.getOBContext().getRole().getId()
+    );
+    RequestContext.get().setVariableSecureApp(vsa);
+  }
+
+  /**
+   * Sets up the OBContext for the admin user.
+   * This includes setting the user, role, client, and organization, and updating the RequestContext with a VariablesSecureApp instance.
+   */
+  public void setupUserSystem() {
+    OBContext.setOBContext(TestConstants.Users.SYSTEM, TestConstants.Roles.SYS_ADMIN,
+        TestConstants.Clients.FB_GRP, TestConstants.Orgs.MAIN);
+    VariablesSecureApp vsa = new VariablesSecureApp(
+        OBContext.getOBContext().getUser().getId(),
+        OBContext.getOBContext().getCurrentClient().getId(),
+        OBContext.getOBContext().getCurrentOrganization().getId(),
+        OBContext.getOBContext().getRole().getId()
+    );
+    RequestContext.get().setVariableSecureApp(vsa);
+  }
+
+  /**
+   * Asserts that the webhook parameters match the expected values.
+   *
+   * @param name
+   *     the expected name of the webhook parameter.
+   * @param description
+   *     the expected description of the webhook parameter.
+   * @param rule
+   *     the expected rule of the webhook parameter.
+   */
   public void assertWebhookParams(String name, String description, String rule) {
     assertEquals(PARAM_NAME, name);
     assertEquals(PARAM_DESCRIPTION, description);
     assertEquals(PARAM_RULE, rule);
   }
 
+  /**
+   * Asserts that the webhook parameters match the expected values, including an optional non-required parameter.
+   *
+   * @param name
+   *     the expected name of the webhook parameter.
+   * @param description
+   *     the expected description of the webhook parameter.
+   * @param rule
+   *     the expected rule of the webhook parameter.
+   * @param paramNoRequired
+   *     the expected value of the non-required parameter.
+   */
   public void assertWebhookParams(String name, String description, String rule, String paramNoRequired) {
     assertEquals(PARAM_NAME, name);
     assertEquals(PARAM_DESCRIPTION, description);
@@ -207,13 +342,21 @@ public class WebhookUtils {
     objectsToDelete.add(object);
   }
 
+  /**
+   * Deletes all objects in the objectsToDelete list.
+   * For each object, if it is an instance of DefinedWebHook, it sets up the system user context,
+   * otherwise, it sets up the admin user context. Then it removes the object from the database and flushes the session.
+   */
   public void deleteAll() {
     for (Object object : objectsToDelete) {
       if (object != null) {
+        Runnable setupUser = (object instanceof DefinedWebHook) ? this::setupUserSystem : this::setupUserAdmin;
+        setupUser.run();
         OBDal.getInstance().remove(object);
         OBDal.getInstance().flush();
       }
     }
     objectsToDelete.clear();
   }
+
 }
