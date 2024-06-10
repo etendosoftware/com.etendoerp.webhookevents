@@ -8,13 +8,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
-import org.openbravo.base.secureApp.VariablesSecureApp;
 import org.openbravo.base.weld.test.WeldBaseTest;
-import org.openbravo.client.kernel.RequestContext;
-import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.erpCommon.utility.OBMessageUtils;
-import org.openbravo.test.base.TestConstants;
 
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
@@ -34,16 +30,8 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    OBContext.setOBContext(TestConstants.Users.ADMIN, TestConstants.Roles.FB_GRP_ADMIN,
-        TestConstants.Clients.FB_GRP, TestConstants.Orgs.ESP_NORTE);
-    VariablesSecureApp vsa = new VariablesSecureApp(
-        OBContext.getOBContext().getUser().getId(),
-        OBContext.getOBContext().getCurrentClient().getId(),
-        OBContext.getOBContext().getCurrentOrganization().getId(),
-        OBContext.getOBContext().getRole().getId()
-    );
-    RequestContext.get().setVariableSecureApp(vsa);
     webhookUtils = new WebhookUtils();
+    webhookUtils.setupUserSystem();
   }
 
   @Test
@@ -70,7 +58,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
       String rule = WebhookUtils.ALERT_RULE;
 
       WebhookHttpResponse response = webhookUtils.sendGetRequest(baseUrl, name, apiKey, description, rule);
-      assertEquals(OBMessageUtils.messageBD("smfwhe_apiKeyNotFound"), response.getMessage());
+      assertEquals(OBMessageUtils.messageBD("smfwhe_unauthorizedToken"), response.getMessage());
       assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.getStatusCode());
     } finally {
       webhookUtils.addObjectToDelete(webhookAccess);
@@ -173,7 +161,8 @@ public class WebhookErrorsTest extends WeldBaseTest {
       String rule = WebhookUtils.ALERT_RULE;
 
       WebhookHttpResponse response = webhookUtils.sendGetRequest(baseUrl, name, apiKey, null, rule);
-      assertEquals(OBMessageUtils.messageBD("smfwhe_missingParameter"), response.getMessage());
+      String expectedMessage = String.format(OBMessageUtils.messageBD("smfwhe_missingParameter"), webhookParamDescription.getName());
+      assertEquals(expectedMessage, response.getMessage());
       assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, response.getStatusCode());
     } finally {
       webhookUtils.addObjectToDelete(webhookAccess);

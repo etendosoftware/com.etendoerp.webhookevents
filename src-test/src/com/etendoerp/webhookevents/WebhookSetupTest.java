@@ -10,18 +10,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
-import org.openbravo.base.secureApp.VariablesSecureApp;
 import org.openbravo.base.weld.test.WeldBaseTest;
-import org.openbravo.client.kernel.RequestContext;
-import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.model.ad.alert.Alert;
-import org.openbravo.test.base.TestConstants;
 
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
 import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
+import com.etendoerp.webhookevents.data.DefinedwebhookRole;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
 public class WebhookSetupTest extends WeldBaseTest {
@@ -32,22 +29,15 @@ public class WebhookSetupTest extends WeldBaseTest {
   DefinedWebhookParam webhookParamDescription;
   DefinedWebhookParam webhookParamRule;
   DefinedwebhookAccess webhookAccess;
+  DefinedwebhookRole webhookRole;
   Alert alert;
 
   @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    OBContext.setOBContext(TestConstants.Users.ADMIN, TestConstants.Roles.FB_GRP_ADMIN,
-        TestConstants.Clients.FB_GRP, TestConstants.Orgs.ESP_NORTE);
-    VariablesSecureApp vsa = new VariablesSecureApp(
-        OBContext.getOBContext().getUser().getId(),
-        OBContext.getOBContext().getCurrentClient().getId(),
-        OBContext.getOBContext().getCurrentOrganization().getId(),
-        OBContext.getOBContext().getRole().getId()
-    );
-    RequestContext.get().setVariableSecureApp(vsa);
     webhookUtils = new WebhookUtils();
+    webhookUtils.setupUserSystem();
   }
 
   @Test
@@ -82,11 +72,13 @@ public class WebhookSetupTest extends WeldBaseTest {
   public void testConfigureWebhookParams() {
     try {
       webhook = webhookUtils.createWebhook();
+      webhookUtils.setupUserAdmin();
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
       webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
       webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE, true);
       webhookAccess = webhookUtils.createWebhookAccess(webhook, token);
+      webhookRole = webhookUtils.createWebhookRole(webhook);
 
       OBDal.getInstance().commitAndClose();
 
@@ -106,7 +98,7 @@ public class WebhookSetupTest extends WeldBaseTest {
       assertEquals(HttpURLConnection.HTTP_OK, response.getStatusCode());
 
       OBCriteria<Alert> alertCriteria = OBDal.getInstance().createCriteria(Alert.class);
-      alertCriteria.add(Restrictions.eq(Alert.ID, alertId));
+      alertCriteria.add(Restrictions.eq(Alert.PROPERTY_ID, alertId));
       alertCriteria.setMaxResults(1);
 
       alert = (Alert) alertCriteria.uniqueResult();
@@ -114,6 +106,7 @@ public class WebhookSetupTest extends WeldBaseTest {
       assertEquals(rule, alert.getAlertRule().getId());
       assertEquals(alertId, alert.getId());
     } finally {
+      webhookUtils.addObjectToDelete(webhookRole);
       webhookUtils.addObjectToDelete(webhookAccess);
       webhookUtils.addObjectToDelete(token);
       webhookUtils.addObjectToDelete(webhookParamName);
@@ -130,12 +123,15 @@ public class WebhookSetupTest extends WeldBaseTest {
     DefinedWebhookParam webhookParamNoRequired = null;
     try {
       webhook = webhookUtils.createWebhook();
+      webhookUtils.setupUserAdmin();
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
       webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
       webhookParamRule = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_RULE, true);
       webhookParamNoRequired = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NO_REQUIRED, false);
       webhookAccess = webhookUtils.createWebhookAccess(webhook, token);
+
+      webhookRole = webhookUtils.createWebhookRole(webhook);
 
       OBDal.getInstance().commitAndClose();
 
@@ -151,19 +147,22 @@ public class WebhookSetupTest extends WeldBaseTest {
 
       // Create alert without the webhook param no required
       WebhookHttpResponse response = webhookUtils.sendGetRequest(baseUrl, name, apiKey, description, rule);
+
       String alertId = response.getMessage();
       assertNotNull(alertId);
       assertEquals(HttpURLConnection.HTTP_OK, response.getStatusCode());
 
       OBCriteria<Alert> alertCriteria = OBDal.getInstance().createCriteria(Alert.class);
-      alertCriteria.add(Restrictions.eq(Alert.ID, alertId));
+      alertCriteria.add(Restrictions.eq(Alert.PROPERTY_ID, alertId));
       alertCriteria.setMaxResults(1);
 
       alert = (Alert) alertCriteria.uniqueResult();
+
       assertEquals(description, alert.getDescription());
       assertEquals(rule, alert.getAlertRule().getId());
       assertEquals(alertId, alert.getId());
     } finally {
+      webhookUtils.addObjectToDelete(webhookRole);
       webhookUtils.addObjectToDelete(webhookAccess);
       webhookUtils.addObjectToDelete(token);
       webhookUtils.addObjectToDelete(webhookParamName);
@@ -171,6 +170,7 @@ public class WebhookSetupTest extends WeldBaseTest {
       webhookUtils.addObjectToDelete(webhookParamRule);
       webhookUtils.addObjectToDelete(webhookParamNoRequired);
       webhookUtils.addObjectToDelete(webhook);
+      webhookUtils.addObjectToDelete(alert);
     }
   }
 
