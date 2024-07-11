@@ -77,49 +77,45 @@ public class WebhookServiceHandler extends HttpBaseServlet {
    * @return Token object
    */
   private DefinedwebhookToken checkUserSecurity(String apikey, String token) {
-    try {
-      // Check access by token
-      var keyCriteria = OBDal.getInstance()
-          .createCriteria(DefinedwebhookToken.class)
-          .setFilterOnReadableClients(false)
-          .setFilterOnReadableOrganization(false)
-          .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, false));
-      keyCriteria.add(Restrictions.eq(DefinedwebhookToken.PROPERTY_APIKEY, apikey));
-      DefinedwebhookToken access = (DefinedwebhookToken) keyCriteria.uniqueResult();
-      if (access == null && token != null) {
-        try {
-          DecodedJWT decodedToken = SecureWebServicesUtils.decodeToken(token);
-          if (decodedToken != null) {
-            String roleId = decodedToken.getClaim("role").asString();
-            String userId = decodedToken.getClaim("user").asString();
-            var userRole = OBDal.getInstance()
-                .createQuery(UserRoles.class,
-                    "as e where e.role.id = :roleId and e.userContact.id = :userId")
-                .setNamedParameter("roleId", roleId)
-                .setNamedParameter("userId", userId)
-                .uniqueResult();
-            access = (DefinedwebhookToken) OBDal.getInstance()
-                .createCriteria(DefinedwebhookToken.class)
-                .setFilterOnReadableClients(false)
-                .setFilterOnReadableOrganization(false)
-                .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, true))
-                .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_USERROLE, userRole))
-                .uniqueResult();
-          }
-        } catch (Exception e) {
-          log.debug("Error decoding token", e);
+    // Check access by token
+    var keyCriteria = OBDal.getInstance()
+        .createCriteria(DefinedwebhookToken.class)
+        .setFilterOnReadableClients(false)
+        .setFilterOnReadableOrganization(false)
+        .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, false));
+    keyCriteria.add(Restrictions.eq(DefinedwebhookToken.PROPERTY_APIKEY, apikey));
+    DefinedwebhookToken access = (DefinedwebhookToken) keyCriteria.uniqueResult();
+    if (access == null && token != null) {
+      try {
+        DecodedJWT decodedToken = SecureWebServicesUtils.decodeToken(token);
+        if (decodedToken != null) {
+          String roleId = decodedToken.getClaim("role").asString();
+          String userId = decodedToken.getClaim("user").asString();
+          var userRole = OBDal.getInstance()
+              .createQuery(UserRoles.class,
+                  "as e where e.role.id = :roleId and e.userContact.id = :userId")
+              .setNamedParameter("roleId", roleId)
+              .setNamedParameter("userId", userId)
+              .uniqueResult();
+          access = (DefinedwebhookToken) OBDal.getInstance()
+              .createCriteria(DefinedwebhookToken.class)
+              .setFilterOnReadableClients(false)
+              .setFilterOnReadableOrganization(false)
+              .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, true))
+              .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_USERROLE, userRole))
+              .uniqueResult();
         }
+      } catch (Exception e) {
+        log.debug("Error decoding token", e);
       }
-      if (access == null) {
-        return null;
-      }
-      var userRole = access.getUserRole();
-      OBContext.setOBContext(userRole.getUserContact().getId(), userRole.getRole().getId(),
-          userRole.getClient().getId(), userRole.getOrganization().getId());
-      return access;
-    } finally {
-      OBContext.restorePreviousMode();
     }
+    if (access == null) {
+      return null;
+    }
+    var userRole = access.getUserRole();
+    OBContext.setOBContext(userRole.getUserContact().getId(), userRole.getRole().getId(),
+        userRole.getClient().getId(), userRole.getOrganization().getId());
+    return access;
   }
 
   /**
@@ -263,6 +259,8 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       } catch (JSONException ex) {
         throw new OBException(ex);
       }
+    } finally {
+      OBContext.restorePreviousMode();
     }
   }
 
