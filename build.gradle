@@ -16,6 +16,7 @@ configurations {
     moduleDependencyContainer
 }
 
+
 publishing {
     publications {
         "com.etendoerp.webhookevents"(MavenPublication) {
