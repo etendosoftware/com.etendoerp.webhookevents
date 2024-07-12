@@ -17,6 +17,7 @@ configurations {
 }
 
 
+
 publishing {
     publications {
         "com.etendoerp.webhookevents"(MavenPublication) {
