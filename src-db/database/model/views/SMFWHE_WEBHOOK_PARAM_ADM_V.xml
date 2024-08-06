@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+  <database name="VIEW SMFWHE_WEBHOOK_PARAM_ADM_V">
+    <view name="SMFWHE_WEBHOOK_PARAM_ADM_V"><![CDATA[SELECT smfwhe_definedwebhook_param.smfwhe_definedwebhook_param_id AS smfwhe_webhook_param_adm_v_id, smfwhe_definedwebhook_param.ad_client_id, smfwhe_definedwebhook_param.ad_org_id, smfwhe_definedwebhook_param.isactive, smfwhe_definedwebhook_param.created, smfwhe_definedwebhook_param.createdby, smfwhe_definedwebhook_param.updated, smfwhe_definedwebhook_param.updatedby, smfwhe_definedwebhook_param.smfwhe_definedwebhook_id AS smfwhe_definedwebhook_admin_v_id, smfwhe_definedwebhook_param.name, smfwhe_definedwebhook_param.isrequired, smfwhe_definedwebhook_param.ad_module_id FROM smfwhe_definedwebhook_param]]></view>
+  </database>
