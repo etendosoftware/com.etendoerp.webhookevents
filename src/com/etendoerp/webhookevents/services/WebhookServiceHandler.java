@@ -64,6 +64,7 @@ import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 public class WebhookServiceHandler extends HttpBaseServlet {
   private static final Logger log = LogManager.getLogger();
   public static final String CONTENT_TYPE = "Content-Type";
+  private static final String EN_US = "en_US";
 
   enum HttpMethod {
     GET, POST, PUT, DELETE
@@ -233,8 +234,11 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       boolean allow = isAllowed(request, token, webHook);
       if (!allow) {
         // User is not allowed to call webhook
+
         var message = Utility.messageBD(new DalConnectionProvider(false),
-            "smfwhe_unauthorizedToken", OBContext.getOBContext().getLanguage().getLanguage());
+            "smfwhe_unauthorizedToken", OBContext.getOBContext() != null ?
+                OBContext.getOBContext().getLanguage().getLanguage() :
+                EN_US);
         log.error(message);
         throw new WebhookAuthException(message);
       }
