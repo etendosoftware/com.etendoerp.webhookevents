@@ -84,7 +84,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
         .setFilterOnReadableOrganization(false)
         .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, false));
     keyCriteria.add(Restrictions.eq(DefinedwebhookToken.PROPERTY_APIKEY, apikey));
-    DefinedwebhookToken access = (DefinedwebhookToken) keyCriteria.uniqueResult();
+    DefinedwebhookToken access = (DefinedwebhookToken) keyCriteria.setMaxResults(1).uniqueResult();
     if (access == null && token != null) {
       try {
         DecodedJWT decodedToken = SecureWebServicesUtils.decodeToken(token);
@@ -96,6 +96,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
                   "as e where e.role.id = :roleId and e.userContact.id = :userId")
               .setNamedParameter("roleId", roleId)
               .setNamedParameter("userId", userId)
+              .setMaxResult(1)
               .uniqueResult();
           access = (DefinedwebhookToken) OBDal.getInstance()
               .createCriteria(DefinedwebhookToken.class)
@@ -103,6 +104,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
               .setFilterOnReadableOrganization(false)
               .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_ROLEACCESS, true))
               .add(Restrictions.eq(DefinedwebhookToken.PROPERTY_USERROLE, userRole))
+              .setMaxResults(1)
               .uniqueResult();
         }
       } catch (Exception e) {
@@ -132,7 +134,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   private DefinedWebHook getAction(String name) throws WebhookNotfoundException {
     var criteria = OBDal.getInstance().createQuery(DefinedWebHook.class, "name = :name");
     criteria.setNamedParameter("name", name);
-    var action = criteria.uniqueResult();
+    var action = criteria.setMaxResult(1).uniqueResult();
     if (action == null) {
       var message = Utility.messageBD(new DalConnectionProvider(false), "smfwhe_actionNotFound",
           OBContext.getOBContext().getLanguage().getLanguage());
