@@ -411,6 +411,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
           .setFilterOnReadableOrganization(false)
           .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_SMFWHEDEFINEDWEBHOOK, webHook))
           .add(Restrictions.eq(DefinedwebhookRole.PROPERTY_ROLE, role))
+          .setMaxResults(1)
           .uniqueResult();
       return definedwebhookRole;
     } catch (Exception e) {
