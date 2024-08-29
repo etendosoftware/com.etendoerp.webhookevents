@@ -8,9 +8,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.openbravo.base.exception.OBSecurityException;
 import org.openbravo.base.weld.test.WeldBaseTest;
+import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.erpCommon.utility.OBMessageUtils;
+import org.openbravo.test.base.Issue;
+import org.openbravo.test.base.TestConstants;
 
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
@@ -35,10 +39,21 @@ public class WebhookErrorsTest extends WeldBaseTest {
   }
 
   @Test
+  @Issue("#12")
+  @DisplayName("[ETP-110] Setup Webhook not allow")
+  public void testSetupWebhookNotAllow() {
+    try {
+      webhookUtils.createWebhookThrowError(TestConstants.Clients.FB_GRP, TestConstants.Orgs.MAIN, TestConstants.Users.ADMIN);
+    } catch (OBSecurityException e) {
+      assertEquals(WebhookUtils.ERROR_MSG_NOT_ALLOW, e.getMessage());
+    }
+  }
+
+  @Test
   @DisplayName("[WHE-011] Make a Get Request with incorrect token")
   public void testMakeGetRequestWithIncorrectToken() {
     try {
-      webhook = webhookUtils.createWebhook();
+      webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
       webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
@@ -74,7 +89,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-012] Make a Get Request with incorrect webhook name")
   public void testMakeGetRequestWithIncorrectName() {
     try {
-      webhook = webhookUtils.createWebhook();
+      webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
       webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
@@ -110,7 +125,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-013] Make a Get Request without access")
   public void testMakeGetRequestWithoutAccess() {
     try {
-      webhook = webhookUtils.createWebhook();
+      webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
       webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
@@ -143,7 +158,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-014] Make a Get Request with a missing parameter marked as required")
   public void testMakeGetRequestWithMissingParameter() {
     try {
-      webhook = webhookUtils.createWebhook();
+      webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
       webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
