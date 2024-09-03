@@ -39,12 +39,14 @@ import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 import org.openbravo.base.HttpBaseServlet;
 import org.openbravo.base.exception.OBException;
+import org.openbravo.base.session.OBPropertiesProvider;
 import org.openbravo.base.util.OBClassLoader;
 import org.openbravo.base.weld.WeldUtils;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.database.SessionInfo;
+import org.openbravo.erpCommon.utility.OBMessageUtils;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.access.Role;
 import org.openbravo.model.ad.access.UserRoles;
@@ -457,39 +459,42 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     if (hooks.length == 0) {
       return;
     }
-    JSONArray infoWebhooksArray = new JSONArray();
-
-    OBCriteria<DefinedWebHook> webhookCrit = OBDal.getInstance().createCriteria(
-        DefinedWebHook.class);
-    webhookCrit.add(Restrictions.in(DefinedWebHook.PROPERTY_NAME, hooks));
-    List<DefinedWebHook> webhooks = webhookCrit.list();
-    for (DefinedWebHook webhook : webhooks) {
-      JSONObject info = new JSONObject();
-      info.put("name", webhook.getName());
-      info.put("description", webhook.getDescription());
-      info.put("javaClass", webhook.getJavaClass());
-
-      JSONArray info_params = new JSONArray();
-      for (DefinedWebhookParam param : webhook.getSmfwheDefinedwebhookParamList()) {
-        JSONObject paramInfo = new JSONObject();
-        paramInfo.put("name", param.getName());
-        paramInfo.put("type", "string");
-        paramInfo.put("required", param.isRequired());
-        info_params.put(paramInfo);
-      }
-
-      info.put("params", info_params);
-      infoWebhooksArray.put(info);
-    }
-    String jsonOpenAPI = jsonOpenAPISpec(infoWebhooksArray);
-
     try {
+      OBContext.setAdminMode();
+      JSONArray infoWebhooksArray = new JSONArray();
+
+      OBCriteria<DefinedWebHook> webhookCrit = OBDal.getInstance().createCriteria(
+          DefinedWebHook.class);
+      webhookCrit.add(Restrictions.in(DefinedWebHook.PROPERTY_NAME, hooks));
+      List<DefinedWebHook> webhooks = webhookCrit.list();
+      for (DefinedWebHook webhook : webhooks) {
+        JSONObject info = new JSONObject();
+        info.put("name", webhook.getName());
+        info.put("description", webhook.getDescription());
+        info.put("javaClass", webhook.getJavaClass());
+
+        JSONArray info_params = new JSONArray();
+        for (DefinedWebhookParam param : webhook.getSmfwheDefinedwebhookParamList()) {
+          JSONObject paramInfo = new JSONObject();
+          paramInfo.put("name", param.getName());
+          paramInfo.put("type", "string");
+          paramInfo.put("required", param.isRequired());
+          info_params.put(paramInfo);
+        }
+
+        info.put("params", info_params);
+        infoWebhooksArray.put(info);
+      }
+      String jsonOpenAPI = jsonOpenAPISpec(infoWebhooksArray);
+
       response.setStatus(HttpStatus.SC_OK);
       response.setHeader(CONTENT_TYPE, APPLICATION_JSON.getMimeType());
       PrintWriter out = response.getWriter();
       out.print(jsonOpenAPI);
     } catch (IOException e) {
       log.error("Error sending response", e);
+    } finally {
+      OBContext.restorePreviousMode();
     }
 
 
@@ -505,6 +510,12 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     info.put("description", "API to execute EtendoERP webhooks");
     info.put("version", "1.0.0");
     openApiSpec.put("info", info);
+
+    //server
+    OBPropertiesProvider prop = OBPropertiesProvider.getInstance();
+    String host = prop.getOpenbravoProperties().getProperty("ETENDO_HOST", "http://localhost:8080/etendo");
+    JSONObject server = new JSONObject();
+    server.put("url", host);
 
     JSONObject paths = new JSONObject();
     JSONObject components = new JSONObject();
@@ -602,7 +613,25 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     // Add paths and components to the OpenAPI spec
     openApiSpec.put("paths", paths);
     components.put("schemas", schemas);
+
+    //add security schema for bearer token
+    JSONObject securitySchemas = new JSONObject();
+    JSONObject bearerToken = new JSONObject();
+    bearerToken.put("type", "http");
+    bearerToken.put("scheme", "bearer");
+    bearerToken.put("bearerFormat", "JWT");
+    securitySchemas.put("secureWSToken", bearerToken);
+    components.put("securitySchemes", securitySchemas);
     openApiSpec.put("components", components);
+
+    //add security to the path
+    JSONObject security = new JSONObject();
+    JSONArray securityArray = new JSONArray();
+    JSONObject secureWSToken = new JSONObject();
+    secureWSToken.put("secureWSToken", new JSONArray());
+    securityArray.put(secureWSToken);
+    security.put("secureWSToken", securityArray);
+    postPath.put("security", security);
 
     return openApiSpec.toString(4);
   }
