@@ -18,6 +18,7 @@
 package com.etendoerp.webhookevents.services;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.ctc.wstx.util.StringUtil;
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
 import com.etendoerp.webhookevents.data.DefinedwebhookRole;
@@ -35,7 +36,6 @@ import org.apache.logging.log4j.Logger;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 import org.openbravo.base.HttpBaseServlet;
 import org.openbravo.base.exception.OBException;
@@ -46,7 +46,6 @@ import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.database.SessionInfo;
-import org.openbravo.erpCommon.utility.OBMessageUtils;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.access.Role;
 import org.openbravo.model.ad.access.UserRoles;
@@ -58,6 +57,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -228,6 +228,9 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       OBContext.setAdminMode();
       // Check if webhook exists
       String name = request.getParameter("name");
+      if (StringUtils.isEmpty(name)) {
+        name = request.getPathInfo().substring(1);
+      }
       var webHook = getAction(name);
 
       // Get JWT token if exists
@@ -485,7 +488,10 @@ public class WebhookServiceHandler extends HttpBaseServlet {
         info.put("params", info_params);
         infoWebhooksArray.put(info);
       }
-      String jsonOpenAPI = jsonOpenAPISpec(infoWebhooksArray);
+      OBPropertiesProvider prop = OBPropertiesProvider.getInstance();
+      String jsonOpenAPI = jsonOpenAPISpec(
+          prop.getOpenbravoProperties().getProperty("ETENDO_HOST", "http://localhost:8080/etendo"), "Webhooks API",
+          "API to execute EtendoERP webhooks", "1.0.0", "/webhooks", infoWebhooksArray);
 
       response.setStatus(HttpStatus.SC_OK);
       response.setHeader(CONTENT_TYPE, APPLICATION_JSON.getMimeType());
@@ -500,45 +506,47 @@ public class WebhookServiceHandler extends HttpBaseServlet {
 
   }
 
-  private String jsonOpenAPISpec(JSONArray infoWebhooksArray) throws JSONException {
+
+  /**
+   * Generates a JSON representation of the OpenAPI specification based on the provided parameters.
+   *
+   * @param host              The host URL for the API.
+   * @param title             The title of the API.
+   * @param description       The description of the API.
+   * @param apiVersion        The version of the API.
+   * @param prefixParentPath  The prefix parent path for the API endpoints.
+   * @param infoWebhooksArray The array of webhook information.
+   * @return A JSON string representing the OpenAPI specification.
+   * @throws JSONException If there is an error while creating the JSON objects.
+   */
+  
+  public String jsonOpenAPISpec(String host, String title, String description,
+      String apiVersion, String prefixParentPath, JSONArray infoWebhooksArray) throws JSONException {
     JSONObject openApiSpec = new JSONObject();
 
-    // Configuración básica de OpenAPI
+    // Basic OpenAPI configuration
     openApiSpec.put("openapi", "3.0.1");
     JSONObject info = new JSONObject();
-    info.put("title", "Webhooks API");
-    info.put("description", "API to execute EtendoERP webhooks");
-    info.put("version", "1.0.0");
+    info.put("title", title);
+    info.put("description", description);
+    info.put("version", apiVersion);
     openApiSpec.put("info", info);
+    String prefixPath = StringUtils.isEmpty(prefixParentPath) ? "" : prefixParentPath;
 
     //server
-    OBPropertiesProvider prop = OBPropertiesProvider.getInstance();
-    String host = prop.getOpenbravoProperties().getProperty("ETENDO_HOST", "http://localhost:8080/etendo");
     JSONObject server = new JSONObject();
     server.put("url", host);
+    openApiSpec.put("servers", new JSONArray().put(server));
 
     JSONObject paths = new JSONObject();
     JSONObject components = new JSONObject();
     JSONObject schemas = new JSONObject();
 
-    // Define the base path for the webhooks
-    String basePath = "/webhooks";
-
-    // Create an array for the possible `name` values
-    JSONArray enumValues = new JSONArray();
-
-    // Create an array for the different request body schemas
-    JSONArray oneOfSchemas = new JSONArray();
-
-    // Iterate over each webhook and generate the corresponding schema
     for (int i = 0; i < infoWebhooksArray.length(); i++) {
       JSONObject webhook = infoWebhooksArray.getJSONObject(i);
       String name = webhook.getString("name");
 
-      // Add the webhook name to the `name` enum
-      enumValues.put(name);
-
-      // Create the schema for the request body
+      // Creates the schema for the request body directly within each path
       JSONObject webhookSchema = new JSONObject();
       webhookSchema.put("type", "object");
       JSONObject properties = new JSONObject();
@@ -562,59 +570,34 @@ public class WebhookServiceHandler extends HttpBaseServlet {
         webhookSchema.put("required", requiredFields);
       }
 
-      // Add the schema to the `schemas` object
-      schemas.put(name + "Request", webhookSchema);
+      // Define the path for each webhook as /webhooks/{name}
 
-      // Add the schema reference to `oneOf`
-      JSONObject refSchema = new JSONObject();
-      refSchema.put("$ref", "#/components/schemas/" + name + "Request");
-      oneOfSchemas.put(refSchema);
+      String webhookPath = String.format("%s%s", prefixPath, StringUtils.startsWith(name, "/") ? name : "/" + name);
+      JSONObject postPath = new JSONObject();
+      postPath.put("summary", "Execute the " + name + " webhook");
+
+      // Configure the request body directly in the endpoint definition
+      JSONObject requestBody = new JSONObject();
+      requestBody.put("required", true);
+      JSONObject content = new JSONObject();
+      JSONObject applicationJson = new JSONObject();
+      applicationJson.put("schema", webhookSchema);
+      content.put("application/json", applicationJson);
+      requestBody.put("content", content);
+      postPath.put("requestBody", requestBody);
+
+      JSONObject responses = new JSONObject();
+      JSONObject response200 = new JSONObject();
+      response200.put("description", "Webhook response");
+      responses.put("200", response200);
+      postPath.put("responses", responses);
+
+      paths.put(webhookPath, new JSONObject().put("post", postPath));
     }
 
-    // Define the webhook path
-    JSONObject postPath = new JSONObject();
-    postPath.put("summary", "Execute a webhook identified by its name");
-
-    JSONArray parameters = new JSONArray();
-    JSONObject nameParam = new JSONObject();
-    nameParam.put("in", "query");
-    nameParam.put("name", "name");
-    nameParam.put("required", true);
-    JSONObject nameSchema = new JSONObject();
-    nameSchema.put("type", "string");
-    nameSchema.put("enum", enumValues);
-    nameParam.put("schema", nameSchema);
-    parameters.put(nameParam);
-
-    postPath.put("parameters", parameters);
-
-    // Configure the request body using a single `schema` that contains `oneOf`
-    JSONObject requestBody = new JSONObject();
-    requestBody.put("required", true);
-    JSONObject content = new JSONObject();
-    JSONObject applicationJson = new JSONObject();
-    JSONObject schema = new JSONObject();
-    schema.put("oneOf", oneOfSchemas);
-    applicationJson.put("schema", schema);
-    content.put("application/json", applicationJson);
-    requestBody.put("content", content);
-    postPath.put("requestBody", requestBody);
-
-    // Add responses without specifying a schema
-    JSONObject responses = new JSONObject();
-    JSONObject response200 = new JSONObject();
-    response200.put("description", "Webhook response");
-    responses.put("200", response200);
-    postPath.put("responses", responses);
-
-    // Add the path to the paths object
-    paths.put(basePath, new JSONObject().put("post", postPath));
-
-    // Add paths and components to the OpenAPI spec
     openApiSpec.put("paths", paths);
-    components.put("schemas", schemas);
 
-    //add security schema for bearer token
+    // Add security schema for Bearer token
     JSONObject securitySchemas = new JSONObject();
     JSONObject bearerToken = new JSONObject();
     bearerToken.put("type", "http");
@@ -624,15 +607,20 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     components.put("securitySchemes", securitySchemas);
     openApiSpec.put("components", components);
 
-    //add security to the path
+    // Add security to each path
     JSONObject security = new JSONObject();
     JSONArray securityArray = new JSONArray();
     JSONObject secureWSToken = new JSONObject();
     secureWSToken.put("secureWSToken", new JSONArray());
     securityArray.put(secureWSToken);
     security.put("secureWSToken", securityArray);
-    postPath.put("security", security);
+    Iterator<String> keys = paths.keys();
 
+    while (keys.hasNext()) {
+      String key = keys.next();
+      JSONObject path = paths.getJSONObject(key);
+      path.getJSONObject("post").put("security", security);
+    }
     return openApiSpec.toString(4);
   }
 
