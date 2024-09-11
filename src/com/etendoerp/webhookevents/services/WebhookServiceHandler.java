@@ -239,12 +239,14 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       boolean allow = isAllowed(request, token, webHook);
       if (!allow) {
         // User is not allowed to call webhook
-        var message = Utility.messageBD(new DalConnectionProvider(false),
-            "smfwhe_unauthorizedToken", OBContext.getOBContext().getLanguage().getLanguage());
+
+        OBContext obContext = OBContext.getOBContext();
+        var lang = obContext != null ? obContext.getLanguage().getLanguage() : EN_US;
+        var roleName = obContext != null ? obContext.getRole().getName() : "-";
+        var message = Utility.messageBD(new DalConnectionProvider(false), "smfwhe_unauthorizedToken", lang);
         if (webHook.isAllowGroupAccess()) {
-          String roleMessage = Utility.messageBD(new DalConnectionProvider(false),
-              "smfwhe_unauthorizedRole", OBContext.getOBContext().getLanguage().getLanguage());
-          message += " " + String.format(roleMessage, OBContext.getOBContext().getRole().getName(), webHook.getName());
+          String roleMessage = Utility.messageBD(new DalConnectionProvider(false), "smfwhe_unauthorizedRole", lang);
+          message += " " + String.format(roleMessage, roleName, webHook.getName());
         }
         log.error(message);
         throw new WebhookAuthException(message);
@@ -463,17 +465,17 @@ public class WebhookServiceHandler extends HttpBaseServlet {
 
   private void handleDocs(HttpServletRequest request, HttpServletResponse response) throws JSONException {
     String hooklist = request.getParameter("hooks");
-    String[] hooks = hooklist.split(",");
-    if (hooks.length == 0) {
-      return;
-    }
+    String[] hooks = StringUtils.isNotEmpty(hooklist) ? hooklist.split(",") : null;
+
     try {
       OBContext.setAdminMode();
       JSONArray infoWebhooksArray = new JSONArray();
 
       OBCriteria<DefinedWebHook> webhookCrit = OBDal.getInstance().createCriteria(
           DefinedWebHook.class);
-      webhookCrit.add(Restrictions.in(DefinedWebHook.PROPERTY_NAME, hooks));
+      if (hooks != null) {
+        webhookCrit.add(Restrictions.in(DefinedWebHook.PROPERTY_NAME, hooks));
+      }
       List<DefinedWebHook> webhooks = webhookCrit.list();
       for (DefinedWebHook webhook : webhooks) {
         JSONObject info = new JSONObject();
