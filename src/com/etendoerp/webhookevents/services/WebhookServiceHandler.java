@@ -18,7 +18,6 @@
 package com.etendoerp.webhookevents.services;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.ctc.wstx.util.StringUtil;
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
 import com.etendoerp.webhookevents.data.DefinedwebhookRole;
@@ -46,6 +45,7 @@ import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.database.SessionInfo;
+import org.openbravo.erpCommon.utility.OBMessageUtils;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.access.Role;
 import org.openbravo.model.ad.access.UserRoles;
@@ -142,6 +142,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     if (action == null) {
       var message = Utility.messageBD(new DalConnectionProvider(false), "smfwhe_actionNotFound",
           OBContext.getOBContext().getLanguage().getLanguage());
+      message = String.format(message, name);
       log.error(message);
       throw new WebhookNotfoundException(message);
     }
@@ -240,6 +241,11 @@ public class WebhookServiceHandler extends HttpBaseServlet {
         // User is not allowed to call webhook
         var message = Utility.messageBD(new DalConnectionProvider(false),
             "smfwhe_unauthorizedToken", OBContext.getOBContext().getLanguage().getLanguage());
+        if (webHook.isAllowGroupAccess()) {
+          String roleMessage = Utility.messageBD(new DalConnectionProvider(false),
+              "smfwhe_unauthorizedRole", OBContext.getOBContext().getLanguage().getLanguage());
+          message += " " + String.format(roleMessage, OBContext.getOBContext().getRole().getName(), webHook.getName());
+        }
         log.error(message);
         throw new WebhookAuthException(message);
       }
@@ -251,25 +257,24 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       action.get(requestParams, responseVars);
       buildResponse(response, HttpStatus.SC_OK, responseVars);
     } catch (WebhookAuthException e) {
-      try {
-        buildResponse(response, HttpStatus.SC_UNAUTHORIZED, e.getMessage());
-      } catch (JSONException ex) {
-        throw new OBException(ex);
-      }
+      buildErrorResponse(response, HttpStatus.SC_UNAUTHORIZED, e.getMessage());
     } catch (WebhookNotfoundException e) {
-      try {
-        buildResponse(response, HttpStatus.SC_NOT_FOUND, e.getMessage());
-      } catch (JSONException ex) {
-        throw new OBException(ex);
-      }
+      buildErrorResponse(response, HttpStatus.SC_NOT_FOUND, e.getMessage());
+    } catch (ClassNotFoundException e) {
+      buildErrorResponse(response, HttpStatus.SC_INTERNAL_SERVER_ERROR,
+          String.format(OBMessageUtils.messageBD("smfwhe_classNotFound"), e.getMessage()));
     } catch (Exception e) {
-      try {
-        buildResponse(response, HttpStatus.SC_INTERNAL_SERVER_ERROR, e.getMessage());
-      } catch (JSONException ex) {
-        throw new OBException(ex);
-      }
+      buildErrorResponse(response, HttpStatus.SC_INTERNAL_SERVER_ERROR, e.getMessage());
     } finally {
       OBContext.restorePreviousMode();
+    }
+  }
+
+  private void buildErrorResponse(HttpServletResponse response, int status, String msg) {
+    try {
+      buildResponse(response, status, msg);
+    } catch (IOException | JSONException ex) {
+      throw new OBException(ex);
     }
   }
 
@@ -445,7 +450,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
     try {
-      if (StringUtils.equalsIgnoreCase(request.getPathInfo(), "/docs")) {
+      if (StringUtils.startsWithIgnoreCase(request.getPathInfo(), "/docs")) {
         handleDocs(request, response);
         return;
       }
@@ -510,16 +515,23 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   /**
    * Generates a JSON representation of the OpenAPI specification based on the provided parameters.
    *
-   * @param host              The host URL for the API.
-   * @param title             The title of the API.
-   * @param description       The description of the API.
-   * @param apiVersion        The version of the API.
-   * @param prefixParentPath  The prefix parent path for the API endpoints.
-   * @param infoWebhooksArray The array of webhook information.
+   * @param host
+   *     The host URL for the API.
+   * @param title
+   *     The title of the API.
+   * @param description
+   *     The description of the API.
+   * @param apiVersion
+   *     The version of the API.
+   * @param prefixParentPath
+   *     The prefix parent path for the API endpoints.
+   * @param infoWebhooksArray
+   *     The array of webhook information.
    * @return A JSON string representing the OpenAPI specification.
-   * @throws JSONException If there is an error while creating the JSON objects.
+   * @throws JSONException
+   *     If there is an error while creating the JSON objects.
    */
-  
+
   public String jsonOpenAPISpec(String host, String title, String description,
       String apiVersion, String prefixParentPath, JSONArray infoWebhooksArray) throws JSONException {
     JSONObject openApiSpec = new JSONObject();
