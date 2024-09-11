@@ -70,6 +70,7 @@ import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 public class WebhookServiceHandler extends HttpBaseServlet {
   private static final Logger log = LogManager.getLogger();
   public static final String CONTENT_TYPE = "Content-Type";
+  private static final String EN_US = "en_US";
 
   enum HttpMethod {
     GET, POST, PUT, DELETE
