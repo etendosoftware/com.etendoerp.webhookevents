@@ -328,7 +328,7 @@ public class WebhookUtils {
    */
   public void setupUserSystem() {
     OBContext.setOBContext(TestConstants.Users.SYSTEM, TestConstants.Roles.SYS_ADMIN,
-        TestConstants.Clients.FB_GRP, TestConstants.Orgs.MAIN);
+        TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN);
     VariablesSecureApp vsa = new VariablesSecureApp(
         OBContext.getOBContext().getUser().getId(),
         OBContext.getOBContext().getCurrentClient().getId(),
