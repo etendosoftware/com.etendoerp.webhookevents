@@ -20,6 +20,8 @@
 <!--0E4E79CE92034B5CAD24604BB5E7D8E6-->  <COLUMNNAME><![CDATA[Smfwhe_Definedwebhook_Acc_ID]]></COLUMNNAME>
 <!--0E4E79CE92034B5CAD24604BB5E7D8E6-->  <NAME><![CDATA[Smfwhe_Definedwebhook_Access_ID]]></NAME>
 <!--0E4E79CE92034B5CAD24604BB5E7D8E6-->  <PRINTNAME><![CDATA[Smfwhe_Definedwebhook_Access_ID]]></PRINTNAME>
+<!--0E4E79CE92034B5CAD24604BB5E7D8E6-->  <DESCRIPTION><![CDATA[This field stores the token associated with a user and the specific webhook to which access is granted.]]></DESCRIPTION>
+<!--0E4E79CE92034B5CAD24604BB5E7D8E6-->  <HELP><![CDATA[Used to store the token and specify the webhook that the user should have access to. This will allow the user to interact with the selected webhook based on the provided token.]]></HELP>
 <!--0E4E79CE92034B5CAD24604BB5E7D8E6-->  <AD_MODULE_ID><![CDATA[6092170021514006BD0F371BB599CC2F]]></AD_MODULE_ID>
 <!--0E4E79CE92034B5CAD24604BB5E7D8E6-->  <ISGLOSSARY><![CDATA[N]]></ISGLOSSARY>
 <!--0E4E79CE92034B5CAD24604BB5E7D8E6--></AD_ELEMENT>
@@ -140,6 +142,8 @@
 <!--386CBDB2BF0C4F6E86B9C42215328750-->  <COLUMNNAME><![CDATA[Isrequired]]></COLUMNNAME>
 <!--386CBDB2BF0C4F6E86B9C42215328750-->  <NAME><![CDATA[Is Required]]></NAME>
 <!--386CBDB2BF0C4F6E86B9C42215328750-->  <PRINTNAME><![CDATA[Is Required]]></PRINTNAME>
+<!--386CBDB2BF0C4F6E86B9C42215328750-->  <DESCRIPTION><![CDATA[This field indicates whether the parameter is mandatory or optional for the webhook to function correctly.]]></DESCRIPTION>
+<!--386CBDB2BF0C4F6E86B9C42215328750-->  <HELP><![CDATA[Select "Yes" if the parameter is required for the webhook; otherwise, select "No" to mark it as optional. A required parameter must always have a value when the webhook is triggered.]]></HELP>
 <!--386CBDB2BF0C4F6E86B9C42215328750-->  <AD_MODULE_ID><![CDATA[6092170021514006BD0F371BB599CC2F]]></AD_MODULE_ID>
 <!--386CBDB2BF0C4F6E86B9C42215328750-->  <ISGLOSSARY><![CDATA[N]]></ISGLOSSARY>
 <!--386CBDB2BF0C4F6E86B9C42215328750--></AD_ELEMENT>
@@ -164,6 +168,8 @@
 <!--5315C66D35D44BC1992E1DA246CA4E51-->  <COLUMNNAME><![CDATA[Smfwhe_Definedwebhook_Param_ID]]></COLUMNNAME>
 <!--5315C66D35D44BC1992E1DA246CA4E51-->  <NAME><![CDATA[Smfwhe_Definedwebhook_Param_ID]]></NAME>
 <!--5315C66D35D44BC1992E1DA246CA4E51-->  <PRINTNAME><![CDATA[Smfwhe_Definedwebhook_Param_ID]]></PRINTNAME>
+<!--5315C66D35D44BC1992E1DA246CA4E51-->  <DESCRIPTION><![CDATA[This field is used to define the parameters that the webhook will receive when triggered.]]></DESCRIPTION>
+<!--5315C66D35D44BC1992E1DA246CA4E51-->  <HELP><![CDATA[Enter the parameters required for the webhook. Ensure these parameters match the expected format and data needed for proper webhook execution.]]></HELP>
 <!--5315C66D35D44BC1992E1DA246CA4E51-->  <AD_MODULE_ID><![CDATA[6092170021514006BD0F371BB599CC2F]]></AD_MODULE_ID>
 <!--5315C66D35D44BC1992E1DA246CA4E51-->  <ISGLOSSARY><![CDATA[N]]></ISGLOSSARY>
 <!--5315C66D35D44BC1992E1DA246CA4E51--></AD_ELEMENT>
@@ -260,6 +266,8 @@
 <!--A8A62DB713154B98B1C0B1914E354750-->  <COLUMNNAME><![CDATA[Java_Class]]></COLUMNNAME>
 <!--A8A62DB713154B98B1C0B1914E354750-->  <NAME><![CDATA[Java Class]]></NAME>
 <!--A8A62DB713154B98B1C0B1914E354750-->  <PRINTNAME><![CDATA[Java Class]]></PRINTNAME>
+<!--A8A62DB713154B98B1C0B1914E354750-->  <DESCRIPTION><![CDATA[This field allows you to specify the Java class that implements the webhook logic, including the full package name (e.g., com.myapp.webhook.MyWebhookClass).]]></DESCRIPTION>
+<!--A8A62DB713154B98B1C0B1914E354750-->  <HELP><![CDATA[Enter the full name of the Java class (including the package) that implements the webhook. Ensure that the class is available in the application's classpath.]]></HELP>
 <!--A8A62DB713154B98B1C0B1914E354750-->  <AD_MODULE_ID><![CDATA[6092170021514006BD0F371BB599CC2F]]></AD_MODULE_ID>
 <!--A8A62DB713154B98B1C0B1914E354750-->  <ISGLOSSARY><![CDATA[N]]></ISGLOSSARY>
 <!--A8A62DB713154B98B1C0B1914E354750--></AD_ELEMENT>
@@ -296,6 +304,8 @@
 <!--B8C315D2AB554ACB924DF4D84E0B00A5-->  <COLUMNNAME><![CDATA[Allow_Group_Access]]></COLUMNNAME>
 <!--B8C315D2AB554ACB924DF4D84E0B00A5-->  <NAME><![CDATA[Allow to give access to role]]></NAME>
 <!--B8C315D2AB554ACB924DF4D84E0B00A5-->  <PRINTNAME><![CDATA[Allow_Group_Access]]></PRINTNAME>
+<!--B8C315D2AB554ACB924DF4D84E0B00A5-->  <DESCRIPTION><![CDATA[This field determines whether access to the webhook can be granted to specific user roles within the application.]]></DESCRIPTION>
+<!--B8C315D2AB554ACB924DF4D84E0B00A5-->  <HELP><![CDATA[Select "Yes" to allow access to the webhook to be assigned to specific roles. This enables role-based permissions for webhook usage.]]></HELP>
 <!--B8C315D2AB554ACB924DF4D84E0B00A5-->  <AD_MODULE_ID><![CDATA[6092170021514006BD0F371BB599CC2F]]></AD_MODULE_ID>
 <!--B8C315D2AB554ACB924DF4D84E0B00A5-->  <ISGLOSSARY><![CDATA[N]]></ISGLOSSARY>
 <!--B8C315D2AB554ACB924DF4D84E0B00A5--></AD_ELEMENT>
@@ -308,6 +318,8 @@
 <!--C126D6A74AA6499493D0AA8B8B6CCE19-->  <COLUMNNAME><![CDATA[Event_Class]]></COLUMNNAME>
 <!--C126D6A74AA6499493D0AA8B8B6CCE19-->  <NAME><![CDATA[Event Class]]></NAME>
 <!--C126D6A74AA6499493D0AA8B8B6CCE19-->  <PRINTNAME><![CDATA[Event Class]]></PRINTNAME>
+<!--C126D6A74AA6499493D0AA8B8B6CCE19-->  <DESCRIPTION><![CDATA[This field specifies the type of event class to be used, with "Java" as the default option. It determines the framework or technology that handles event processing.]]></DESCRIPTION>
+<!--C126D6A74AA6499493D0AA8B8B6CCE19-->  <HELP><![CDATA[Select the appropriate event class type. The default value is "Java," indicating that events are handled using Java classes. Adjust this field only if a different event-handling mechanism is required.]]></HELP>
 <!--C126D6A74AA6499493D0AA8B8B6CCE19-->  <AD_MODULE_ID><![CDATA[6092170021514006BD0F371BB599CC2F]]></AD_MODULE_ID>
 <!--C126D6A74AA6499493D0AA8B8B6CCE19-->  <ISGLOSSARY><![CDATA[N]]></ISGLOSSARY>
 <!--C126D6A74AA6499493D0AA8B8B6CCE19--></AD_ELEMENT>
@@ -344,6 +356,8 @@
 <!--D0394BF5E0D4402285A49A25F1C47AA4-->  <COLUMNNAME><![CDATA[Smfwhe_Definedwebhook_ID]]></COLUMNNAME>
 <!--D0394BF5E0D4402285A49A25F1C47AA4-->  <NAME><![CDATA[Smfwhe_Definedwebhook_ID]]></NAME>
 <!--D0394BF5E0D4402285A49A25F1C47AA4-->  <PRINTNAME><![CDATA[Smfwhe_Definedwebhook_ID]]></PRINTNAME>
+<!--D0394BF5E0D4402285A49A25F1C47AA4-->  <DESCRIPTION><![CDATA[This field allows you to select a defined webhook.]]></DESCRIPTION>
+<!--D0394BF5E0D4402285A49A25F1C47AA4-->  <HELP><![CDATA[Choose a webhook from the dropdown list. Make sure the selected webhook matches the intended integration or event handling requirements.]]></HELP>
 <!--D0394BF5E0D4402285A49A25F1C47AA4-->  <AD_MODULE_ID><![CDATA[6092170021514006BD0F371BB599CC2F]]></AD_MODULE_ID>
 <!--D0394BF5E0D4402285A49A25F1C47AA4-->  <ISGLOSSARY><![CDATA[N]]></ISGLOSSARY>
 <!--D0394BF5E0D4402285A49A25F1C47AA4--></AD_ELEMENT>
@@ -368,6 +382,8 @@
 <!--E93EDA4DCC97406AA2CBA8904521D8AE-->  <COLUMNNAME><![CDATA[Smfwhe_Definedwebhook_Token_ID]]></COLUMNNAME>
 <!--E93EDA4DCC97406AA2CBA8904521D8AE-->  <NAME><![CDATA[Token]]></NAME>
 <!--E93EDA4DCC97406AA2CBA8904521D8AE-->  <PRINTNAME><![CDATA[Token]]></PRINTNAME>
+<!--E93EDA4DCC97406AA2CBA8904521D8AE-->  <DESCRIPTION><![CDATA[This field is used to store the API Key associated with each user ID for secure authentication and access to external services.]]></DESCRIPTION>
+<!--E93EDA4DCC97406AA2CBA8904521D8AE-->  <HELP><![CDATA[Enter the API Key/Token corresponding to the user ID. This key will be used to authenticate requests made by the user to external services or APIs.]]></HELP>
 <!--E93EDA4DCC97406AA2CBA8904521D8AE-->  <AD_MODULE_ID><![CDATA[6092170021514006BD0F371BB599CC2F]]></AD_MODULE_ID>
 <!--E93EDA4DCC97406AA2CBA8904521D8AE-->  <ISGLOSSARY><![CDATA[N]]></ISGLOSSARY>
 <!--E93EDA4DCC97406AA2CBA8904521D8AE--></AD_ELEMENT>

@@ -19,6 +19,7 @@ import org.openbravo.base.secureApp.VariablesSecureApp;
 import org.openbravo.client.kernel.RequestContext;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
+import org.openbravo.model.ad.alert.Alert;
 import org.openbravo.model.ad.access.Role;
 import org.openbravo.model.ad.access.User;
 import org.openbravo.model.ad.access.UserRoles;
@@ -33,11 +34,12 @@ import com.etendoerp.webhookevents.data.DefinedwebhookRole;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.openbravo.dal.security.SecurityChecker;
+
 
 public class WebhookUtils {
   private static final Logger log4j = Logger.getLogger(WebhookSetupTest.class);
 
-  static final String USER_ROLE_ADMIN = "451EF9CDDFE54DEEAF5636CCADC0D7BB";
   static final String BASE_URL = "http://localhost:8080/etendo/webhooks/";
   static final String ALERT_RULE = "1000013"; // Products without defined price
   static final String EXPECTED_TOKEN_NAME = "Etendo token";
@@ -49,6 +51,7 @@ public class WebhookUtils {
   static final String WEBHOOK_DESCRIPTION = "Create an alert with custom message";
   static final String WEBHOOK_JAVACLASS = "com.etendoerp.webhookevents.ad_alert.AdAlertWebhookService";
   static final String WEBHOOK_EVENTCLASS = "JAVA";
+  static final String ERROR_MSG_NOT_ALLOW = "Entity smfwhe_definedwebhook may only have instances with client 0";
 
   /**
    * Creates a new DefinedwebhookToken and sets its attributes.
@@ -57,14 +60,14 @@ public class WebhookUtils {
    */
   public DefinedwebhookToken createApiToken() {
     DefinedwebhookToken token = OBProvider.getInstance().get(DefinedwebhookToken.class);
-    UserRoles userRole = OBDal.getInstance().get(UserRoles.class, USER_ROLE_ADMIN);
-    Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.FB_GRP);
+    Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.SYSTEM);
     Organization org = OBDal.getInstance().get(Organization.class, TestConstants.Orgs.MAIN);
-    User user = OBDal.getInstance().get(User.class, TestConstants.Users.ADMIN);
+    User user = OBDal.getInstance().get(User.class, TestConstants.Users.SYSTEM);
 
     try {
       token.setName(EXPECTED_TOKEN_NAME);
-      token.setUserRole(userRole);
+      // Get the System User Role
+      token.setUserRole(user.getADUserRolesList().get(0));
       token.setClient(client);
       token.setOrganization(org);
       token.setCreatedBy(user);
@@ -79,17 +82,23 @@ public class WebhookUtils {
     return token;
   }
 
-  /**
+/**
    * Creates a new DefinedWebHook and sets its attributes.
    *
+   * @param clientID
+   *     the ID of the client to associate with the new webhook.
+   * @param orgID
+   *     the ID of the organization to associate with the new webhook.
+   * @param userID
+   *     the ID of the user to associate with the new webhook.
    * @return the created DefinedWebHook.
    */
-  public DefinedWebHook createWebhook() {
+  public DefinedWebHook createWebhook(String clientID, String orgID, String userID) {
     DefinedWebHook webHook = OBProvider.getInstance().get(DefinedWebHook.class);
 
-    Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.SYSTEM);
-    Organization org = OBDal.getInstance().get(Organization.class, TestConstants.Orgs.MAIN);
-    User user = OBDal.getInstance().get(User.class, TestConstants.Users.SYSTEM);
+    Client client = OBDal.getInstance().get(Client.class, clientID);
+    Organization org = OBDal.getInstance().get(Organization.class, orgID);
+    User user = OBDal.getInstance().get(User.class, userID);
 
     try {
       webHook.setName(WEBHOOK_NAME);
@@ -112,6 +121,35 @@ public class WebhookUtils {
   }
 
   /**
+   *
+   * Creates a new DefinedWebHook, sets its attributes, and checks if the current user has write access to the DefinedWebHook instance.
+   * If the user does not have write access, a security exception will be thrown.
+   *
+   * @param clientID
+   *     the ID of the client to associate with the new webhook.
+   * @param orgID
+   *     the ID of the organization to associate with the new webhook.
+   * @param userID
+   *     the ID of the user to associate with the new webhook.
+   */
+  public void createWebhookThrowError(String clientID, String orgID, String userID) {
+    DefinedWebHook webHook = OBProvider.getInstance().get(DefinedWebHook.class);
+    Client client = OBDal.getInstance().get(Client.class, clientID);
+    Organization org = OBDal.getInstance().get(Organization.class, orgID);
+    User user = OBDal.getInstance().get(User.class, userID);
+    webHook.setName(WEBHOOK_NAME);
+    webHook.setClient(client);
+    webHook.setOrganization(org);
+    webHook.setCreatedBy(user);
+    webHook.setDescription(WEBHOOK_DESCRIPTION);
+    webHook.setJavaClass(WEBHOOK_JAVACLASS);
+    webHook.setEventClass(WEBHOOK_EVENTCLASS);
+    webHook.setAllowGroupAccess(true);
+
+    SecurityChecker.getInstance().checkWriteAccess(webHook);
+  }
+
+  /**
    * Creates a new DefinedWebhookParam associated with the given webhook and sets its attributes.
    *
    * @param webhook
@@ -124,9 +162,9 @@ public class WebhookUtils {
    */
   public DefinedWebhookParam createWebhookParam(DefinedWebHook webhook, String name, boolean isRequired) {
     DefinedWebhookParam webhookParam = OBProvider.getInstance().get(DefinedWebhookParam.class);
-    Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.FB_GRP);
+    Client client = OBDal.getInstance().get(Client.class, TestConstants.Clients.SYSTEM);
     Organization org = OBDal.getInstance().get(Organization.class, TestConstants.Orgs.MAIN);
-    User user = OBDal.getInstance().get(User.class, TestConstants.Users.ADMIN);
+    User user = OBDal.getInstance().get(User.class, TestConstants.Users.SYSTEM);
 
     try {
       webhookParam.setName(name);
@@ -290,7 +328,7 @@ public class WebhookUtils {
    */
   public void setupUserSystem() {
     OBContext.setOBContext(TestConstants.Users.SYSTEM, TestConstants.Roles.SYS_ADMIN,
-        TestConstants.Clients.FB_GRP, TestConstants.Orgs.MAIN);
+        TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN);
     VariablesSecureApp vsa = new VariablesSecureApp(
         OBContext.getOBContext().getUser().getId(),
         OBContext.getOBContext().getCurrentClient().getId(),
@@ -350,13 +388,26 @@ public class WebhookUtils {
   public void deleteAll() {
     for (Object object : objectsToDelete) {
       if (object != null) {
-        Runnable setupUser = (object instanceof DefinedWebHook) ? this::setupUserSystem : this::setupUserAdmin;
+        Runnable setupUser = shouldBeSystem(object) ?
+            this::setupUserSystem : this::setupUserAdmin;
         setupUser.run();
         OBDal.getInstance().remove(object);
         OBDal.getInstance().flush();
       }
     }
     objectsToDelete.clear();
+  }
+
+  /**
+   * Returns whether the object should be associated with the system user.
+   * @param object the object to check.
+   * @return true if the object should be associated with the system user, false otherwise.
+   */
+  private static boolean shouldBeSystem(Object object) {
+    return object instanceof DefinedWebHook
+        || object instanceof DefinedWebhookParam
+        || object instanceof DefinedwebhookToken
+        || object instanceof Alert;
   }
 
 }

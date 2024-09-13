@@ -14,6 +14,7 @@ import org.openbravo.base.weld.test.WeldBaseTest;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.model.ad.alert.Alert;
+import org.openbravo.test.base.TestConstants;
 
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
@@ -57,7 +58,7 @@ public class WebhookSetupTest extends WeldBaseTest {
   @DisplayName("[WHE-003] Setup Webhook")
   public void testSetupWebhook() {
     try {
-      webhook = webhookUtils.createWebhook();
+      webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
 
       assertEquals(WebhookUtils.WEBHOOK_NAME, webhook.getName());
       assertEquals(WebhookUtils.WEBHOOK_DESCRIPTION, webhook.getDescription());
@@ -71,8 +72,8 @@ public class WebhookSetupTest extends WeldBaseTest {
   @DisplayName("[WHE-006], [WHE-007], [WHE-010] Configure Webhook params & access token, and create alert with webhook")
   public void testConfigureWebhookParams() {
     try {
-      webhook = webhookUtils.createWebhook();
-      webhookUtils.setupUserAdmin();
+      webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
+      webhookUtils.setupUserSystem();
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
       webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
@@ -122,8 +123,8 @@ public class WebhookSetupTest extends WeldBaseTest {
   public void testMakeGetRequestWithMissingParameterNotRequired() {
     DefinedWebhookParam webhookParamNoRequired = null;
     try {
-      webhook = webhookUtils.createWebhook();
-      webhookUtils.setupUserAdmin();
+      webhookUtils.setupUserSystem();
+      webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
       webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
@@ -176,6 +177,7 @@ public class WebhookSetupTest extends WeldBaseTest {
 
   @After
   public void tearDown() {
+    webhookUtils.setupUserSystem();
     webhookUtils.deleteAll();
     OBDal.getInstance().commitAndClose();
   }
