@@ -36,16 +36,33 @@ import org.openbravo.model.ad.system.Client;
 import com.etendoerp.webhookevents.data.DefinedWebHook;
 import com.etendoerp.webhookevents.data.DefinedWebhookParam;
 
+/**
+ * Observes entity persistence events for DefinedWebHook and DefinedWebhookParam entities.
+ * This class ensures that certain actions are only performed by the system administrator.
+ */
 public class DefinedWebHookModifications extends EntityPersistenceEventObserver {
-  private static Entity[] entities = { ModelProvider.getInstance().getEntity(DefinedWebHook.ENTITY_NAME),
-      ModelProvider.getInstance().getEntity(DefinedWebhookParam.ENTITY_NAME) };
+  private static Entity[] entities = {
+      ModelProvider.getInstance().getEntity(DefinedWebHook.ENTITY_NAME),
+      ModelProvider.getInstance().getEntity(DefinedWebhookParam.ENTITY_NAME)
+  };
   protected Logger logger = Logger.getLogger(this.getClass());
 
+  /**
+   * Returns the entities observed by this event observer.
+   *
+   * @return An array of entities observed by this class.
+   */
   @Override
   protected Entity[] getObservedEntities() {
     return entities;
   }
 
+  /**
+   * Handles the save event for the observed entities.
+   *
+   * @param event
+   *     The entity new event.
+   */
   public void onSave(@Observes EntityNewEvent event) {
     if (!isValidEvent(event)) {
       return;
@@ -53,14 +70,25 @@ public class DefinedWebHookModifications extends EntityPersistenceEventObserver 
     checkSysAdminRole();
   }
 
+  /**
+   * Handles the update event for the observed entities.
+   *
+   * @param event
+   *     The entity update event.
+   */
   public void onUpdate(@Observes EntityUpdateEvent event) {
     if (!isValidEvent(event)) {
       return;
     }
     checkSysAdminRole();
-
   }
 
+  /**
+   * Handles the delete event for the observed entities.
+   *
+   * @param event
+   *     The entity delete event.
+   */
   public void onDelete(@Observes EntityDeleteEvent event) {
     if (!isValidEvent(event)) {
       return;
@@ -68,6 +96,10 @@ public class DefinedWebHookModifications extends EntityPersistenceEventObserver 
     checkSysAdminRole();
   }
 
+  /**
+   * Checks if the current user has the system administrator role.
+   * Throws an OBException if the user does not have the required role.
+   */
   private void checkSysAdminRole() {
     Client currentClient = OBContext.getOBContext().getCurrentClient();
     var sysClient = OBDal.getInstance().get(Client.class, "0");
@@ -75,6 +107,4 @@ public class DefinedWebHookModifications extends EntityPersistenceEventObserver 
       throw new OBException(OBMessageUtils.messageBD("smfwhe_errorSysAdminRole"));
     }
   }
-
-
 }
