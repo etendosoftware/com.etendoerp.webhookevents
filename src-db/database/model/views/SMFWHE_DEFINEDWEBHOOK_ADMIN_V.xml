@@ -1,4 +1,0 @@
-<?xml version="1.0"?>
-  <database name="VIEW SMFWHE_DEFINEDWEBHOOK_ADMIN_V">
-    <view name="SMFWHE_DEFINEDWEBHOOK_ADMIN_V"><![CDATA[SELECT smfwhe_definedwebhook.smfwhe_definedwebhook_id AS smfwhe_definedwebhook_admin_v_id, smfwhe_definedwebhook.ad_client_id, smfwhe_definedwebhook.ad_org_id, smfwhe_definedwebhook.isactive, smfwhe_definedwebhook.created, smfwhe_definedwebhook.createdby, smfwhe_definedwebhook.updated, smfwhe_definedwebhook.updatedby, smfwhe_definedwebhook.name, smfwhe_definedwebhook.description, smfwhe_definedwebhook.ad_module_id, smfwhe_definedwebhook.event_class, smfwhe_definedwebhook.java_class, smfwhe_definedwebhook.allow_group_access FROM smfwhe_definedwebhook]]></view>
-  </database>

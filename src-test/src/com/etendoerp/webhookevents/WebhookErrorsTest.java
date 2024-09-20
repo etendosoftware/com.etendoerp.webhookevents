@@ -43,7 +43,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[ETP-110] Setup Webhook not allow")
   public void testSetupWebhookNotAllow() {
     try {
-      webhookUtils.createWebhookThrowError(TestConstants.Clients.FB_GRP, TestConstants.Orgs.MAIN, TestConstants.Users.ADMIN);
+      webhookUtils.createWebhookThrowError(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.ADMIN);
     } catch (OBSecurityException e) {
       assertEquals(WebhookUtils.ERROR_MSG_NOT_ALLOW, e.getMessage());
     }
