@@ -15,6 +15,13 @@ public class OpenAPISpecUtils {
   public static final String PROP_NAME = "name";
   public static final String PROP_TYPE = "type";
   public static final String PROP_REQUIRED = "required";
+  public static final String PROP_DESCRIPTION = "description";
+
+  /**
+   * Private constructor to prevent instantiation of the utility class.
+   */
+  private OpenAPISpecUtils() {
+  }
 
   /**
    * Generates a JSON representation of the OpenAPI specification based on the provided parameters.
@@ -95,7 +102,7 @@ public class OpenAPISpecUtils {
         .put("openapi", "3.0.1")
         .put("info", new JSONObject()
             .put("title", title)
-            .put("description", description)
+            .put(PROP_DESCRIPTION, description)
             .put("version", apiVersion));
   }
 
@@ -155,16 +162,30 @@ public class OpenAPISpecUtils {
       }
 
       webhookSchema.put("properties", properties);
-      String webhookPath = String.format("%s%s", StringUtils.isEmpty(prefixParentPath) ? "" : prefixParentPath,
-          StringUtils.startsWith(name, "/") ? name : "/" + name);
-      String hookDescription = webhook.optString("description", String.format("Executes the %s WebHook", name));
+      String webhookPath = getWebhookPath(prefixParentPath, name);
+      String hookDescription = webhook.optString(PROP_DESCRIPTION, String.format("Executes the %s WebHook", name));
       JSONObject postPath = new JSONObject().put("summary", hookDescription)
           .put("requestBody", new JSONObject().put(PROP_REQUIRED, true)
               .put("content", new JSONObject().put("application/json", new JSONObject().put("schema", webhookSchema))))
-          .put("responses", new JSONObject().put("200", new JSONObject().put("description", "Webhook response")));
+          .put("responses", new JSONObject().put("200", new JSONObject().put(PROP_DESCRIPTION, "Webhook response")));
 
       paths.put(webhookPath, new JSONObject().put("post", postPath));
     }
     return paths;
+  }
+
+  /**
+   * Constructs the full webhook path by combining the prefix parent path and the webhook name.
+   *
+   * @param prefixParentPath
+   *     The parent path prefix for the API endpoints.
+   * @param name
+   *     The name of the webhook.
+   * @return The full webhook path as a string.
+   */
+  private static String getWebhookPath(String prefixParentPath, String name) {
+    String prefix = StringUtils.isEmpty(prefixParentPath) ? "" : prefixParentPath;
+    String path = StringUtils.startsWith(name, "/") ? name : ("/" + name);
+    return prefix + path;
   }
 }

@@ -488,16 +488,16 @@ public class WebhookServiceHandler extends HttpBaseServlet {
         info.put("description", webhook.getDescription());
         info.put("javaClass", webhook.getJavaClass());
 
-        JSONArray info_params = new JSONArray();
+        JSONArray infoParams = new JSONArray();
         for (DefinedWebhookParam param : webhook.getSmfwheDefinedwebhookParamList()) {
           JSONObject paramInfo = new JSONObject();
           paramInfo.put("name", param.getName());
           paramInfo.put("type", "string");
           paramInfo.put("required", param.isRequired());
-          info_params.put(paramInfo);
+          infoParams.put(paramInfo);
         }
 
-        info.put("params", info_params);
+        info.put("params", infoParams);
         infoWebhooksArray.put(info);
       }
       OBPropertiesProvider prop = OBPropertiesProvider.getInstance();
