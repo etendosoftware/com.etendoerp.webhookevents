@@ -501,9 +501,12 @@ public class WebhookServiceHandler extends HttpBaseServlet {
         infoWebhooksArray.put(info);
       }
       OBPropertiesProvider prop = OBPropertiesProvider.getInstance();
+      String host = request.getParameter("host");
+      if (StringUtils.isEmpty(host)) {
+        host = "http://localhost:8080/etendo";
+      }
       String jsonOpenAPI = OpenAPISpecUtils.generateJSONOpenAPISpec(
-          prop.getOpenbravoProperties().getProperty("ETENDO_HOST", "http://localhost:8080/etendo"), "Webhooks API",
-          "API to execute EtendoERP webhooks", "1.0.0", "/webhooks", infoWebhooksArray);
+          host, "Webhooks API", "API to execute EtendoERP webhooks", "1.0.0", "/webhooks", infoWebhooksArray);
 
       response.setStatus(HttpStatus.SC_OK);
       response.setHeader(CONTENT_TYPE, APPLICATION_JSON.getMimeType());
