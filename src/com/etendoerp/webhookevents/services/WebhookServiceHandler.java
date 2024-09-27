@@ -25,6 +25,7 @@ import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 import com.etendoerp.webhookevents.exceptions.WebhookAuthException;
 import com.etendoerp.webhookevents.exceptions.WebhookNotfoundException;
 import com.etendoerp.webhookevents.exceptions.WebhookParamException;
+import com.etendoerp.webhookevents.webhook_util.OpenAPISpecUtils;
 import com.smf.securewebservices.utils.SecureWebServicesUtils;
 
 import org.apache.commons.lang.BooleanUtils;
@@ -32,16 +33,20 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.hibernate.criterion.Restrictions;
 import org.openbravo.base.HttpBaseServlet;
 import org.openbravo.base.exception.OBException;
+import org.openbravo.base.session.OBPropertiesProvider;
 import org.openbravo.base.util.OBClassLoader;
 import org.openbravo.base.weld.WeldUtils;
 import org.openbravo.dal.core.OBContext;
+import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.database.SessionInfo;
+import org.openbravo.erpCommon.utility.OBMessageUtils;
 import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.access.Role;
 import org.openbravo.model.ad.access.UserRoles;
@@ -53,6 +58,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -139,6 +146,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     if (action == null) {
       var message = Utility.messageBD(new DalConnectionProvider(false), "smfwhe_actionNotFound",
           OBContext.getOBContext().getLanguage().getLanguage());
+      message = String.format(message, name);
       log.error(message);
       throw new WebhookNotfoundException(message);
     }
@@ -225,6 +233,9 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       OBContext.setAdminMode();
       // Check if webhook exists
       String name = request.getParameter("name");
+      if (StringUtils.isEmpty(name)) {
+        name = request.getPathInfo().substring(1);
+      }
       var webHook = getAction(name);
 
       // Get JWT token if exists
@@ -233,10 +244,14 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       if (!allow) {
         // User is not allowed to call webhook
 
-        var message = Utility.messageBD(new DalConnectionProvider(false),
-            "smfwhe_unauthorizedToken", OBContext.getOBContext() != null ?
-                OBContext.getOBContext().getLanguage().getLanguage() :
-                EN_US);
+        OBContext obContext = OBContext.getOBContext();
+        var lang = obContext != null ? obContext.getLanguage().getLanguage() : EN_US;
+        var roleName = obContext != null ? obContext.getRole().getName() : "-";
+        var message = Utility.messageBD(new DalConnectionProvider(false), "smfwhe_unauthorizedToken", lang);
+        if (webHook.isAllowGroupAccess()) {
+          String roleMessage = Utility.messageBD(new DalConnectionProvider(false), "smfwhe_unauthorizedRole", lang);
+          message += " " + String.format(roleMessage, roleName, webHook.getName());
+        }
         log.error(message);
         throw new WebhookAuthException(message);
       }
@@ -248,25 +263,24 @@ public class WebhookServiceHandler extends HttpBaseServlet {
       action.get(requestParams, responseVars);
       buildResponse(response, HttpStatus.SC_OK, responseVars);
     } catch (WebhookAuthException e) {
-      try {
-        buildResponse(response, HttpStatus.SC_UNAUTHORIZED, e.getMessage());
-      } catch (JSONException ex) {
-        throw new OBException(ex);
-      }
+      buildErrorResponse(response, HttpStatus.SC_UNAUTHORIZED, e.getMessage());
     } catch (WebhookNotfoundException e) {
-      try {
-        buildResponse(response, HttpStatus.SC_NOT_FOUND, e.getMessage());
-      } catch (JSONException ex) {
-        throw new OBException(ex);
-      }
+      buildErrorResponse(response, HttpStatus.SC_NOT_FOUND, e.getMessage());
+    } catch (ClassNotFoundException e) {
+      buildErrorResponse(response, HttpStatus.SC_INTERNAL_SERVER_ERROR,
+          String.format(OBMessageUtils.messageBD("smfwhe_classNotFound"), e.getMessage()));
     } catch (Exception e) {
-      try {
-        buildResponse(response, HttpStatus.SC_INTERNAL_SERVER_ERROR, e.getMessage());
-      } catch (JSONException ex) {
-        throw new OBException(ex);
-      }
+      buildErrorResponse(response, HttpStatus.SC_INTERNAL_SERVER_ERROR, e.getMessage());
     } finally {
       OBContext.restorePreviousMode();
+    }
+  }
+
+  private void buildErrorResponse(HttpServletResponse response, int status, String msg) {
+    try {
+      buildResponse(response, status, msg);
+    } catch (IOException | JSONException ex) {
+      throw new OBException(ex);
     }
   }
 
@@ -443,12 +457,71 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
     try {
+      if (StringUtils.startsWithIgnoreCase(request.getPathInfo(), "/docs")) {
+        handleDocs(request, response);
+        return;
+      }
       handleRequest(HttpMethod.GET, request, response);
-    } catch (IOException e) {
+    } catch (IOException | JSONException e) {
       response.setStatus(HttpStatus.SC_INTERNAL_SERVER_ERROR);
       response.setHeader(CONTENT_TYPE, APPLICATION_JSON.getMimeType());
     }
   }
+
+  private void handleDocs(HttpServletRequest request, HttpServletResponse response) throws JSONException {
+    String hooklist = request.getParameter("hooks");
+    String[] hooks = StringUtils.isNotEmpty(hooklist) ? hooklist.split(",") : null;
+
+    try {
+      OBContext.setAdminMode();
+      JSONArray infoWebhooksArray = new JSONArray();
+
+      OBCriteria<DefinedWebHook> webhookCrit = OBDal.getInstance().createCriteria(
+          DefinedWebHook.class);
+      if (hooks != null) {
+        webhookCrit.add(Restrictions.in(DefinedWebHook.PROPERTY_NAME, hooks));
+      }
+      List<DefinedWebHook> webhooks = webhookCrit.list();
+      for (DefinedWebHook webhook : webhooks) {
+        JSONObject info = new JSONObject();
+        info.put("name", webhook.getName());
+        info.put("description", webhook.getDescription());
+        info.put("javaClass", webhook.getJavaClass());
+
+        JSONArray infoParams = new JSONArray();
+        for (DefinedWebhookParam param : webhook.getSmfwheDefinedwebhookParamList()) {
+          JSONObject paramInfo = new JSONObject();
+          paramInfo.put("name", param.getName());
+          paramInfo.put("type", "string");
+          paramInfo.put("required", param.isRequired());
+          infoParams.put(paramInfo);
+        }
+
+        info.put("params", infoParams);
+        infoWebhooksArray.put(info);
+      }
+      OBPropertiesProvider prop = OBPropertiesProvider.getInstance();
+      String host = request.getParameter("host");
+      if (StringUtils.isEmpty(host)) {
+        host = "http://localhost:8080/etendo";
+      }
+      String jsonOpenAPI = OpenAPISpecUtils.generateJSONOpenAPISpec(
+          host, "Webhooks API", "API to execute EtendoERP webhooks", "1.0.0", "/webhooks", infoWebhooksArray);
+
+      response.setStatus(HttpStatus.SC_OK);
+      response.setHeader(CONTENT_TYPE, APPLICATION_JSON.getMimeType());
+      PrintWriter out = response.getWriter();
+      out.print(jsonOpenAPI);
+    } catch (IOException e) {
+      log.error("Error sending response", e);
+    } finally {
+      OBContext.restorePreviousMode();
+    }
+
+
+  }
+
+
 
   /**
    * Handler of POST requests.

@@ -1,6 +1,7 @@
 package com.etendoerp.webhookevents;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.net.HttpURLConnection;
 
@@ -73,7 +74,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
       String rule = WebhookUtils.ALERT_RULE;
 
       WebhookHttpResponse response = webhookUtils.sendGetRequest(baseUrl, name, apiKey, description, rule);
-      assertEquals(OBMessageUtils.messageBD("smfwhe_unauthorizedToken"), response.getMessage());
+      assertTrue(response.getMessage().contains(OBMessageUtils.messageBD("smfwhe_unauthorizedToken")));
       assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.getStatusCode());
     } finally {
       webhookUtils.addObjectToDelete(webhookAccess);
@@ -109,7 +110,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
       String rule = WebhookUtils.ALERT_RULE;
 
       WebhookHttpResponse response = webhookUtils.sendGetRequest(baseUrl, name, apiKey, description, rule);
-      assertEquals(OBMessageUtils.messageBD("smfwhe_actionNotFound"), response.getMessage());
+      assertEquals(String.format(OBMessageUtils.messageBD("smfwhe_actionNotFound"), name), response.getMessage());
       assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatusCode());
     } finally {
       webhookUtils.addObjectToDelete(webhookAccess);
@@ -143,7 +144,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
       String rule = WebhookUtils.ALERT_RULE;
 
       WebhookHttpResponse response = webhookUtils.sendGetRequest(baseUrl, name, apiKey, description, rule);
-      assertEquals(OBMessageUtils.messageBD("smfwhe_unauthorizedToken"), response.getMessage());
+      assertTrue(response.getMessage().contains(OBMessageUtils.messageBD("smfwhe_unauthorizedToken")));
       assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.getStatusCode());
     } finally {
       webhookUtils.addObjectToDelete(token);
