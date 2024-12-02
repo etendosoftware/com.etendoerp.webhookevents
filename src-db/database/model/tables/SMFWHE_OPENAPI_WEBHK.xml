@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+  <database name="TABLE SMFWHE_OPENAPI_WEBHK">
+    <table name="SMFWHE_OPENAPI_WEBHK" primaryKey="SMFWHE_OPENAPI_WEBHK_KEY">
+      <column name="SMFWHE_OPENAPI_WEBHK_ID" primaryKey="true" required="true" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="AD_CLIENT_ID" primaryKey="false" required="true" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="AD_ORG_ID" primaryKey="false" required="true" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="ISACTIVE" primaryKey="false" required="true" type="CHAR" size="1" autoIncrement="false">
+        <default><![CDATA[Y]]></default>
+        <onCreateDefault/>
+      </column>
+      <column name="CREATED" primaryKey="false" required="true" type="TIMESTAMP" size="7" autoIncrement="false">
+        <default><![CDATA[SYSDATE]]></default>
+        <onCreateDefault/>
+      </column>
+      <column name="CREATEDBY" primaryKey="false" required="true" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="UPDATED" primaryKey="false" required="true" type="TIMESTAMP" size="7" autoIncrement="false">
+        <default><![CDATA[SYSDATE]]></default>
+        <onCreateDefault/>
+      </column>
+      <column name="UPDATEDBY" primaryKey="false" required="true" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="SMFWHE_DEFINEDWEBHOOK_ID" primaryKey="false" required="true" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <column name="ETAPI_OPENAPI_REQ_ID" primaryKey="false" required="false" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
+      <foreign-key foreignTable="SMFWHE_DEFINEDWEBHOOK" name="SMFWHE_OPENAPI_WEBHK">
+        <reference local="SMFWHE_DEFINEDWEBHOOK_ID" foreign="SMFWHE_DEFINEDWEBHOOK_ID"/>
+      </foreign-key>
+      <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_OPENAPI_WEBHK_AD_CLIENT">
+        <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
+      </foreign-key>
+      <foreign-key foreignTable="AD_ORG" name="SMFWHE_OPENAPI_WEBHK_AD_ORG">
+        <reference local="AD_ORG_ID" foreign="AD_ORG_ID"/>
+      </foreign-key>
+      <foreign-key foreignTable="ETAPI_OPENAPI_REQ" name="SMFWHE_OPENAPI_WEBHK_REQ">
+        <reference local="ETAPI_OPENAPI_REQ_ID" foreign="ETAPI_OPENAPI_REQ_ID"/>
+      </foreign-key>
+      <unique name="SMFWHE_OPENAPI_WEBHK_UNIQ">
+        <unique-column name="ETAPI_OPENAPI_REQ_ID"/>
+      </unique>
+      <check name="SMFWHE_OPENAPI_WEBHK_ACT_CHK"><![CDATA[ISACTIVE IN ('Y', 'N')]]></check>
+    </table>
+  </database>
