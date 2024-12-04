@@ -41,6 +41,10 @@
         <default/>
         <onCreateDefault/>
       </column>
+      <column name="AD_MODULE_ID" primaryKey="false" required="false" type="VARCHAR" size="32" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
       <foreign-key foreignTable="SMFWHE_DEFINEDWEBHOOK" name="SMFWHE_OPENAPI_WEBHK">
         <reference local="SMFWHE_DEFINEDWEBHOOK_ID" foreign="SMFWHE_DEFINEDWEBHOOK_ID"/>
       </foreign-key>
@@ -52,6 +56,9 @@
       </foreign-key>
       <foreign-key foreignTable="ETAPI_OPENAPI_REQ" name="SMFWHE_OPENAPI_WEBHK_REQ">
         <reference local="ETAPI_OPENAPI_REQ_ID" foreign="ETAPI_OPENAPI_REQ_ID"/>
+      </foreign-key>
+      <foreign-key foreignTable="AD_MODULE" name="SMFWHE_WEBHK_FK">
+        <reference local="AD_MODULE_ID" foreign="AD_MODULE_ID"/>
       </foreign-key>
       <unique name="SMFWHE_OPENAPI_WEBHK_UNIQ">
         <unique-column name="ETAPI_OPENAPI_REQ_ID"/>
