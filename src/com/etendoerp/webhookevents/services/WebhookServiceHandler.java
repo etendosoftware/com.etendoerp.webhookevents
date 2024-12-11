@@ -494,6 +494,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
           paramInfo.put("name", param.getName());
           paramInfo.put("type", "string");
           paramInfo.put("required", param.isRequired());
+          paramInfo.put("description", param.getDescription());
           infoParams.put(paramInfo);
         }
 
@@ -520,7 +521,6 @@ public class WebhookServiceHandler extends HttpBaseServlet {
 
 
   }
-
 
 
   /**

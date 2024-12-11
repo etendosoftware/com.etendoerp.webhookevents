@@ -116,7 +116,7 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
           }
           // At this point, the list should have only one element
           OpenAPIWebhook openAPIWebhook = webhookOpenApiList.get(0);
-          addDefinition(openAPI, flow.getName(), etapiOpenapiReq.getName(), openAPIWebhook.getSmfwheDefinedwebhook());
+          addDefinition(openAPI, flow.getName(), etapiOpenapiReq, openAPIWebhook.getSmfwheDefinedwebhook());
         }
       });
     } finally {
@@ -140,7 +140,7 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
         sometag -> StringUtils.equalsIgnoreCase(sometag.getName(), tag.getName()));
   }
 
-  private void addDefinition(OpenAPI openAPI, String tag, String entityName, DefinedWebHook webHook) {
+  private void addDefinition(OpenAPI openAPI, String tag, OpenAPIRequest request, DefinedWebHook webHook) {
 
     // Form init
     Schema<?> formInitResponseSchema;
@@ -158,7 +158,7 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     List<Parameter> formInitParams = new ArrayList<>();
 
     String webhook = webHook.getName();
-    createEndpoint(openAPI, tag, webhook, "",
+    createEndpoint(openAPI, tag, webhook, request.getDescription(),
         webHook.getDescription(), formInitResponseSchema,
         formInitResponseExample.toString(), webhook + "Response", formInitParams,
         formInitRequestSchema, formInitRequestExample, method);
@@ -196,7 +196,7 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     }
 
     operation.responses(apiResponses);
-    String path = String.format("/sws/webhooks/%s", actionValue);
+    String path = String.format("/webhooks/%s", actionValue);
     PathItem pathItem;
     if (openAPI.getPaths() == null) {
       openAPI.setPaths(new Paths());
@@ -252,7 +252,10 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     List<String> required = new ArrayList<>();
     for (DefinedWebhookParam parameter : params) {
       String name = parameter.getName();
-      schema.addProperty(name, new Schema<>().type("string"));
+      Schema parameterSchema = new Schema<>();
+      parameterSchema.type("string");
+      parameterSchema.description(parameter.getDescription());
+      schema.addProperty(name, parameterSchema);
       if (parameter.isRequired()) {
         required.add(name);
       }
