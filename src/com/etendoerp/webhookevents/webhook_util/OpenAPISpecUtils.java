@@ -150,7 +150,10 @@ public class OpenAPISpecUtils {
       JSONArray params = webhook.getJSONArray("params");
       for (int j = 0; j < params.length(); j++) {
         JSONObject param = params.getJSONObject(j);
-        properties.put(param.getString(PROP_NAME), new JSONObject().put(PROP_TYPE, param.getString(PROP_TYPE)));
+        JSONObject paramInfo = new JSONObject();
+        paramInfo.put(PROP_TYPE, param.getString(PROP_TYPE));
+        paramInfo.put(PROP_DESCRIPTION, param.optString(PROP_DESCRIPTION, ""));
+        properties.put(param.getString(PROP_NAME), paramInfo);
 
         if (param.getBoolean(PROP_REQUIRED)) {
           requiredFields.put(param.getString(PROP_NAME));

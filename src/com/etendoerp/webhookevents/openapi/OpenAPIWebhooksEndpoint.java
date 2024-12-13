@@ -12,11 +12,9 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.Paths;
-import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
@@ -24,10 +22,8 @@ import io.swagger.v3.oas.models.tags.Tag;
 
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jettison.json.JSONObject;
-import org.openbravo.base.session.OBPropertiesProvider;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
-import org.openbravo.model.ad.ui.Field;
 
 import javax.enterprise.context.ApplicationScoped;
 
@@ -36,19 +32,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.etendoerp.etendorx.services.DataSourceServlet.normalizedName;
-
 @ApplicationScoped
+/**
+ * Class that implements the OpenAPIEndpoint interface to handle OpenAPI webhook endpoints.
+ */
 public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
 
   public static final String DEFAULT_TAG = "Webhooks";
+  public static final String OBJECT = "object";
+  public static final String STRING = "string";
   private String requestedTag = null;
-  private static final List<String> extraFields = List.of("_identifier", "$ref", "active",
-      "creationDate", "createdBy", "createdBy$_identifier", "updated", "updatedBy",
-      "updatedBy$_identifier");
+
   public static final String GET = "GET";
   public static final String POST = "POST";
 
+  /**
+   * Retrieves a list of OpenApiFlow entities from the database.
+   *
+   * @return a list of OpenApiFlow entities
+   */
   private List<OpenApiFlow> getFlows() {
     return OBDal.getInstance().createCriteria(OpenApiFlow.class).list();
   }
@@ -72,6 +74,16 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     return listFlows;
   }
 
+  /**
+   * Validates if the provided tag is valid.
+   * <p>
+   * This method checks if the provided tag is null or exists in the list of tags.
+   * If the tag is valid, it sets the requestedTag to the provided tag.
+   *
+   * @param tag
+   *     the tag to validate
+   * @return true if the tag is valid, false otherwise
+   */
   @Override
   public boolean isValid(String tag) {
     try {
@@ -89,16 +101,25 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     }
   }
 
+  /**
+   * Adds OpenAPI definitions based on the available flows.
+   * <p>
+   * This method adds a default tag globally and filters the flows based on the requested tag.
+   * It then iterates through the flows and their endpoints to add OpenAPI definitions.
+   *
+   * @param openAPI
+   *     the OpenAPI object to add definitions to
+   */
   @Override
   public void add(OpenAPI openAPI) {
     try {
       OBContext.setAdminMode();
       List<OpenApiFlow> flows = getFlows();
-      //add default tag globally
+      // Add default tag globally
       Tag defaultTag = new Tag().name(DEFAULT_TAG);
       addTagsIncrementally(openAPI, defaultTag);
-      //if the tag is present and is not the default tag, add only the endpoints of that tag
-      if (requestedTag != null && !requestedTag.equals(DEFAULT_TAG)) {
+      // If the tag is present and is not the default tag, add only the endpoints of that tag
+      if (requestedTag != null && !StringUtils.equals(requestedTag, DEFAULT_TAG)) {
         flows = flows.stream()
             .filter(flow -> StringUtils.equalsIgnoreCase(flow.getName(), requestedTag))
             .collect(Collectors.toList());
@@ -116,7 +137,7 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
           }
           // At this point, the list should have only one element
           OpenAPIWebhook openAPIWebhook = webhookOpenApiList.get(0);
-          addDefinition(openAPI, flow.getName(), etapiOpenapiReq.getName(), openAPIWebhook.getSmfwheDefinedwebhook());
+          addDefinition(openAPI, flow.getName(), etapiOpenapiReq, openAPIWebhook.getWebHook());
         }
       });
     } finally {
@@ -124,6 +145,16 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     }
   }
 
+  /**
+   * Adds tags to the OpenAPI object incrementally.
+   * <p>
+   * This method checks if the tag is already present in the OpenAPI object and adds it if not.
+   *
+   * @param openAPI
+   *     the OpenAPI object to add tags to
+   * @param tag
+   *     the tag to add
+   */
   private void addTagsIncrementally(OpenAPI openAPI, Tag tag) {
     List<Tag> currentGlobalTags = openAPI.getTags();
     if (currentGlobalTags == null) {
@@ -135,41 +166,90 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     }
   }
 
+  /**
+   * Checks if a tag is already present in the list of tags.
+   *
+   * @param tag
+   *     the tag to check
+   * @param currentGlobalTags
+   *     the list of current global tags
+   * @return true if the tag is not present, false otherwise
+   */
   private boolean tagIsPresent(Tag tag, List<Tag> currentGlobalTags) {
     return currentGlobalTags.stream().noneMatch(
         sometag -> StringUtils.equalsIgnoreCase(sometag.getName(), tag.getName()));
   }
 
-  private void addDefinition(OpenAPI openAPI, String tag, String entityName, DefinedWebHook webHook) {
+  /**
+   * Adds an OpenAPI definition for a specific webhook.
+   * <p>
+   * This method creates the request and response schemas and adds the endpoint to the OpenAPI object.
+   *
+   * @param openAPI
+   *     the OpenAPI object to add the definition to
+   * @param tag
+   *     the tag associated with the endpoint
+   * @param request
+   *     the OpenAPIRequest object containing the request details
+   * @param webHook
+   *     the DefinedWebHook object containing the webhook details
+   */
+  private void addDefinition(OpenAPI openAPI, String tag, OpenAPIRequest request, DefinedWebHook webHook) {
 
     // Form init
     Schema<?> formInitResponseSchema;
     Schema<?> formInitRequestSchema;
 
-    JSONObject formInitJSON = new JSONObject();
-    JSONObject formInitResponseExample = new JSONObject();
     List<DefinedWebhookParam> webhooksParameterList = webHook.getSmfwheDefinedwebhookParamList();
     formInitRequestSchema = defineFormInitRequestSchema(webhooksParameterList);
     formInitResponseSchema = new Schema<>();
 
     String method = webhooksParameterList.isEmpty() ? GET : POST;
 
-    String formInitRequestExample = formInitJSON.toString();
-    List<Parameter> formInitParams = new ArrayList<>();
-
-    String webhook = webHook.getName();
-    createEndpoint(openAPI, tag, webhook, "",
-        webHook.getDescription(), formInitResponseSchema,
-        formInitResponseExample.toString(), webhook + "Response", formInitParams,
-        formInitRequestSchema, formInitRequestExample, method);
+    createEndpoint(openAPI,
+        tag,
+        request.getDescription(),
+        formInitResponseSchema,
+        formInitRequestSchema,
+        method,
+        webHook);
 
   }
 
+  /**
+   * Creates an endpoint in the OpenAPI object.
+   * <p>
+   * This method sets up the operation, request body, and responses for the endpoint and adds it to the OpenAPI object.
+   *
+   * @param openAPI
+   *     the OpenAPI object to add the endpoint to
+   * @param tag
+   *     the tag associated with the endpoint
+   * @param summary
+   *     the summary of the endpoint
+   * @param responseSchema
+   *     the schema for the response
+   * @param requestBodySchema
+   *     the schema for the request body
+   * @param httpMethod
+   *     the HTTP method for the endpoint (GET or POST)
+   * @param webHook
+   *     the DefinedWebHook object containing the webhook details
+   */
+  private void createEndpoint(OpenAPI openAPI,
+      String tag,
+      String summary,
+      Schema<?> responseSchema,
+      Schema<?> requestBodySchema,
+      String httpMethod,
+      DefinedWebHook webHook) {
 
-  private void createEndpoint(OpenAPI openAPI, String tag, String actionValue, String summary,
-      String description, Schema<?> responseSchema, String responseExample, String schemaKey,
-      List<Parameter> parameters, Schema<?> requestBodySchema, String requestBodyExample,
-      String httpMethod) {
+    String actionValue = webHook.getName();
+    String description = webHook.getDescription();
+    String schemaKey = actionValue + "Response";
+
+    String responseExample = new JSONObject().toString();
+    String requestBodyExample = new JSONObject().toString();
 
     ApiResponses apiResponses = new ApiResponses().addApiResponse("200",
             createApiResponse("Successful response.", responseSchema, responseExample))
@@ -181,10 +261,9 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     if (operation.getTags() == null) {
       operation.setTags(new ArrayList<>());
     }
-    //add default tag and the tag of the flow
+    // Add default tag and the tag of the flow
     operation.getTags().add(DEFAULT_TAG);
     operation.getTags().add(tag);
-
 
     if (requestBodySchema != null) {
       RequestBody requestBody = new RequestBody().description(
@@ -196,7 +275,7 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     }
 
     operation.responses(apiResponses);
-    String path = String.format("/sws/webhooks/%s", actionValue);
+    String path = String.format("/webhooks/%s", actionValue);
     PathItem pathItem;
     if (openAPI.getPaths() == null) {
       openAPI.setPaths(new Paths());
@@ -223,17 +302,33 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     addSchema(openAPI, schemaKey, responseSchema);
   }
 
-  private String getContextName() {
-    return OBPropertiesProvider.getInstance().getOpenbravoProperties().getProperty("context.name");
-  }
-
+  /**
+   * Creates an ApiResponse object for the given description, schema, and example.
+   *
+   * @param description
+   *     the description of the response
+   * @param schema
+   *     the schema of the response
+   * @param example
+   *     the example of the response
+   * @return the created ApiResponse object
+   */
   private ApiResponse createApiResponse(String description, Schema<?> schema, String example) {
     return new ApiResponse().description(description)
         .content(new Content().addMediaType("application/json",
             new MediaType().schema(schema).example(example)));
   }
 
-
+  /**
+   * Adds a schema to the OpenAPI object.
+   *
+   * @param openAPI
+   *     the OpenAPI object to add the schema to
+   * @param key
+   *     the key for the schema
+   * @param schema
+   *     the schema to add
+   */
   private void addSchema(OpenAPI openAPI, String key, Schema<?> schema) {
     if (openAPI.getComponents() == null) {
       openAPI.setComponents(new io.swagger.v3.oas.models.Components());
@@ -246,50 +341,31 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     }
   }
 
+  /**
+   * Defines the request schema for the form initialization.
+   * <p>
+   * This method creates a schema for the request body based on the provided parameters.
+   *
+   * @param params
+   *     the list of DefinedWebhookParam objects
+   * @return the created request schema
+   */
   private Schema<?> defineFormInitRequestSchema(List<DefinedWebhookParam> params) {
     Schema<Object> schema = new Schema<>();
-    schema.type("object");
+    schema.type(OBJECT);
     List<String> required = new ArrayList<>();
     for (DefinedWebhookParam parameter : params) {
       String name = parameter.getName();
-      schema.addProperty(name, new Schema<>().type("string"));
+      Schema parameterSchema = new Schema<>();
+      parameterSchema.type(STRING);
+      parameterSchema.description(parameter.getDescription());
+      schema.addProperty(name, parameterSchema);
       if (parameter.isRequired()) {
         required.add(name);
       }
     }
     schema.required(required);
     return schema;
-  }
-
-
-  private Schema<?> defineDataItemSchema(List<Field> fields) {
-    Schema<Object> dataItemSchema = new Schema<>();
-    dataItemSchema.type("object");
-    dataItemSchema.description("Entity data");
-    for (String extraField : extraFields) {
-      dataItemSchema.addProperty(extraField, new Schema<>().type("string").example(""));
-    }
-    for (Field field : fields) {
-      dataItemSchema.addProperty(normalizedName(field.getColumn().getName()),
-          new Schema<>().type("string").example(""));
-    }
-    return dataItemSchema;
-  }
-
-  private Schema<?> defineResponseSchema(List<Field> fields) {
-    Schema<Object> responseSchema = new Schema<>();
-    responseSchema.type("object");
-    responseSchema.description("Main object of the response");
-
-    Schema<Integer> statusSchema = new Schema<>();
-    statusSchema.type("integer").format("int32").example(0);
-    responseSchema.addProperty("status", statusSchema);
-
-    ArraySchema dataArraySchema = new ArraySchema();
-    dataArraySchema.items(defineDataItemSchema(fields));
-    responseSchema.addProperty("data", dataArraySchema);
-
-    return responseSchema;
   }
 
 }

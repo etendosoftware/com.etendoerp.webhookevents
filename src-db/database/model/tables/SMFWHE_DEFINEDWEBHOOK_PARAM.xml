@@ -49,6 +49,10 @@
         <default/>
         <onCreateDefault/>
       </column>
+      <column name="DESCRIPTION" primaryKey="false" required="false" type="VARCHAR" size="2000" autoIncrement="false">
+        <default/>
+        <onCreateDefault/>
+      </column>
       <foreign-key foreignTable="AD_MODULE" name="SMFWHE_DEFWEBHK_PARAM_MOD_FK">
         <reference local="AD_MODULE_ID" foreign="AD_MODULE_ID"/>
       </foreign-key>
