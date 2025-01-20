@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
-  <database name="TABLE SMFWHE_DEFINEDWEBHOOK_PARAM">
-    <table name="SMFWHE_DEFINEDWEBHOOK_PARAM" primaryKey="SMFWHE_DEFWEBHOOKPAR_KEY">
-      <column name="SMFWHE_DEFINEDWEBHOOK_PARAM_ID" primaryKey="true" required="true" type="VARCHAR" size="32" autoIncrement="false">
+  <database name="TABLE SMFWHE_OPENAPI_WEBHK">
+    <table name="SMFWHE_OPENAPI_WEBHK" primaryKey="SMFWHE_OPENAPI_WEBHK_KEY">
+      <column name="SMFWHE_OPENAPI_WEBHK_ID" primaryKey="true" required="true" type="VARCHAR" size="32" autoIncrement="false">
         <default/>
         <onCreateDefault/>
       </column>
@@ -37,39 +37,32 @@
         <default/>
         <onCreateDefault/>
       </column>
-      <column name="NAME" primaryKey="false" required="false" type="VARCHAR" size="32" autoIncrement="false">
+      <column name="ETAPI_OPENAPI_REQ_ID" primaryKey="false" required="false" type="VARCHAR" size="32" autoIncrement="false">
         <default/>
-        <onCreateDefault/>
-      </column>
-      <column name="ISREQUIRED" primaryKey="false" required="false" type="CHAR" size="1" autoIncrement="false">
-        <default><![CDATA[Y]]></default>
         <onCreateDefault/>
       </column>
       <column name="AD_MODULE_ID" primaryKey="false" required="false" type="VARCHAR" size="32" autoIncrement="false">
         <default/>
         <onCreateDefault/>
       </column>
-      <column name="DESCRIPTION" primaryKey="false" required="false" type="VARCHAR" size="2000" autoIncrement="false">
-        <default/>
-        <onCreateDefault/>
-      </column>
-      <foreign-key foreignTable="AD_MODULE" name="SMFWHE_DEFWEBHK_PARAM_MOD_FK">
-        <reference local="AD_MODULE_ID" foreign="AD_MODULE_ID"/>
-      </foreign-key>
-      <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_DEFWEBHOOKPAR_AD_CLIENT">
-        <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
-      </foreign-key>
-      <foreign-key foreignTable="AD_ORG" name="SMFWHE_DEFWEBHOOKPAR_AD_ORG">
-        <reference local="AD_ORG_ID" foreign="AD_ORG_ID"/>
-      </foreign-key>
-      <foreign-key foreignTable="SMFWHE_DEFINEDWEBHOOK" name="SMFWHE_DEFWEBHOOKPAR_WEBHOOK">
+      <foreign-key foreignTable="SMFWHE_DEFINEDWEBHOOK" name="SMFWHE_OPENAPI_WEBHK">
         <reference local="SMFWHE_DEFINEDWEBHOOK_ID" foreign="SMFWHE_DEFINEDWEBHOOK_ID"/>
       </foreign-key>
-      <unique name="SMFWHE_DEFWEBHOOKPAR_NAME">
-        <unique-column name="SMFWHE_DEFINEDWEBHOOK_ID"/>
-        <unique-column name="NAME"/>
+      <foreign-key foreignTable="AD_CLIENT" name="SMFWHE_OPENAPI_WEBHK_AD_CLIENT">
+        <reference local="AD_CLIENT_ID" foreign="AD_CLIENT_ID"/>
+      </foreign-key>
+      <foreign-key foreignTable="AD_ORG" name="SMFWHE_OPENAPI_WEBHK_AD_ORG">
+        <reference local="AD_ORG_ID" foreign="AD_ORG_ID"/>
+      </foreign-key>
+      <foreign-key foreignTable="ETAPI_OPENAPI_REQ" name="SMFWHE_OPENAPI_WEBHK_REQ">
+        <reference local="ETAPI_OPENAPI_REQ_ID" foreign="ETAPI_OPENAPI_REQ_ID"/>
+      </foreign-key>
+      <foreign-key foreignTable="AD_MODULE" name="SMFWHE_WEBHK_FK">
+        <reference local="AD_MODULE_ID" foreign="AD_MODULE_ID"/>
+      </foreign-key>
+      <unique name="SMFWHE_OPENAPI_WEBHK_UNIQ">
+        <unique-column name="ETAPI_OPENAPI_REQ_ID"/>
       </unique>
-      <check name="SMFWHE_DEFWEBHOOKPAR_IA_CHK"><![CDATA[ISACTIVE IN ('Y', 'N')]]></check>
-      <check name="SMFWHE_DEFWEBHOOKPAR_REQ_CHK"><![CDATA[ISREQUIRED IN ('Y', 'N')]]></check>
+      <check name="SMFWHE_OPENAPI_WEBHK_ACT_CHK"><![CDATA[ISACTIVE IN ('Y', 'N')]]></check>
     </table>
   </database>

@@ -57,6 +57,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -471,6 +472,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
   private void handleDocs(HttpServletRequest request, HttpServletResponse response) throws JSONException {
     String hooklist = request.getParameter("hooks");
     String[] hooks = StringUtils.isNotEmpty(hooklist) ? hooklist.split(",") : null;
+    List<String> hookList = hooks != null ? List.of(hooks) : new ArrayList<>();
 
     try {
       OBContext.setAdminMode();
@@ -478,8 +480,8 @@ public class WebhookServiceHandler extends HttpBaseServlet {
 
       OBCriteria<DefinedWebHook> webhookCrit = OBDal.getInstance().createCriteria(
           DefinedWebHook.class);
-      if (hooks != null) {
-        webhookCrit.add(Restrictions.in(DefinedWebHook.PROPERTY_NAME, hooks));
+      if (!hookList.isEmpty()) {
+        webhookCrit.add(Restrictions.in(DefinedWebHook.PROPERTY_NAME, hookList));
       }
       List<DefinedWebHook> webhooks = webhookCrit.list();
       for (DefinedWebHook webhook : webhooks) {
@@ -494,6 +496,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
           paramInfo.put("name", param.getName());
           paramInfo.put("type", "string");
           paramInfo.put("required", param.isRequired());
+          paramInfo.put("description", param.getDescription());
           infoParams.put(paramInfo);
         }
 
@@ -517,10 +520,7 @@ public class WebhookServiceHandler extends HttpBaseServlet {
     } finally {
       OBContext.restorePreviousMode();
     }
-
-
   }
-
 
 
   /**
