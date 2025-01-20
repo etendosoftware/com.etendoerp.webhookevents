@@ -67,6 +67,7 @@ dependencies {
    implementation('com.thoughtworks.xstream:xstream:1.4.12') {
        exclude group: '*'
    }
+   implementation('com.etendoerp:openapi:1.0.0')
 
    implementation('com.etendoerp.platform:etendo-core:[22.1.0,24.4.0)')
 
