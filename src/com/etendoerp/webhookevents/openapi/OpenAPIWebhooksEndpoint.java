@@ -359,7 +359,7 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
       Schema parameterSchema = new Schema<>();
       parameterSchema.type(STRING);
       parameterSchema.description(parameter.getDescription());
-      schema.addProperty(name, parameterSchema);
+      schema.addProperties(name, parameterSchema);
       if (parameter.isRequired()) {
         required.add(name);
       }
