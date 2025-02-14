@@ -1,5 +1,17 @@
 package com.etendoerp.webhookevents.openapi;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.enterprise.context.ApplicationScoped;
+
+import org.apache.commons.lang3.StringUtils;
+import org.codehaus.jettison.json.JSONObject;
+import org.openbravo.dal.core.OBContext;
+import org.openbravo.dal.service.OBDal;
+
 import com.etendoerp.openapi.data.OpenAPIRequest;
 import com.etendoerp.openapi.data.OpenApiFlow;
 import com.etendoerp.openapi.data.OpenApiFlowPoint;
@@ -20,25 +32,12 @@ import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.tags.Tag;
 
-import org.apache.commons.lang3.StringUtils;
-import org.codehaus.jettison.json.JSONObject;
-import org.openbravo.dal.core.OBContext;
-import org.openbravo.dal.service.OBDal;
-
-import javax.enterprise.context.ApplicationScoped;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.stream.Collectors;
-
 @ApplicationScoped
 /**
  * Class that implements the OpenAPIEndpoint interface to handle OpenAPI webhook endpoints.
  */
 public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
 
-  public static final String DEFAULT_TAG = "Webhooks";
   public static final String OBJECT = "object";
   public static final String STRING = "string";
   private String requestedTag = null;
@@ -60,9 +59,9 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
    * <p>
    * This method filters the flows to include only those that have at least one
    * endpoint with non-empty webhook lists. It then maps the filtered flows to their names
-   * and adds a default tag to the list.
+   * to the list.
    *
-   * @return a list of tag names including the default tag
+   * @return a list of tag names
    */
   private List<String> getTags() {
     List<String> listFlows = getFlows().stream()
@@ -70,7 +69,6 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
             .anyMatch(point -> !point.getEtapiOpenapiReq().getSmfwheOpenapiWebhkList().isEmpty()))
         .map(OpenApiFlow::getName)
         .collect(Collectors.toList());
-    listFlows.add(DEFAULT_TAG);
     return listFlows;
   }
 
@@ -115,29 +113,34 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     try {
       OBContext.setAdminMode();
       List<OpenApiFlow> flows = getFlows();
-      // Add default tag globally
-      Tag defaultTag = new Tag().name(DEFAULT_TAG);
-      addTagsIncrementally(openAPI, defaultTag);
-      // If the tag is present and is not the default tag, add only the endpoints of that tag
-      if (requestedTag != null && !StringUtils.equals(requestedTag, DEFAULT_TAG)) {
+      // If the tag is present , add only the endpoints of that tag
+      if (requestedTag != null) {
         flows = flows.stream()
             .filter(flow -> StringUtils.equalsIgnoreCase(flow.getName(), requestedTag))
             .collect(Collectors.toList());
       }
       flows.forEach(flow -> {
-        var endpoints = flow.getETAPIOpenApiFlowPointList();
+        var endpoints = flow.getETAPIOpenApiFlowPointList().stream().filter(OpenApiFlowPoint::isActive).collect(
+            Collectors.toList());
         for (OpenApiFlowPoint endpoint : endpoints) {
+          OpenAPIRequest etapiOpenapiReq = endpoint.getEtapiOpenapiReq();
+          if (etapiOpenapiReq == null || !etapiOpenapiReq.isActive()) {
+            continue;
+          }
           Tag newTag = new Tag().name(flow.getName()).description(flow.getDescription());
           addTagsIncrementally(openAPI, newTag);
-          OpenAPIRequest etapiOpenapiReq = endpoint.getEtapiOpenapiReq();
 
-          List<OpenAPIWebhook> webhookOpenApiList = etapiOpenapiReq.getSmfwheOpenapiWebhkList();
+          List<OpenAPIWebhook> webhookOpenApiList = etapiOpenapiReq.getSmfwheOpenapiWebhkList().stream()
+              .filter(OpenAPIWebhook::isActive).collect(Collectors.toList());
           if (webhookOpenApiList.isEmpty()) {
             continue;
           }
           // At this point, the list should have only one element
-          OpenAPIWebhook openAPIWebhook = webhookOpenApiList.get(0);
-          addDefinition(openAPI, flow.getName(), etapiOpenapiReq, openAPIWebhook.getWebHook());
+          DefinedWebHook webHook = webhookOpenApiList.get(0).getWebHook();
+          if (webHook == null || !webHook.isActive()) {
+            continue;
+          }
+          addDefinition(openAPI, flow.getName(), etapiOpenapiReq, webHook);
         }
       });
     } finally {
@@ -261,8 +264,7 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
     if (operation.getTags() == null) {
       operation.setTags(new ArrayList<>());
     }
-    // Add default tag and the tag of the flow
-    operation.getTags().add(DEFAULT_TAG);
+    // Add the tag of the flow
     operation.getTags().add(tag);
 
     if (requestBodySchema != null) {
