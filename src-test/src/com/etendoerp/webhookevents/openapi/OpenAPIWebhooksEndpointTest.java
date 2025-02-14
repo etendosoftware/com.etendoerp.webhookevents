@@ -52,6 +52,8 @@ public class OpenAPIWebhooksEndpointTest extends WeldBaseTest {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  private static final String HOST_ADDRESS = "http://localhost:8080";
+
   /**
    * Sets up the test environment before each test.
    *
@@ -133,7 +135,7 @@ public class OpenAPIWebhooksEndpointTest extends WeldBaseTest {
     OBDal.getInstance().flush();
 
     // When
-    String jsonString = new OpenAPIController().getOpenAPIJson("TempTestFlow", "http://localhost:8080");
+    String jsonString = new OpenAPIController().getOpenAPIJson(HOST_ADDRESS, "TempTestFlow", null);
     JSONObject json = new JSONObject(jsonString);
     assertTrue(json.names().length() > 0);
 
