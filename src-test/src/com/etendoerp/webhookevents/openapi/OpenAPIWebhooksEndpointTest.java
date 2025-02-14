@@ -1,6 +1,5 @@
 package com.etendoerp.webhookevents.openapi;
 
-import static com.etendoerp.webhookevents.openapi.OpenAPIWebhooksEndpoint.DEFAULT_TAG;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -56,7 +55,8 @@ public class OpenAPIWebhooksEndpointTest extends WeldBaseTest {
   /**
    * Sets up the test environment before each test.
    *
-   * @throws Exception if an error occurs during setup
+   * @throws Exception
+   *     if an error occurs during setup
    */
   @Before
   public void setUp() throws Exception {
@@ -74,9 +74,12 @@ public class OpenAPIWebhooksEndpointTest extends WeldBaseTest {
   /**
    * Tests the getWebhooks method to ensure it retrieves webhooks correctly.
    *
-   * @throws OpenApiConfigurationException if an OpenAPI configuration error occurs
-   * @throws IOException if an I/O error occurs
-   * @throws JSONException if a JSON processing error occurs
+   * @throws OpenApiConfigurationException
+   *     if an OpenAPI configuration error occurs
+   * @throws IOException
+   *     if an I/O error occurs
+   * @throws JSONException
+   *     if a JSON processing error occurs
    */
   @Test
   public void test_getWebhooks() throws OpenApiConfigurationException, IOException, JSONException {
@@ -130,7 +133,7 @@ public class OpenAPIWebhooksEndpointTest extends WeldBaseTest {
     OBDal.getInstance().flush();
 
     // When
-    String jsonString = new OpenAPIController().getOpenAPIJson(DEFAULT_TAG, "http://localhost:8080");
+    String jsonString = new OpenAPIController().getOpenAPIJson("TempTestFlow", "http://localhost:8080");
     JSONObject json = new JSONObject(jsonString);
     assertTrue(json.names().length() > 0);
 
@@ -148,7 +151,8 @@ public class OpenAPIWebhooksEndpointTest extends WeldBaseTest {
   /**
    * Cleans up the specified items after a test.
    *
-   * @param itemsToClean the list of items to clean up
+   * @param itemsToClean
+   *     the list of items to clean up
    */
   private void cleanUpItems(List<BaseOBObject> itemsToClean) {
     for (BaseOBObject item : itemsToClean) {
