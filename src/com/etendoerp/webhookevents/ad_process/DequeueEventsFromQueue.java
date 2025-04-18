@@ -18,7 +18,7 @@
 package com.etendoerp.webhookevents.ad_process;
 
 import com.etendoerp.webhookevents.webhook_util.WebHookUtil;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.ScrollableResults;
 import org.openbravo.base.exception.OBException;
