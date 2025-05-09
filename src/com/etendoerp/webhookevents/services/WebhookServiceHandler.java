@@ -28,8 +28,8 @@ import com.etendoerp.webhookevents.exceptions.WebhookParamException;
 import com.etendoerp.webhookevents.webhook_util.OpenAPISpecUtils;
 import com.smf.securewebservices.utils.SecureWebServicesUtils;
 
-import org.apache.commons.lang.BooleanUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

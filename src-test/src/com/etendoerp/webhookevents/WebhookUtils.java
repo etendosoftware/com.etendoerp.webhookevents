@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.openbravo.base.provider.OBProvider;
 import org.openbravo.base.secureApp.VariablesSecureApp;
@@ -22,7 +22,6 @@ import org.openbravo.dal.service.OBDal;
 import org.openbravo.model.ad.alert.Alert;
 import org.openbravo.model.ad.access.Role;
 import org.openbravo.model.ad.access.User;
-import org.openbravo.model.ad.access.UserRoles;
 import org.openbravo.model.ad.system.Client;
 import org.openbravo.model.common.enterprise.Organization;
 import org.openbravo.test.base.TestConstants;

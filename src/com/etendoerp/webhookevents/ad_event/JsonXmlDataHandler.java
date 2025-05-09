@@ -23,7 +23,7 @@ import javax.enterprise.event.Observes;
 
 import com.etendoerp.webhookevents.interfaces.DynamicNode;
 import com.etendoerp.webhookevents.webhook_util.Constants;
-import org.apache.commons.lang.BooleanUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.log4j.Logger;
 import org.openbravo.base.exception.OBException;
 import org.openbravo.base.model.Entity;
