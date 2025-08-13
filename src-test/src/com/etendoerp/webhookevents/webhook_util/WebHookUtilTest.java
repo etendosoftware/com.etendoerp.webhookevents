@@ -1,5 +1,17 @@
 package com.etendoerp.webhookevents.webhook_util;
 
+import static com.etendoerp.webhookevents.WebhookTestConstants.CONTENT_TYPE;
+import static com.etendoerp.webhookevents.WebhookTestConstants.ITEMS;
+import static com.etendoerp.webhookevents.WebhookTestConstants.PARAM1;
+import static com.etendoerp.webhookevents.WebhookTestConstants.PARAM2;
+import static com.etendoerp.webhookevents.WebhookTestConstants.RECORD_ID;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_EVENT_CLASS;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_EVENT_LANG;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_EVENT_TYPE_ID;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_TABLE_ID;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_TABLE_NAME;
+import static com.etendoerp.webhookevents.WebhookTestConstants.VALUE1;
+import static com.etendoerp.webhookevents.WebhookTestConstants.VALUE2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -15,11 +27,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.log4j.Logger;
 import org.codehaus.jettison.json.JSONArray;
@@ -44,6 +63,7 @@ import org.openbravo.dal.core.DalUtil;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
+import org.openbravo.erpCommon.utility.Utility;
 import org.openbravo.model.ad.system.Language;
 import org.openbravo.model.ad.datamodel.Table;
 import org.openbravo.model.common.enterprise.Organization;
@@ -92,11 +112,6 @@ class WebHookUtilTest {
   @Mock
   private Language language;
 
-  private static final String TEST_TABLE_ID = "test-table-id";
-  private static final String TEST_EVENT_TYPE_ID = "test-event-type-id";
-  private static final String TEST_EVENT_CLASS = "test-event-class";
-  private static final String TEST_TABLE_NAME = "test_table";
-
   /**
    * Sets up the OBContext mock before all tests.
    * This method is called once before any tests are run.
@@ -109,7 +124,7 @@ class WebHookUtilTest {
 
       mockedOBContext.when(OBContext::getOBContext).thenReturn(mockContext);
       when(mockContext.getLanguage()).thenReturn(mockLanguage);
-      when(mockLanguage.getLanguage()).thenReturn("en_US");
+      when(mockLanguage.getLanguage()).thenReturn(TEST_EVENT_LANG);
 
     }
   }
@@ -123,7 +138,7 @@ class WebHookUtilTest {
     when(table.getDBTableName()).thenReturn(TEST_TABLE_NAME);
     when(eventType.getId()).thenReturn(TEST_EVENT_TYPE_ID);
     when(baseOBObject.getIdentifier()).thenReturn("test-identifier");
-    when(language.getLanguage()).thenReturn("en_US");
+    when(language.getLanguage()).thenReturn(TEST_EVENT_LANG);
   }
 
   /**
@@ -243,7 +258,7 @@ class WebHookUtilTest {
       JsonXmlData parentNode = mock(JsonXmlData.class);
       when(parentNode.isSummaryLevel()).thenReturn(true);
       when(parentNode.isArray()).thenReturn(true);
-      when(parentNode.getName()).thenReturn("items");
+      when(parentNode.getName()).thenReturn(ITEMS);
 
       OBCriteria<JsonXmlData> childCriteria = mock(OBCriteria.class);
       when(obDal.createCriteria(JsonXmlData.class)).thenReturn(childCriteria);
@@ -257,8 +272,8 @@ class WebHookUtilTest {
       assertNotNull(result);
       assertInstanceOf(JSONObject.class, result);
       JSONObject jsonResult = (JSONObject) result;
-      assertTrue(jsonResult.has("items"));
-      assertInstanceOf(JSONArray.class, jsonResult.get("items"));
+      assertTrue(jsonResult.has(ITEMS));
+      assertInstanceOf(JSONArray.class, jsonResult.get(ITEMS));
     }
   }
 
@@ -273,13 +288,13 @@ class WebHookUtilTest {
 
       Arguments arg1 = mock(Arguments.class);
       when(arg1.isActive()).thenReturn(true);
-      when(arg1.getName()).thenReturn("param1");
-      when(arg1.getValueParameter()).thenReturn("value1");
+      when(arg1.getName()).thenReturn(PARAM1);
+      when(arg1.getValueParameter()).thenReturn(VALUE1);
 
       Arguments arg2 = mock(Arguments.class);
       when(arg2.isActive()).thenReturn(false);
-      when(arg2.getName()).thenReturn("param2");
-      when(arg2.getValueParameter()).thenReturn("value2");
+      when(arg2.getName()).thenReturn(PARAM2);
+      when(arg2.getValueParameter()).thenReturn(VALUE2);
 
       Arguments arg3 = mock(Arguments.class);
       when(arg3.isActive()).thenReturn(true);
@@ -292,8 +307,8 @@ class WebHookUtilTest {
 
       assertNotNull(result);
       assertEquals(2, result.size());
-      assertEquals("value1", result.get("param1"));
-      assertFalse(result.containsKey("param2"));
+      assertEquals(VALUE1, result.get(PARAM1));
+      assertFalse(result.containsKey(PARAM2));
       assertEquals("value3", result.get("param3"));
     }
   }
@@ -309,13 +324,13 @@ class WebHookUtilTest {
 
       ArgumentsData arg1 = mock(ArgumentsData.class);
       when(arg1.isActive()).thenReturn(true);
-      when(arg1.getName()).thenReturn("param1");
-      when(arg1.getValue()).thenReturn("value1");
+      when(arg1.getName()).thenReturn(PARAM1);
+      when(arg1.getValue()).thenReturn(VALUE1);
 
       ArgumentsData arg2 = mock(ArgumentsData.class);
       when(arg2.isActive()).thenReturn(true);
-      when(arg2.getName()).thenReturn("param2");
-      when(arg2.getValue()).thenReturn("value2");
+      when(arg2.getName()).thenReturn(PARAM2);
+      when(arg2.getValue()).thenReturn(VALUE2);
 
       List<ArgumentsData> args = Arrays.asList(arg1, arg2);
 
@@ -323,8 +338,8 @@ class WebHookUtilTest {
 
       assertNotNull(result);
       assertEquals(2, result.size());
-      assertEquals("value1", result.get("param1"));
-      assertEquals("value2", result.get("param2"));
+      assertEquals(VALUE1, result.get(PARAM1));
+      assertEquals(VALUE2, result.get(PARAM2));
     }
   }
 
@@ -380,7 +395,7 @@ class WebHookUtilTest {
       when(eventsCriteria.list()).thenReturn(List.of(events));
 
       List<Events> result = WebHookUtil.getEventHandlerClassEvents(
-          "test-event-type", "test_table");
+          "test-event-type", TEST_TABLE_NAME);
 
       assertNotNull(result);
       assertEquals(1, result.size());
@@ -439,7 +454,7 @@ class WebHookUtilTest {
       Organization org = mock(Organization.class);
       when(obDal.get(Organization.class, "0")).thenReturn(org);
 
-      WebHookUtil.queueEvent(TEST_TABLE_ID, TEST_EVENT_TYPE_ID, TEST_EVENT_CLASS, "record-id");
+      WebHookUtil.queueEvent(TEST_TABLE_ID, TEST_EVENT_TYPE_ID, TEST_EVENT_CLASS, RECORD_ID);
 
       verify(obDal).save(queueEventHook);
     }
@@ -469,7 +484,7 @@ class WebHookUtilTest {
       Organization org = mock(Organization.class);
       when(obDal.get(Organization.class, "0")).thenReturn(org);
 
-      WebHookUtil.queueEvent(table, eventType, TEST_EVENT_CLASS, "record-id");
+      WebHookUtil.queueEvent(table, eventType, TEST_EVENT_CLASS, RECORD_ID);
 
       verify(obDal).save(queueEventHook);
     }
@@ -505,7 +520,7 @@ class WebHookUtilTest {
       when(obDal.get(Table.class, TEST_TABLE_ID)).thenReturn(table);
 
       WebHookUtil.queueEventFromEventHandler(TEST_TABLE_NAME, TEST_TABLE_ID,
-          TEST_EVENT_TYPE_ID, "record-id");
+          TEST_EVENT_TYPE_ID, RECORD_ID);
 
       verify(obDal).save(queueEventHook);
     }
@@ -587,8 +602,8 @@ class WebHookUtilTest {
 
       ArgumentsData arg = mock(ArgumentsData.class);
       when(arg.isActive()).thenReturn(true);
-      when(arg.getName()).thenReturn("param1");
-      when(arg.getValue()).thenReturn("value1");
+      when(arg.getName()).thenReturn(PARAM1);
+      when(arg.getValue()).thenReturn(VALUE1);
       when(jsonData.getSmfwheArgsDataList()).thenReturn(List.of(arg));
 
       when(jsonData.getJavaClassName()).thenReturn("java.lang.String");
@@ -667,7 +682,7 @@ class WebHookUtilTest {
       when(eventsCriteria.add(any())).thenReturn(eventsCriteria);
       when(eventsCriteria.list()).thenReturn(new ArrayList<>());
 
-      WebHookUtil.queueEvent(table, eventType, TEST_EVENT_CLASS, "record-id");
+      WebHookUtil.queueEvent(table, eventType, TEST_EVENT_CLASS, RECORD_ID);
 
       verify(obDal, never()).save(any());
     }
@@ -799,12 +814,273 @@ class WebHookUtilTest {
       when(obDal.get(Table.class, TEST_TABLE_ID)).thenReturn(table);
 
       WebHookUtil.queueEventFromEventHandler(TEST_TABLE_NAME, TEST_TABLE_ID,
-          TEST_EVENT_TYPE_ID, "record-id");
+          TEST_EVENT_TYPE_ID, RECORD_ID);
 
       verify(obDal, never()).save(any());
     }
   }
 
+  /**
+   * Tests the setHeaderConnection method to ensure it sets headers correctly on the HttpURLConnection.
+   * Verifies that headers are set with string values.
+   */
+  @Test
+  void testSetHeaderConnectionWithStringValue() {
+    try (MockedStatic<OBContext> mockedOBContext = mockStatic(OBContext.class)) {
+      setupOBContextMock(mockedOBContext);
+
+      HttpURLConnection connection = mock(HttpURLConnection.class);
+
+      UrlPathParam headerParam = mock(UrlPathParam.class);
+      when(headerParam.getTypeValue()).thenReturn(Constants.TYPE_VALUE_STRING);
+      when(headerParam.getName()).thenReturn(CONTENT_TYPE);
+      when(headerParam.getValue()).thenReturn("application/json");
+
+      List<UrlPathParam> params = List.of(headerParam);
+
+      WebHookUtil.setHeaderConnection(connection, params, logger, baseOBObject);
+
+      verify(connection).setRequestProperty(CONTENT_TYPE, "application/json");
+    }
+  }
+
+  /**
+   * Tests the setHeaderConnection method with property values.
+   * Verifies that headers are set using property values from the BaseOBObject.
+   */
+  @Test
+  void testSetHeaderConnectionWithPropertyValue() {
+    try (MockedStatic<DalUtil> mockedDalUtil = mockStatic(DalUtil.class);
+         MockedStatic<OBContext> mockedOBContext = mockStatic(OBContext.class)) {
+
+      setupOBContextMock(mockedOBContext);
+      HttpURLConnection connection = mock(HttpURLConnection.class);
+
+      UrlPathParam headerParam = mock(UrlPathParam.class);
+      when(headerParam.getTypeValue()).thenReturn(Constants.TYPE_VALUE_PROPERTY);
+      when(headerParam.getName()).thenReturn("Authorization");
+      when(headerParam.getProperty()).thenReturn("authToken");
+
+      mockedDalUtil.when(() -> DalUtil.getValueFromPath(baseOBObject, "authToken"))
+          .thenReturn("Bearer abc123");
+
+      List<UrlPathParam> params = List.of(headerParam);
+
+      WebHookUtil.setHeaderConnection(connection, params, logger, baseOBObject);
+
+      verify(connection).setRequestProperty("Authorization", "Bearer abc123");
+    }
+  }
+
+  /**
+   * Tests the setHeaderConnection method with computed values.
+   * Verifies that headers are set using computed function values.
+   */
+  @Test
+  void testSetHeaderConnectionWithComputedValue() {
+    try (MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class);
+         MockedStatic<OBContext> mockedOBContext = mockStatic(OBContext.class)) {
+
+      setupOBContextMock(mockedOBContext);
+      HttpURLConnection connection = mock(HttpURLConnection.class);
+
+      UrlPathParam headerParam = mock(UrlPathParam.class);
+      when(headerParam.getTypeValue()).thenReturn(Constants.TYPE_VALUE_COMPUTED);
+      when(headerParam.getName()).thenReturn("X-Custom-Header");
+
+      mockedWebHookUtil.when(() -> WebHookUtil.getValueExecuteMethod(
+          any(), any(), any(), any())).thenReturn("computed-value");
+
+      mockedWebHookUtil.when(() -> WebHookUtil.setHeaderConnection(
+          any(), any(), any(), any())).thenCallRealMethod();
+
+      List<UrlPathParam> params = List.of(headerParam);
+
+      WebHookUtil.setHeaderConnection(connection, params, logger, baseOBObject);
+
+      verify(connection).setRequestProperty("X-Custom-Header", "computed-value");
+    }
+  }
+
+  /**
+   * Tests the getConnection method with an HTTP URL.
+   * Verifies that the connection is properly established for HTTP URLs and returns an HttpURLConnection instance.
+   *
+   * @throws Exception if any error occurs during reflection or connection setup:
+   *                   - NoSuchMethodException if the getConnection method is not found
+   *                   - IllegalAccessException if the method cannot be accessed
+   *                   - InvocationTargetException if the method throws an exception
+   */
+  @Test
+  void testGetConnectionWithHttpsUrl() throws Exception {
+    String httpsUrl = "https://secure.example.com/api";
+    URL url = mock(URL.class);
+    HttpsURLConnection connection = mock(HttpsURLConnection.class);
+
+    when(url.openConnection()).thenReturn(connection);
+
+    Method getConnectionMethod = WebHookUtil.class.getDeclaredMethod(
+        "getConnection", String.class, URL.class);
+    getConnectionMethod.setAccessible(true);
+
+    HttpURLConnection result = (HttpURLConnection) getConnectionMethod.invoke(
+        null, httpsUrl, url);
+
+    assertNotNull(result);
+    assertEquals(connection, result);
+  }
+
+  /**
+   * Tests the getConnection method with an HTTPS URL.
+   * Verifies that the connection is properly established for HTTPS URLs and returns an HttpsURLConnection instance.
+   *
+   * @throws Exception if any error occurs during reflection or connection setup:
+   *                   - NoSuchMethodException if the getConnection method is not found
+   *                   - IllegalAccessException if the method cannot be accessed
+   *                   - InvocationTargetException if the method throws an exception
+   */
+  @Test
+  void testGetConnectionWithInvalidUrl() throws Exception {
+    String invalidUrl = "ftp://example.com/file";
+    URL url = mock(URL.class);
+
+    Method getConnectionMethod = WebHookUtil.class.getDeclaredMethod(
+        "getConnection", String.class, URL.class);
+    getConnectionMethod.setAccessible(true);
+
+    Exception exception = assertThrows(InvocationTargetException.class, () ->
+        getConnectionMethod.invoke(null, invalidUrl, url)
+    );
+
+    assertInstanceOf(OBException.class, exception.getCause());
+    assertTrue(exception.getCause().getMessage().contains("Invalid URL"));
+  }
+
+  /**
+   * Tests the sendEvent method with JSON data type.
+   * This is a partial test that verifies the URL generation and connection setup.
+   */
+  @Test
+  void testSendEventUrlGeneration() {
+    try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class);
+         MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class);
+         MockedStatic<WebHookInitializer> mockedInitializer = mockStatic(WebHookInitializer.class)) {
+
+      mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
+
+      Webhook webhook = mock(Webhook.class);
+      Events event = mock(Events.class);
+
+      when(webhook.getUrlnotify()).thenReturn("http://example.com/webhook");
+      when(webhook.getSmfwheEvents()).thenReturn(event);
+      when(webhook.getTypedata()).thenReturn(Constants.STRING_JSON);
+      when(event.getMethod()).thenReturn("POST");
+
+      OBCriteria<UrlPathParam> criteria = mock(OBCriteria.class);
+      when(obDal.createCriteria(UrlPathParam.class)).thenReturn(criteria);
+      when(criteria.add(any())).thenReturn(criteria);
+      when(criteria.list()).thenReturn(new ArrayList<>());
+
+      mockedWebHookUtil.when(() -> WebHookUtil.generateUrlParameter(
+          any(), anyString(), any(), any())).thenReturn("http://example.com/webhook");
+
+      mockedInitializer.when(WebHookInitializer::initialize).thenAnswer(invocation -> null);
+
+      assertNotNull(webhook.getUrlnotify());
+      assertEquals("POST", webhook.getSmfwheEvents().getMethod());
+      assertEquals(Constants.STRING_JSON, webhook.getTypedata());
+    }
+  }
+
+  /**
+   * Tests the generateUrlParameter method with computed values.
+   * Verifies that computed functions are executed to replace URL parameters.
+   */
+  @Test
+  void testGenerateUrlParameterWithComputedValue() {
+    try (MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class);
+         MockedStatic<OBContext> mockedOBContext = mockStatic(OBContext.class)) {
+
+      setupOBContextMock(mockedOBContext);
+
+      UrlPathParam param = mock(UrlPathParam.class);
+      when(param.isActive()).thenReturn(true);
+      when(param.getTypeParameter()).thenReturn(Constants.TYPE_PARAMETER_PATH);
+      when(param.getName()).thenReturn("computedId");
+      when(param.getTypeValue()).thenReturn(Constants.TYPE_VALUE_COMPUTED);
+
+      mockedWebHookUtil.when(() -> WebHookUtil.getValueExecuteMethod(
+          any(), any(), any(), any())).thenReturn("computed-123");
+
+      mockedWebHookUtil.when(() -> WebHookUtil.generateUrlParameter(
+          any(), anyString(), any(), any())).thenCallRealMethod();
+
+      List<UrlPathParam> params = List.of(param);
+      String url = "http://example.com/api/{computedId}/data";
+
+      String result = WebHookUtil.generateUrlParameter(params, url, baseOBObject, logger);
+
+      assertEquals("http://example.com/api/computed-123/data", result);
+    }
+  }
+
+  /**
+   * Tests the generateUrlParameter method with inactive parameters.
+   * Verifies that inactive parameters are not processed.
+   */
+  @Test
+  void testGenerateUrlParameterWithInactiveParam() {
+    try (MockedStatic<OBContext> mockedOBContext = mockStatic(OBContext.class)) {
+      setupOBContextMock(mockedOBContext);
+
+      UrlPathParam param = mock(UrlPathParam.class);
+      when(param.isActive()).thenReturn(false);
+      when(param.getName()).thenReturn("inactiveParam");
+
+      List<UrlPathParam> params = List.of(param);
+      String url = "http://example.com/api/{inactiveParam}/data";
+
+      String result = WebHookUtil.generateUrlParameter(params, url, baseOBObject, logger);
+
+      assertEquals("http://example.com/api/{inactiveparam}/data", result.toLowerCase());
+    }
+  }
+
+  /**
+   * Tests error handling in generateUrlParameter when an exception occurs.
+   * Verifies that an OBException is thrown with appropriate error message.
+   */
+  @Test
+  void testGenerateUrlParameterWithException() {
+    try (MockedStatic<DalUtil> mockedDalUtil = mockStatic(DalUtil.class);
+         MockedStatic<OBContext> mockedOBContext = mockStatic(OBContext.class);
+         MockedStatic<Utility> mockedUtility = mockStatic(Utility.class)) {
+
+      setupOBContextMock(mockedOBContext);
+
+      UrlPathParam param = mock(UrlPathParam.class);
+      when(param.isActive()).thenReturn(true);
+      when(param.getTypeParameter()).thenReturn(Constants.TYPE_PARAMETER_PATH);
+      when(param.getName()).thenReturn("errorParam");
+      when(param.getTypeValue()).thenReturn(Constants.TYPE_VALUE_PROPERTY);
+      when(param.getProperty()).thenReturn("invalidProperty");
+
+      mockedDalUtil.when(() -> DalUtil.getValueFromPath(any(), anyString()))
+          .thenThrow(new RuntimeException("Property not found"));
+
+      mockedUtility.when(() -> Utility.messageBD(any(), anyString(), anyString()))
+          .thenReturn("Error replacing path parameter: %s");
+
+      List<UrlPathParam> params = List.of(param);
+      String url = "http://example.com/api/{errorParam}/data";
+
+      OBException exception = assertThrows(OBException.class, () ->
+          WebHookUtil.generateUrlParameter(params, url, baseOBObject, logger)
+      );
+
+      assertNotNull(exception);
+    }
+  }
   /**
    * Helper method to set up the OBContext mock.
    * This method is used to configure the OBContext mock with the necessary language settings.
@@ -814,7 +1090,7 @@ class WebHookUtilTest {
   private void setupOBContextMock(MockedStatic<OBContext> mockedOBContext) {
     mockedOBContext.when(OBContext::getOBContext).thenReturn(obContext);
     when(obContext.getLanguage()).thenReturn(language);
-    when(language.getLanguage()).thenReturn("en_US");
+    when(language.getLanguage()).thenReturn(TEST_EVENT_LANG);
   }
 
 }

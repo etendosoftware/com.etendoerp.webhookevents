@@ -1,5 +1,7 @@
 package com.etendoerp.webhookevents.ad_event;
 
+import static com.etendoerp.webhookevents.WebhookTestConstants.INVALID_PROPERTY_ERROR_MESSAGE;
+import static com.etendoerp.webhookevents.WebhookTestConstants.INVALID_PROPERTY_VALUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -125,7 +127,7 @@ public class ArgumentsDataHandlerTest extends OBBaseTest {
   public void testOnSaveWithInvalidProperty() {
     setupArgumentsDataMockChain();
     when(newEvent.getTargetInstance()).thenReturn(argumentsData);
-    when(argumentsData.getValue()).thenReturn("value @nonExistentProperty");
+    when(argumentsData.getValue()).thenReturn(INVALID_PROPERTY_VALUE);
 
     try (MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class);
          MockedStatic<DalUtil> mockedDalUtil = mockStatic(DalUtil.class);
@@ -138,7 +140,7 @@ public class ArgumentsDataHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'nonExistentProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE);
 
       assertThrows(OBException.class, () -> handler.onSave(newEvent));
     }
@@ -169,7 +171,7 @@ public class ArgumentsDataHandlerTest extends OBBaseTest {
   public void testOnUpdateWithInvalidProperty() {
     setupArgumentsDataMockChain();
     when(updateEvent.getTargetInstance()).thenReturn(argumentsData);
-    when(argumentsData.getValue()).thenReturn("value @nonExistentProperty");
+    when(argumentsData.getValue()).thenReturn(INVALID_PROPERTY_VALUE);
 
     try (MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class);
          MockedStatic<DalUtil> mockedDalUtil = mockStatic(DalUtil.class);
@@ -182,7 +184,7 @@ public class ArgumentsDataHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'nonExistentProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE);
 
       assertThrows(OBException.class, () -> handler.onUpdate(updateEvent));
     }
@@ -195,9 +197,8 @@ public class ArgumentsDataHandlerTest extends OBBaseTest {
   @Test
   public void testValidMethodWithSimpleValue() {
     when(argumentsData.getValue()).thenReturn("simple value without properties");
-    Entity testEntity = mock(Entity.class);
 
-    assertDoesNotThrow(() -> handler.valid(testEntity, argumentsData));
+    assertDoesNotThrow(() -> handler.valid(entity, argumentsData));
   }
 
   /**
@@ -206,24 +207,23 @@ public class ArgumentsDataHandlerTest extends OBBaseTest {
    */
   @Test
   public void testValidMethodWithPropertyReferences() {
-    Entity testEntity = mock(Entity.class);
 
     try (MockedStatic<DalUtil> mockedDalUtil = mockStatic(DalUtil.class)) {
       when(argumentsData.getValue()).thenReturn("value @validProperty simple");
       mockedDalUtil.when(() -> DalUtil.getPropertyFromPath(any(Entity.class), anyString()))
           .thenReturn(property);
 
-      assertDoesNotThrow(() -> handler.valid(testEntity, argumentsData));
+      assertDoesNotThrow(() -> handler.valid(entity, argumentsData));
 
-      when(argumentsData.getValue()).thenReturn("value @nonExistentProperty");
+      when(argumentsData.getValue()).thenReturn(INVALID_PROPERTY_VALUE);
       mockedDalUtil.when(() -> DalUtil.getPropertyFromPath(any(Entity.class), anyString()))
           .thenReturn(null);
 
       try (MockedStatic<Utility> mockedUtility = mockStatic(Utility.class)) {
         mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-            .thenReturn("Error in name the property: 'nonExistentProperty'");
+            .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE);
 
-        assertThrows(OBException.class, () -> handler.valid(testEntity, argumentsData));
+        assertThrows(OBException.class, () -> handler.valid(entity, argumentsData));
       }
     }
   }

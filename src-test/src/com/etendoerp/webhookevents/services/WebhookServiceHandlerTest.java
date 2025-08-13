@@ -1,5 +1,8 @@
 package com.etendoerp.webhookevents.services;
 
+import static com.etendoerp.webhookevents.WebhookTestConstants.CHECK_ROLE_SECURITY;
+import static com.etendoerp.webhookevents.WebhookTestConstants.CONTENT_TYPE;
+import static com.etendoerp.webhookevents.WebhookTestConstants.GET_DEFINED_WEBHOOK_ROLE;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -210,7 +213,7 @@ class WebhookServiceHandlerTest {
     webhookServiceHandler.doGet(mockRequest, mockResponse);
 
     verify(mockResponse).setStatus(HttpStatus.SC_OK);
-    verify(mockResponse).addHeader("Content-Type", CONTENT_TYPE_JSON);
+    verify(mockResponse).addHeader(CONTENT_TYPE, CONTENT_TYPE_JSON);
     verify(mockPrintWriter).print(any(JSONObject.class));
   }
 
@@ -271,7 +274,7 @@ class WebhookServiceHandlerTest {
     webhookServiceHandler.doPost(mockRequest, mockResponse);
 
     verify(mockResponse).setStatus(HttpStatus.SC_OK);
-    verify(mockResponse).addHeader("Content-Type", CONTENT_TYPE_JSON);
+    verify(mockResponse).addHeader(CONTENT_TYPE, CONTENT_TYPE_JSON);
   }
 
   /**
@@ -289,7 +292,7 @@ class WebhookServiceHandlerTest {
     webhookServiceHandler.doGet(mockRequest, mockResponse);
 
     verify(mockResponse).setStatus(HttpStatus.SC_OK);
-    verify(mockResponse).setHeader("Content-Type", CONTENT_TYPE_JSON);
+    verify(mockResponse).setHeader(CONTENT_TYPE, CONTENT_TYPE_JSON);
   }
 
   /**
@@ -456,7 +459,7 @@ class WebhookServiceHandlerTest {
     method.invoke(webhookServiceHandler, mockResponse, HttpStatus.SC_OK, responseVars);
 
     verify(mockResponse).setStatus(HttpStatus.SC_OK);
-    verify(mockResponse).addHeader("Content-Type", CONTENT_TYPE_JSON);
+    verify(mockResponse).addHeader(CONTENT_TYPE, CONTENT_TYPE_JSON);
     verify(mockPrintWriter).print(any(JSONObject.class));
   }
 
@@ -477,7 +480,7 @@ class WebhookServiceHandlerTest {
     method.invoke(webhookServiceHandler, mockResponse, HttpStatus.SC_OK, message);
 
     verify(mockResponse).setStatus(HttpStatus.SC_OK);
-    verify(mockResponse).addHeader("Content-Type", CONTENT_TYPE_JSON);
+    verify(mockResponse).addHeader(CONTENT_TYPE, CONTENT_TYPE_JSON);
     verify(mockPrintWriter).print(any(JSONObject.class));
   }
 
@@ -502,7 +505,7 @@ class WebhookServiceHandlerTest {
     when(mockRoleCriteria.setMaxResults(1)).thenReturn(mockRoleCriteria);
     when(mockRoleCriteria.uniqueResult()).thenReturn(mockDefinedwebhookRole);
 
-    var method = WebhookServiceHandler.class.getDeclaredMethod("getDefinedwebhookRole",
+    var method = WebhookServiceHandler.class.getDeclaredMethod(GET_DEFINED_WEBHOOK_ROLE,
         DefinedWebHook.class, Role.class);
     method.setAccessible(true);
     var result = method.invoke(webhookServiceHandler, mockDefinedWebHook, mockRole);
@@ -532,7 +535,7 @@ class WebhookServiceHandlerTest {
     when(mockRoleCriteria.setMaxResults(1)).thenReturn(mockRoleCriteria);
     when(mockRoleCriteria.uniqueResult()).thenReturn(null);
 
-    var method = WebhookServiceHandler.class.getDeclaredMethod("getDefinedwebhookRole",
+    var method = WebhookServiceHandler.class.getDeclaredMethod(GET_DEFINED_WEBHOOK_ROLE,
         DefinedWebHook.class, Role.class);
     method.setAccessible(true);
     var result = method.invoke(webhookServiceHandler, mockDefinedWebHook, mockRole);
@@ -552,7 +555,7 @@ class WebhookServiceHandlerTest {
     when(mockOBDal.createCriteria(com.etendoerp.webhookevents.data.DefinedwebhookRole.class))
         .thenThrow(new RuntimeException("Database error"));
 
-    var method = WebhookServiceHandler.class.getDeclaredMethod("getDefinedwebhookRole",
+    var method = WebhookServiceHandler.class.getDeclaredMethod(GET_DEFINED_WEBHOOK_ROLE,
         DefinedWebHook.class, Role.class);
     method.setAccessible(true);
     var result = method.invoke(webhookServiceHandler, mockDefinedWebHook, mockRole);
@@ -607,7 +610,7 @@ class WebhookServiceHandlerTest {
     when(mockRoleCriteria.setMaxResults(1)).thenReturn(mockRoleCriteria);
     when(mockRoleCriteria.uniqueResult()).thenReturn(mockDefinedwebhookRole);
 
-    var method = WebhookServiceHandler.class.getDeclaredMethod("checkRoleSecurity",
+    var method = WebhookServiceHandler.class.getDeclaredMethod(CHECK_ROLE_SECURITY,
         HttpServletRequest.class, String.class, DefinedWebHook.class);
     method.setAccessible(true);
     var result = method.invoke(webhookServiceHandler, mockRequest, TEST_TOKEN, mockDefinedWebHook);
@@ -640,7 +643,7 @@ class WebhookServiceHandlerTest {
     when(mockDecodedJWT.getClaim("warehouse")).thenReturn(emptyClaim);
     when(mockDecodedJWT.getClaim("client")).thenReturn(emptyClaim);
 
-    var method = WebhookServiceHandler.class.getDeclaredMethod("checkRoleSecurity",
+    var method = WebhookServiceHandler.class.getDeclaredMethod(CHECK_ROLE_SECURITY,
         HttpServletRequest.class, String.class, DefinedWebHook.class);
     method.setAccessible(true);
     var result = method.invoke(webhookServiceHandler, mockRequest, TEST_TOKEN, mockDefinedWebHook);
@@ -657,7 +660,7 @@ class WebhookServiceHandlerTest {
     mockedSecureWebServicesUtils.when(() -> SecureWebServicesUtils.decodeToken(TEST_TOKEN))
         .thenThrow(new RuntimeException("Invalid token"));
 
-    var method = WebhookServiceHandler.class.getDeclaredMethod("checkRoleSecurity",
+    var method = WebhookServiceHandler.class.getDeclaredMethod(CHECK_ROLE_SECURITY,
         HttpServletRequest.class, String.class, DefinedWebHook.class);
     method.setAccessible(true);
     var result = method.invoke(webhookServiceHandler, mockRequest, TEST_TOKEN, mockDefinedWebHook);
@@ -750,7 +753,7 @@ class WebhookServiceHandlerTest {
     webhookServiceHandler.doGet(mockRequest, mockResponse);
 
     verify(mockResponse).setStatus(HttpStatus.SC_OK);
-    verify(mockResponse).setHeader("Content-Type", CONTENT_TYPE_JSON);
+    verify(mockResponse).setHeader(CONTENT_TYPE, CONTENT_TYPE_JSON);
     verify(mockPrintWriter).print(any(String.class));
   }
 

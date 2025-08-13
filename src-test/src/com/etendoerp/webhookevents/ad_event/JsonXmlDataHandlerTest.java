@@ -1,5 +1,7 @@
 package com.etendoerp.webhookevents.ad_event;
 
+import static com.etendoerp.webhookevents.WebhookTestConstants.INVALID_PROPERTY_ERROR_MESSAGE_ALT;
+import static com.etendoerp.webhookevents.WebhookTestConstants.SIMPLE_VALUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -104,7 +106,7 @@ public class JsonXmlDataHandlerTest extends OBBaseTest {
     when(newEvent.getTargetInstance()).thenReturn(jsonXmlData);
     when(jsonXmlData.isSummaryLevel()).thenReturn(false); // Should perform validation
     when(jsonXmlData.getTypeValue()).thenReturn(Constants.TYPE_VALUE_STRING);
-    when(jsonXmlData.getValue()).thenReturn("simple value");
+    when(jsonXmlData.getValue()).thenReturn(SIMPLE_VALUE);
 
     try (MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class)) {
       mockedModelProvider.when(ModelProvider::getInstance).thenReturn(modelProvider);
@@ -124,7 +126,7 @@ public class JsonXmlDataHandlerTest extends OBBaseTest {
     when(updateEvent.getTargetInstance()).thenReturn(jsonXmlData);
     when(jsonXmlData.isSummaryLevel()).thenReturn(false);
     when(jsonXmlData.getTypeValue()).thenReturn(Constants.TYPE_VALUE_STRING);
-    when(jsonXmlData.getValue()).thenReturn("simple value");
+    when(jsonXmlData.getValue()).thenReturn(SIMPLE_VALUE);
 
     try (MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class)) {
       mockedModelProvider.when(ModelProvider::getInstance).thenReturn(modelProvider);
@@ -169,7 +171,7 @@ public class JsonXmlDataHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'invalidProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE_ALT);
 
       assertThrows(OBException.class, () -> handler.valid(testEntity, jsonXmlData));
     }
@@ -223,7 +225,7 @@ public class JsonXmlDataHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'invalidProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE_ALT);
 
       assertThrows(OBException.class, () -> handler.valid(testEntity, jsonXmlData));
     }
@@ -340,7 +342,7 @@ public class JsonXmlDataHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'invalidProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE_ALT);
 
       assertThrows(OBException.class, () -> handler.onSave(newEvent));
     }
@@ -394,7 +396,7 @@ public class JsonXmlDataHandlerTest extends OBBaseTest {
     when(updateEvent.getTargetInstance()).thenReturn(jsonXmlData);
     when(jsonXmlData.isSummaryLevel()).thenReturn(null); // BooleanUtils.isFalse(null) returns true
     when(jsonXmlData.getTypeValue()).thenReturn(Constants.TYPE_VALUE_STRING);
-    when(jsonXmlData.getValue()).thenReturn("simple value");
+    when(jsonXmlData.getValue()).thenReturn(SIMPLE_VALUE);
 
     try (MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class)) {
       mockedModelProvider.when(ModelProvider::getInstance).thenReturn(modelProvider);
@@ -497,7 +499,7 @@ public class JsonXmlDataHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'invalidProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE_ALT);
 
       assertThrows(OBException.class, () -> handler.valid(testEntity, jsonXmlData));
     }
