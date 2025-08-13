@@ -1,5 +1,9 @@
 package com.etendoerp.webhookevents.ad_event;
 
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_RECORD_ID;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_TABLE_ID;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_TABLE_NAME;
+import static com.etendoerp.webhookevents.WebhookTestConstants.WEBHOOK_PROCESSING_FAILED_MESSAGE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -63,18 +67,18 @@ public class GenericEventHookTest extends OBBaseTest {
   public void testOnSaveSuccessful() {
     when(newEvent.getTargetInstance()).thenReturn(baseOBObject);
     when(baseOBObject.getEntity()).thenReturn(entity);
-    when(entity.getTableName()).thenReturn("test_table");
-    when(entity.getTableId()).thenReturn("table_id_123");
-    when(baseOBObject.get("id")).thenReturn("record_id_456");
+    when(entity.getTableName()).thenReturn(TEST_TABLE_NAME);
+    when(entity.getTableId()).thenReturn(TEST_TABLE_ID);
+    when(baseOBObject.get("id")).thenReturn(TEST_RECORD_ID);
 
     try (MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class)) {
       assertDoesNotThrow(() -> handler.onSave(newEvent));
 
       mockedWebHookUtil.verify(() -> WebHookUtil.queueEventFromEventHandler(
-          eq("test_table"),
-          eq("table_id_123"),
+          eq(TEST_TABLE_NAME),
+          eq(TEST_TABLE_ID),
           eq(Constants.CREATE),
-          eq("record_id_456")
+          eq(TEST_RECORD_ID)
       ), times(1));
     }
   }
@@ -87,18 +91,18 @@ public class GenericEventHookTest extends OBBaseTest {
   public void testOnUpdateSuccessful() {
     when(updateEvent.getTargetInstance()).thenReturn(baseOBObject);
     when(baseOBObject.getEntity()).thenReturn(entity);
-    when(entity.getTableName()).thenReturn("test_table");
-    when(entity.getTableId()).thenReturn("table_id_123");
-    when(baseOBObject.get("id")).thenReturn("record_id_456");
+    when(entity.getTableName()).thenReturn(TEST_TABLE_NAME);
+    when(entity.getTableId()).thenReturn(TEST_TABLE_ID);
+    when(baseOBObject.get("id")).thenReturn(TEST_RECORD_ID);
 
     try (MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class)) {
       assertDoesNotThrow(() -> handler.onUpdate(updateEvent));
 
       mockedWebHookUtil.verify(() -> WebHookUtil.queueEventFromEventHandler(
-          eq("test_table"),
-          eq("table_id_123"),
+          eq(TEST_TABLE_NAME),
+          eq(TEST_TABLE_ID),
           eq(Constants.UPDATE),
-          eq("record_id_456")
+          eq(TEST_RECORD_ID)
       ), times(1));
     }
   }
@@ -111,18 +115,18 @@ public class GenericEventHookTest extends OBBaseTest {
   public void testOnDeleteSuccessful() {
     when(deleteEvent.getTargetInstance()).thenReturn(baseOBObject);
     when(baseOBObject.getEntity()).thenReturn(entity);
-    when(entity.getTableName()).thenReturn("test_table");
-    when(entity.getTableId()).thenReturn("table_id_123");
-    when(baseOBObject.get("id")).thenReturn("record_id_456");
+    when(entity.getTableName()).thenReturn(TEST_TABLE_NAME);
+    when(entity.getTableId()).thenReturn(TEST_TABLE_ID);
+    when(baseOBObject.get("id")).thenReturn(TEST_RECORD_ID);
 
     try (MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class)) {
       assertDoesNotThrow(() -> handler.onDelete(deleteEvent));
 
       mockedWebHookUtil.verify(() -> WebHookUtil.queueEventFromEventHandler(
-          eq("test_table"),
-          eq("table_id_123"),
+          eq(TEST_TABLE_NAME),
+          eq(TEST_TABLE_ID),
           eq(Constants.DELETE),
-          eq("record_id_456")
+          eq(TEST_RECORD_ID)
       ), times(1));
     }
   }
@@ -135,21 +139,21 @@ public class GenericEventHookTest extends OBBaseTest {
   public void testOnSaveWithException() {
     when(newEvent.getTargetInstance()).thenReturn(baseOBObject);
     when(baseOBObject.getEntity()).thenReturn(entity);
-    when(entity.getTableName()).thenReturn("test_table");
-    when(entity.getTableId()).thenReturn("table_id_123");
-    when(baseOBObject.get("id")).thenReturn("record_id_456");
+    when(entity.getTableName()).thenReturn(TEST_TABLE_NAME);
+    when(entity.getTableId()).thenReturn(TEST_TABLE_ID);
+    when(baseOBObject.get("id")).thenReturn(TEST_RECORD_ID);
 
     try (MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class)) {
       mockedWebHookUtil.when(() -> WebHookUtil.queueEventFromEventHandler(anyString(), anyString(), anyString(), anyString()))
-          .thenThrow(new RuntimeException("WebHook processing failed"));
+          .thenThrow(new RuntimeException(WEBHOOK_PROCESSING_FAILED_MESSAGE));
 
       assertDoesNotThrow(() -> handler.onSave(newEvent));
 
       mockedWebHookUtil.verify(() -> WebHookUtil.queueEventFromEventHandler(
-          eq("test_table"),
-          eq("table_id_123"),
+          eq(TEST_TABLE_NAME),
+          eq(TEST_TABLE_ID),
           eq(Constants.CREATE),
-          eq("record_id_456")
+          eq(TEST_RECORD_ID)
       ), times(1));
     }
   }
@@ -162,21 +166,21 @@ public class GenericEventHookTest extends OBBaseTest {
   public void testOnUpdateWithException() {
     when(updateEvent.getTargetInstance()).thenReturn(baseOBObject);
     when(baseOBObject.getEntity()).thenReturn(entity);
-    when(entity.getTableName()).thenReturn("test_table");
-    when(entity.getTableId()).thenReturn("table_id_123");
-    when(baseOBObject.get("id")).thenReturn("record_id_456");
+    when(entity.getTableName()).thenReturn(TEST_TABLE_NAME);
+    when(entity.getTableId()).thenReturn(TEST_TABLE_ID);
+    when(baseOBObject.get("id")).thenReturn(TEST_RECORD_ID);
 
     try (MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class)) {
       mockedWebHookUtil.when(() -> WebHookUtil.queueEventFromEventHandler(anyString(), anyString(), anyString(), anyString()))
-          .thenThrow(new RuntimeException("WebHook processing failed"));
+          .thenThrow(new RuntimeException(WEBHOOK_PROCESSING_FAILED_MESSAGE));
 
       assertDoesNotThrow(() -> handler.onUpdate(updateEvent));
 
       mockedWebHookUtil.verify(() -> WebHookUtil.queueEventFromEventHandler(
-          eq("test_table"),
-          eq("table_id_123"),
+          eq(TEST_TABLE_NAME),
+          eq(TEST_TABLE_ID),
           eq(Constants.UPDATE),
-          eq("record_id_456")
+          eq(TEST_RECORD_ID)
       ), times(1));
     }
   }
@@ -189,21 +193,21 @@ public class GenericEventHookTest extends OBBaseTest {
   public void testOnDeleteWithException() {
     when(deleteEvent.getTargetInstance()).thenReturn(baseOBObject);
     when(baseOBObject.getEntity()).thenReturn(entity);
-    when(entity.getTableName()).thenReturn("test_table");
-    when(entity.getTableId()).thenReturn("table_id_123");
-    when(baseOBObject.get("id")).thenReturn("record_id_456");
+    when(entity.getTableName()).thenReturn(TEST_TABLE_NAME);
+    when(entity.getTableId()).thenReturn(TEST_TABLE_ID);
+    when(baseOBObject.get("id")).thenReturn(TEST_RECORD_ID);
 
     try (MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class)) {
       mockedWebHookUtil.when(() -> WebHookUtil.queueEventFromEventHandler(anyString(), anyString(), anyString(), anyString()))
-          .thenThrow(new RuntimeException("WebHook processing failed"));
+          .thenThrow(new RuntimeException(WEBHOOK_PROCESSING_FAILED_MESSAGE));
 
       assertDoesNotThrow(() -> handler.onDelete(deleteEvent));
 
       mockedWebHookUtil.verify(() -> WebHookUtil.queueEventFromEventHandler(
-          eq("test_table"),
-          eq("table_id_123"),
+          eq(TEST_TABLE_NAME),
+          eq(TEST_TABLE_ID),
           eq(Constants.DELETE),
-          eq("record_id_456")
+          eq(TEST_RECORD_ID)
       ), times(1));
     }
   }

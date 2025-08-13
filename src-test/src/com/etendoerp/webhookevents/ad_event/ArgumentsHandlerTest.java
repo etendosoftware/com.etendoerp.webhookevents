@@ -1,5 +1,7 @@
 package com.etendoerp.webhookevents.ad_event;
 
+import static com.etendoerp.webhookevents.WebhookTestConstants.INVALID_PROPERTY_ERROR_MESSAGE;
+import static com.etendoerp.webhookevents.WebhookTestConstants.INVALID_PROPERTY_VALUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -125,7 +127,7 @@ public class ArgumentsHandlerTest extends OBBaseTest {
   public void testOnSaveWithInvalidProperty() {
     setupArgumentsMockChain();
     when(newEvent.getTargetInstance()).thenReturn(arguments);
-    when(arguments.getValueParameter()).thenReturn("value @nonExistentProperty");
+    when(arguments.getValueParameter()).thenReturn(INVALID_PROPERTY_VALUE);
 
     try (MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class);
          MockedStatic<DalUtil> mockedDalUtil = mockStatic(DalUtil.class);
@@ -138,7 +140,7 @@ public class ArgumentsHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'nonExistentProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE);
 
       assertThrows(OBException.class, () -> handler.onSave(newEvent));
     }
@@ -170,7 +172,7 @@ public class ArgumentsHandlerTest extends OBBaseTest {
   public void testOnUpdateWithInvalidProperty() {
     setupArgumentsMockChain();
     when(updateEvent.getTargetInstance()).thenReturn(arguments);
-    when(arguments.getValueParameter()).thenReturn("value @nonExistentProperty");
+    when(arguments.getValueParameter()).thenReturn(INVALID_PROPERTY_VALUE);
 
     try (MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class);
          MockedStatic<DalUtil> mockedDalUtil = mockStatic(DalUtil.class);
@@ -183,7 +185,7 @@ public class ArgumentsHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'nonExistentProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE);
 
       assertThrows(OBException.class, () -> handler.onUpdate(updateEvent));
     }
@@ -216,13 +218,13 @@ public class ArgumentsHandlerTest extends OBBaseTest {
 
       assertDoesNotThrow(() -> handler.valid(testEntity, arguments));
 
-      when(arguments.getValueParameter()).thenReturn("value @nonExistentProperty");
+      when(arguments.getValueParameter()).thenReturn(INVALID_PROPERTY_VALUE);
       mockedDalUtil.when(() -> DalUtil.getPropertyFromPath(any(Entity.class), anyString()))
           .thenReturn(null);
 
       try (MockedStatic<Utility> mockedUtility = mockStatic(Utility.class)) {
         mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-            .thenReturn("Error in name the property: 'nonExistentProperty'");
+            .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE);
 
         assertThrows(OBException.class, () -> handler.valid(testEntity, arguments));
       }

@@ -1,5 +1,8 @@
 package com.etendoerp.webhookevents.openapi;
 
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_DESCRIPTION;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_FLOW_NAME;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_WEBHOOK_ENDPOINT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -154,7 +157,7 @@ class OpenAPIWebhooksTest {
   @Test
   void testAddWithNullRequestedTag() {
     OpenAPI openAPI = new OpenAPI();
-    List<OpenApiFlow> flows = createMockFlowsWithWebhooks("testFlow");
+    List<OpenApiFlow> flows = createMockFlowsWithWebhooks(TEST_FLOW_NAME);
 
     when(mockOBDal.createCriteria(OpenApiFlow.class)).thenReturn(mockCriteria);
     when(mockCriteria.list()).thenReturn(flows);
@@ -163,7 +166,7 @@ class OpenAPIWebhooksTest {
 
     assertNotNull(openAPI.getTags());
     assertFalse(openAPI.getTags().isEmpty());
-    assertEquals("testFlow", openAPI.getTags().get(0).getName());
+    assertEquals(TEST_FLOW_NAME, openAPI.getTags().get(0).getName());
   }
 
   /**
@@ -203,7 +206,7 @@ class OpenAPIWebhooksTest {
     mutableTagList.add(existingTag);
     openAPI.setTags(mutableTagList);
 
-    List<OpenApiFlow> flows = createMockFlowsWithWebhooks("testFlow");
+    List<OpenApiFlow> flows = createMockFlowsWithWebhooks(TEST_FLOW_NAME);
 
     when(mockOBDal.createCriteria(OpenApiFlow.class)).thenReturn(mockCriteria);
     when(mockCriteria.list()).thenReturn(flows);
@@ -224,8 +227,8 @@ class OpenAPIWebhooksTest {
     OpenApiFlow flow = mock(OpenApiFlow.class);
     OpenApiFlowPoint inactiveFlowPoint = mock(OpenApiFlowPoint.class);
 
-    when(flow.getName()).thenReturn("testFlow");
-    when(flow.getDescription()).thenReturn("Test Description");
+    when(flow.getName()).thenReturn(TEST_FLOW_NAME);
+    when(flow.getDescription()).thenReturn(TEST_DESCRIPTION);
     when(flow.getETAPIOpenApiFlowPointList()).thenReturn(List.of(inactiveFlowPoint));
     when(inactiveFlowPoint.isActive()).thenReturn(false);
 
@@ -250,8 +253,8 @@ class OpenAPIWebhooksTest {
     OpenApiFlowPoint flowPoint = mock(OpenApiFlowPoint.class);
     OpenAPIRequest inactiveRequest = mock(OpenAPIRequest.class);
 
-    when(flow.getName()).thenReturn("testFlow");
-    when(flow.getDescription()).thenReturn("Test Description");
+    when(flow.getName()).thenReturn(TEST_FLOW_NAME);
+    when(flow.getDescription()).thenReturn(TEST_DESCRIPTION);
     when(flow.getETAPIOpenApiFlowPointList()).thenReturn(List.of(flowPoint));
     when(flowPoint.isActive()).thenReturn(true);
     when(flowPoint.getEtapiOpenapiReq()).thenReturn(inactiveRequest);
@@ -278,8 +281,8 @@ class OpenAPIWebhooksTest {
     OpenApiFlowPoint flowPoint = mock(OpenApiFlowPoint.class);
     OpenAPIRequest request = mock(OpenAPIRequest.class);
 
-    when(flow.getName()).thenReturn("testFlow");
-    when(flow.getDescription()).thenReturn("Test Description");
+    when(flow.getName()).thenReturn(TEST_FLOW_NAME);
+    when(flow.getDescription()).thenReturn(TEST_DESCRIPTION);
     when(flow.getETAPIOpenApiFlowPointList()).thenReturn(List.of(flowPoint));
     when(flowPoint.isActive()).thenReturn(true);
     when(flowPoint.getEtapiOpenapiReq()).thenReturn(request);
@@ -309,8 +312,8 @@ class OpenAPIWebhooksTest {
     OpenAPIWebhook webhook = mock(OpenAPIWebhook.class);
     DefinedWebHook inactiveDefinedWebHook = mock(DefinedWebHook.class);
 
-    when(flow.getName()).thenReturn("testFlow");
-    when(flow.getDescription()).thenReturn("Test Description");
+    when(flow.getName()).thenReturn(TEST_FLOW_NAME);
+    when(flow.getDescription()).thenReturn(TEST_DESCRIPTION);
     when(flow.getETAPIOpenApiFlowPointList()).thenReturn(List.of(flowPoint));
     when(flowPoint.isActive()).thenReturn(true);
     when(flowPoint.getEtapiOpenapiReq()).thenReturn(request);
@@ -343,8 +346,8 @@ class OpenAPIWebhooksTest {
     OpenAPIWebhook webhook = mock(OpenAPIWebhook.class);
     DefinedWebHook definedWebHook = mock(DefinedWebHook.class);
 
-    when(flow.getName()).thenReturn("testFlow");
-    when(flow.getDescription()).thenReturn("Test Description");
+    when(flow.getName()).thenReturn(TEST_FLOW_NAME);
+    when(flow.getDescription()).thenReturn(TEST_DESCRIPTION);
     when(flow.getETAPIOpenApiFlowPointList()).thenReturn(List.of(flowPoint));
     when(flowPoint.isActive()).thenReturn(true);
     when(flowPoint.getEtapiOpenapiReq()).thenReturn(request);
@@ -364,8 +367,8 @@ class OpenAPIWebhooksTest {
     endpoint.add(openAPI);
 
     assertNotNull(openAPI.getPaths());
-    assertTrue(openAPI.getPaths().containsKey("/webhooks/testWebhook"));
-    PathItem pathItem = openAPI.getPaths().get("/webhooks/testWebhook");
+    assertTrue(openAPI.getPaths().containsKey(TEST_WEBHOOK_ENDPOINT));
+    PathItem pathItem = openAPI.getPaths().get(TEST_WEBHOOK_ENDPOINT);
     assertNotNull(pathItem.getGet());
   }
 
@@ -384,8 +387,8 @@ class OpenAPIWebhooksTest {
     DefinedWebHook definedWebHook = mock(DefinedWebHook.class);
     DefinedWebhookParam param = mock(DefinedWebhookParam.class);
 
-    when(flow.getName()).thenReturn("testFlow");
-    when(flow.getDescription()).thenReturn("Test Description");
+    when(flow.getName()).thenReturn(TEST_FLOW_NAME);
+    when(flow.getDescription()).thenReturn(TEST_DESCRIPTION);
     when(flow.getETAPIOpenApiFlowPointList()).thenReturn(List.of(flowPoint));
     when(flowPoint.isActive()).thenReturn(true);
     when(flowPoint.getEtapiOpenapiReq()).thenReturn(request);
@@ -408,8 +411,8 @@ class OpenAPIWebhooksTest {
     endpoint.add(openAPI);
 
     assertNotNull(openAPI.getPaths());
-    assertTrue(openAPI.getPaths().containsKey("/webhooks/testWebhook"));
-    PathItem pathItem = openAPI.getPaths().get("/webhooks/testWebhook");
+    assertTrue(openAPI.getPaths().containsKey(TEST_WEBHOOK_ENDPOINT));
+    PathItem pathItem = openAPI.getPaths().get(TEST_WEBHOOK_ENDPOINT);
     assertNotNull(pathItem.getPost());
     assertNotNull(pathItem.getPost().getRequestBody());
   }
@@ -424,7 +427,7 @@ class OpenAPIWebhooksTest {
     openAPI.setComponents(new Components());
     openAPI.getComponents().setSchemas(new HashMap<>());
 
-    List<OpenApiFlow> flows = createMockFlowsWithWebhooks("testFlow");
+    List<OpenApiFlow> flows = createMockFlowsWithWebhooks(TEST_FLOW_NAME);
 
     when(mockOBDal.createCriteria(OpenApiFlow.class)).thenReturn(mockCriteria);
     when(mockCriteria.list()).thenReturn(flows);
@@ -442,10 +445,10 @@ class OpenAPIWebhooksTest {
   @Test
   void testAddWithDuplicateTag() {
     OpenAPI openAPI = new OpenAPI();
-    Tag existingTag = new Tag().name("testFlow");
+    Tag existingTag = new Tag().name(TEST_FLOW_NAME);
     openAPI.setTags(List.of(existingTag));
 
-    List<OpenApiFlow> flows = createMockFlowsWithWebhooks("testFlow");
+    List<OpenApiFlow> flows = createMockFlowsWithWebhooks(TEST_FLOW_NAME);
 
     when(mockOBDal.createCriteria(OpenApiFlow.class)).thenReturn(mockCriteria);
     when(mockCriteria.list()).thenReturn(flows);

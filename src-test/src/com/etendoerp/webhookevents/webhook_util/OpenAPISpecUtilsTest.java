@@ -1,5 +1,22 @@
 package com.etendoerp.webhookevents.webhook_util;
 
+import static com.etendoerp.webhookevents.WebhookTestConstants.AMOUNT;
+import static com.etendoerp.webhookevents.WebhookTestConstants.API_V1_PREFIX;
+import static com.etendoerp.webhookevents.WebhookTestConstants.API_V2_PREFIX;
+import static com.etendoerp.webhookevents.WebhookTestConstants.APPLICATION_JSON;
+import static com.etendoerp.webhookevents.WebhookTestConstants.CONTENT;
+import static com.etendoerp.webhookevents.WebhookTestConstants.DEFAULT_API_PREFIX;
+import static com.etendoerp.webhookevents.WebhookTestConstants.DESCRIPTION;
+import static com.etendoerp.webhookevents.WebhookTestConstants.LEGACY_V1_PREFIX;
+import static com.etendoerp.webhookevents.WebhookTestConstants.PARAMS;
+import static com.etendoerp.webhookevents.WebhookTestConstants.REQUEST_BODY;
+import static com.etendoerp.webhookevents.WebhookTestConstants.REQUIRED;
+import static com.etendoerp.webhookevents.WebhookTestConstants.SCHEMA;
+import static com.etendoerp.webhookevents.WebhookTestConstants.STRING;
+import static com.etendoerp.webhookevents.WebhookTestConstants.SUMMARY;
+import static com.etendoerp.webhookevents.WebhookTestConstants.USER_ID;
+import static com.etendoerp.webhookevents.WebhookTestConstants.WEBHOOK;
+import static com.etendoerp.webhookevents.WebhookTestConstants.WEBHOOK_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -28,7 +45,7 @@ class OpenAPISpecUtilsTest {
    */
   @Test
   void testCreatePathsWithEmptyWebhookArray() throws Exception {
-    String prefixParentPath = "/api";
+    String prefixParentPath = DEFAULT_API_PREFIX;
     JSONArray emptyWebhooksArray = new JSONArray();
 
     JSONObject result = invokeCreatePaths(prefixParentPath, emptyWebhooksArray);
@@ -46,12 +63,12 @@ class OpenAPISpecUtilsTest {
    */
   @Test
   void testCreatePathsWithSingleWebhookNoParameters() throws Exception {
-    String prefixParentPath = "/api";
+    String prefixParentPath = DEFAULT_API_PREFIX;
     JSONArray webhooksArray = new JSONArray();
     JSONObject webhook = new JSONObject()
         .put("name", "testWebhook")
-        .put("description", "Test webhook description")
-        .put("params", new JSONArray());
+        .put(DESCRIPTION, "Test webhook description")
+        .put(PARAMS, new JSONArray());
     webhooksArray.put(webhook);
 
     JSONObject result = invokeCreatePaths(prefixParentPath, webhooksArray);
@@ -64,18 +81,18 @@ class OpenAPISpecUtilsTest {
     assertTrue(webhookPath.has("post"));
 
     JSONObject postMethod = webhookPath.getJSONObject("post");
-    assertEquals("Test webhook description", postMethod.getString("summary"));
-    assertTrue(postMethod.has("requestBody"));
+    assertEquals("Test webhook description", postMethod.getString(SUMMARY));
+    assertTrue(postMethod.has(REQUEST_BODY));
     assertTrue(postMethod.has("responses"));
 
-    JSONObject requestBody = postMethod.getJSONObject("requestBody");
-    assertTrue(requestBody.getBoolean("required"));
+    JSONObject requestBody = postMethod.getJSONObject(REQUEST_BODY);
+    assertTrue(requestBody.getBoolean(REQUIRED));
 
-    JSONObject schema = requestBody.getJSONObject("content")
-        .getJSONObject("application/json")
-        .getJSONObject("schema");
+    JSONObject schema = requestBody.getJSONObject(CONTENT)
+        .getJSONObject(APPLICATION_JSON)
+        .getJSONObject(SCHEMA);
     assertEquals("object", schema.getString("type"));
-    assertFalse(schema.has("required"));
+    assertFalse(schema.has(REQUIRED));
   }
 
   /**
@@ -92,23 +109,23 @@ class OpenAPISpecUtilsTest {
     JSONArray params = new JSONArray();
 
     JSONObject param1 = new JSONObject()
-        .put("name", "userId")
-        .put("type", "string")
-        .put("description", "User ID parameter")
-        .put("required", true);
+        .put("name", USER_ID)
+        .put("type", STRING)
+        .put(DESCRIPTION, "User ID parameter")
+        .put(REQUIRED, true);
 
     JSONObject param2 = new JSONObject()
-        .put("name", "amount")
+        .put("name", AMOUNT)
         .put("type", "number")
-        .put("description", "Amount parameter")
-        .put("required", false);
+        .put(DESCRIPTION, "Amount parameter")
+        .put(REQUIRED, false);
 
     params.put(param1);
     params.put(param2);
 
     JSONObject webhook = new JSONObject()
         .put("name", "payment")
-        .put("params", params);
+        .put(PARAMS, params);
     webhooksArray.put(webhook);
 
     JSONObject result = invokeCreatePaths(prefixParentPath, webhooksArray);
@@ -118,29 +135,29 @@ class OpenAPISpecUtilsTest {
 
     JSONObject webhookPath = result.getJSONObject("/payment");
     JSONObject postMethod = webhookPath.getJSONObject("post");
-    assertEquals("Executes the payment WebHook", postMethod.getString("summary"));
+    assertEquals("Executes the payment WebHook", postMethod.getString(SUMMARY));
 
-    JSONObject schema = postMethod.getJSONObject("requestBody")
-        .getJSONObject("content")
-        .getJSONObject("application/json")
-        .getJSONObject("schema");
+    JSONObject schema = postMethod.getJSONObject(REQUEST_BODY)
+        .getJSONObject(CONTENT)
+        .getJSONObject(APPLICATION_JSON)
+        .getJSONObject(SCHEMA);
 
-    assertTrue(schema.has("required"));
-    JSONArray requiredFields = schema.getJSONArray("required");
+    assertTrue(schema.has(REQUIRED));
+    JSONArray requiredFields = schema.getJSONArray(REQUIRED);
     assertEquals(1, requiredFields.length());
-    assertEquals("userId", requiredFields.getString(0));
+    assertEquals(USER_ID, requiredFields.getString(0));
 
     JSONObject properties = schema.getJSONObject("properties");
-    assertTrue(properties.has("userId"));
-    assertTrue(properties.has("amount"));
+    assertTrue(properties.has(USER_ID));
+    assertTrue(properties.has(AMOUNT));
 
-    JSONObject userIdProp = properties.getJSONObject("userId");
-    assertEquals("string", userIdProp.getString("type"));
-    assertEquals("User ID parameter", userIdProp.getString("description"));
+    JSONObject userIdProp = properties.getJSONObject(USER_ID);
+    assertEquals(STRING, userIdProp.getString("type"));
+    assertEquals("User ID parameter", userIdProp.getString(DESCRIPTION));
 
-    JSONObject amountProp = properties.getJSONObject("amount");
+    JSONObject amountProp = properties.getJSONObject(AMOUNT);
     assertEquals("number", amountProp.getString("type"));
-    assertEquals("Amount parameter", amountProp.getString("description"));
+    assertEquals("Amount parameter", amountProp.getString(DESCRIPTION));
   }
 
   /**
@@ -152,27 +169,27 @@ class OpenAPISpecUtilsTest {
    */
   @Test
   void testCreatePathsWithWebhookAllRequiredParameters() throws Exception {
-    String prefixParentPath = "/v1";
+    String prefixParentPath = LEGACY_V1_PREFIX;
     JSONArray webhooksArray = new JSONArray();
     JSONArray params = new JSONArray();
 
     JSONObject param1 = new JSONObject()
         .put("name", "email")
-        .put("type", "string")
-        .put("required", true);
+        .put("type", STRING)
+        .put(REQUIRED, true);
 
     JSONObject param2 = new JSONObject()
         .put("name", "password")
-        .put("type", "string")
-        .put("required", true);
+        .put("type", STRING)
+        .put(REQUIRED, true);
 
     params.put(param1);
     params.put(param2);
 
     JSONObject webhook = new JSONObject()
         .put("name", "/auth/login")
-        .put("description", "User login webhook")
-        .put("params", params);
+        .put(DESCRIPTION, "User login webhook")
+        .put(PARAMS, params);
     webhooksArray.put(webhook);
 
     JSONObject result = invokeCreatePaths(prefixParentPath, webhooksArray);
@@ -182,12 +199,12 @@ class OpenAPISpecUtilsTest {
 
     JSONObject schema = result.getJSONObject("/v1/auth/login")
         .getJSONObject("post")
-        .getJSONObject("requestBody")
-        .getJSONObject("content")
-        .getJSONObject("application/json")
-        .getJSONObject("schema");
+        .getJSONObject(REQUEST_BODY)
+        .getJSONObject(CONTENT)
+        .getJSONObject(APPLICATION_JSON)
+        .getJSONObject(SCHEMA);
 
-    JSONArray requiredFields = schema.getJSONArray("required");
+    JSONArray requiredFields = schema.getJSONArray(REQUIRED);
     assertEquals(2, requiredFields.length());
     assertTrue(requiredFields.toString().contains("email"));
     assertTrue(requiredFields.toString().contains("password"));
@@ -209,27 +226,27 @@ class OpenAPISpecUtilsTest {
     JSONObject param = new JSONObject()
         .put("name", "data")
         .put("type", "object")
-        .put("required", false);
+        .put(REQUIRED, false);
 
     params.put(param);
 
     JSONObject webhook = new JSONObject()
         .put("name", "webhook1")
-        .put("params", params);
+        .put(PARAMS, params);
     webhooksArray.put(webhook);
 
     JSONObject result = invokeCreatePaths(prefixParentPath, webhooksArray);
 
     JSONObject properties = result.getJSONObject("/webhook1")
         .getJSONObject("post")
-        .getJSONObject("requestBody")
-        .getJSONObject("content")
-        .getJSONObject("application/json")
-        .getJSONObject("schema")
+        .getJSONObject(REQUEST_BODY)
+        .getJSONObject(CONTENT)
+        .getJSONObject(APPLICATION_JSON)
+        .getJSONObject(SCHEMA)
         .getJSONObject("properties");
 
     JSONObject dataProp = properties.getJSONObject("data");
-    assertEquals("", dataProp.getString("description"));
+    assertEquals("", dataProp.getString(DESCRIPTION));
   }
 
   /**
@@ -241,18 +258,18 @@ class OpenAPISpecUtilsTest {
    */
   @Test
   void testCreatePathsWithMultipleWebhooks() throws Exception {
-    String prefixParentPath = "/api/v2";
+    String prefixParentPath = API_V2_PREFIX;
     JSONArray webhooksArray = new JSONArray();
 
     JSONObject webhook1 = new JSONObject()
         .put("name", "hook1")
-        .put("description", "First hook")
-        .put("params", new JSONArray());
+        .put(DESCRIPTION, "First hook")
+        .put(PARAMS, new JSONArray());
 
     JSONObject webhook2 = new JSONObject()
         .put("name", "hook2")
-        .put("description", "Second hook")
-        .put("params", new JSONArray());
+        .put(DESCRIPTION, "Second hook")
+        .put(PARAMS, new JSONArray());
 
     webhooksArray.put(webhook1);
     webhooksArray.put(webhook2);
@@ -264,9 +281,9 @@ class OpenAPISpecUtilsTest {
     assertTrue(result.has("/api/v2/hook2"));
 
     assertEquals("First hook", result.getJSONObject("/api/v2/hook1")
-        .getJSONObject("post").getString("summary"));
+        .getJSONObject("post").getString(SUMMARY));
     assertEquals("Second hook", result.getJSONObject("/api/v2/hook2")
-        .getJSONObject("post").getString("summary"));
+        .getJSONObject("post").getString(SUMMARY));
   }
 
   /**
@@ -282,7 +299,7 @@ class OpenAPISpecUtilsTest {
     JSONArray webhooksArray = new JSONArray();
     JSONObject webhook = new JSONObject()
         .put("name", "test")
-        .put("params", new JSONArray());
+        .put(PARAMS, new JSONArray());
     webhooksArray.put(webhook);
 
     JSONObject result = invokeCreatePaths(prefixParentPath, webhooksArray);
@@ -293,7 +310,7 @@ class OpenAPISpecUtilsTest {
 
     assertTrue(responses.has("200"));
     JSONObject response200 = responses.getJSONObject("200");
-    assertEquals("Webhook response", response200.getString("description"));
+    assertEquals("Webhook response", response200.getString(DESCRIPTION));
   }
 
   /**
@@ -309,23 +326,23 @@ class OpenAPISpecUtilsTest {
     JSONArray webhooksArray = new JSONArray();
     JSONObject webhook = new JSONObject()
         .put("name", "test")
-        .put("params", new JSONArray());
+        .put(PARAMS, new JSONArray());
     webhooksArray.put(webhook);
 
     JSONObject result = invokeCreatePaths(prefixParentPath, webhooksArray);
 
     JSONObject requestBody = result.getJSONObject("/test")
         .getJSONObject("post")
-        .getJSONObject("requestBody");
+        .getJSONObject(REQUEST_BODY);
 
-    assertTrue(requestBody.getBoolean("required"));
-    assertTrue(requestBody.has("content"));
+    assertTrue(requestBody.getBoolean(REQUIRED));
+    assertTrue(requestBody.has(CONTENT));
 
-    JSONObject content = requestBody.getJSONObject("content");
-    assertTrue(content.has("application/json"));
+    JSONObject content = requestBody.getJSONObject(CONTENT);
+    assertTrue(content.has(APPLICATION_JSON));
 
-    JSONObject applicationJson = content.getJSONObject("application/json");
-    assertTrue(applicationJson.has("schema"));
+    JSONObject applicationJson = content.getJSONObject(APPLICATION_JSON);
+    assertTrue(applicationJson.has(SCHEMA));
   }
 
   /**
@@ -338,11 +355,11 @@ class OpenAPISpecUtilsTest {
   @Test
   void testGetWebhookPathWithEmptyPrefix() throws Exception {
     String prefixParentPath = "";
-    String name = "webhook";
+    String name = WEBHOOK;
 
     String result = invokeGetWebhookPath(prefixParentPath, name);
 
-    assertEquals("/webhook", result);
+    assertEquals(WEBHOOK_PATH, result);
   }
 
   /**
@@ -355,11 +372,11 @@ class OpenAPISpecUtilsTest {
   @Test
   void testGetWebhookPathWithNullPrefix() throws Exception {
     String prefixParentPath = null;
-    String name = "webhook";
+    String name = WEBHOOK;
 
     String result = invokeGetWebhookPath(prefixParentPath, name);
 
-    assertEquals("/webhook", result);
+    assertEquals(WEBHOOK_PATH, result);
   }
 
   /**
@@ -371,8 +388,8 @@ class OpenAPISpecUtilsTest {
    */
   @Test
   void testGetWebhookPathWithPrefix() throws Exception {
-    String prefixParentPath = "/api/v1";
-    String name = "webhook";
+    String prefixParentPath = API_V1_PREFIX;
+    String name = WEBHOOK;
 
     String result = invokeGetWebhookPath(prefixParentPath, name);
 
@@ -388,8 +405,8 @@ class OpenAPISpecUtilsTest {
    */
   @Test
   void testGetWebhookPathWithNameStartingWithSlash() throws Exception {
-    String prefixParentPath = "/api";
-    String name = "/webhook";
+    String prefixParentPath = DEFAULT_API_PREFIX;
+    String name = WEBHOOK_PATH;
 
     String result = invokeGetWebhookPath(prefixParentPath, name);
 
@@ -438,7 +455,7 @@ class OpenAPISpecUtilsTest {
 
     JSONObject webhook = new JSONObject()
         .put("name", "test")
-        .put("params", params);
+        .put(PARAMS, params);
     webhooksArray.put(webhook);
 
     Exception exception = assertThrows(Exception.class, () ->

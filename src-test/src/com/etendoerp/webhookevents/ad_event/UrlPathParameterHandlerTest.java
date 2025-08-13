@@ -1,5 +1,8 @@
 package com.etendoerp.webhookevents.ad_event;
 
+import static com.etendoerp.webhookevents.WebhookTestConstants.INVALID_PROPERTY_ERROR_MESSAGE_ALT;
+import static com.etendoerp.webhookevents.WebhookTestConstants.SIMPLE_VALUE;
+import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_TABLE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -81,7 +84,7 @@ public class UrlPathParameterHandlerTest extends OBBaseTest {
     setupUrlPathParamMockChain();
     when(newEvent.getTargetInstance()).thenReturn(urlPathParam);
     when(urlPathParam.getTypeValue()).thenReturn(Constants.TYPE_VALUE_STRING);
-    when(urlPathParam.getValue()).thenReturn("simple value");
+    when(urlPathParam.getValue()).thenReturn(SIMPLE_VALUE);
 
     try (MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class)) {
       mockedModelProvider.when(ModelProvider::getInstance).thenReturn(modelProvider);
@@ -100,7 +103,7 @@ public class UrlPathParameterHandlerTest extends OBBaseTest {
     setupUrlPathParamMockChain();
     when(updateEvent.getTargetInstance()).thenReturn(urlPathParam);
     when(urlPathParam.getTypeValue()).thenReturn(Constants.TYPE_VALUE_STRING);
-    when(urlPathParam.getValue()).thenReturn("simple value");
+    when(urlPathParam.getValue()).thenReturn(SIMPLE_VALUE);
 
     try (MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class)) {
       mockedModelProvider.when(ModelProvider::getInstance).thenReturn(modelProvider);
@@ -145,7 +148,7 @@ public class UrlPathParameterHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'invalidProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE_ALT);
 
       assertThrows(OBException.class, () -> handler.valid(testEntity, urlPathParam));
     }
@@ -186,7 +189,7 @@ public class UrlPathParameterHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'invalidProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE_ALT);
 
       assertThrows(OBException.class, () -> handler.valid(testEntity, urlPathParam));
     }
@@ -302,7 +305,7 @@ public class UrlPathParameterHandlerTest extends OBBaseTest {
           .thenReturn(null);
 
       mockedUtility.when(() -> Utility.messageBD(any(ConnectionProvider.class), anyString(), anyString()))
-          .thenReturn("Error in name the property: 'invalidProperty'");
+          .thenReturn(INVALID_PROPERTY_ERROR_MESSAGE_ALT);
 
       assertThrows(OBException.class, () -> handler.onSave(newEvent));
     }
@@ -356,7 +359,7 @@ public class UrlPathParameterHandlerTest extends OBBaseTest {
     when(urlPathParam.getSmfwheWebhook()).thenReturn(webhook);
     when(webhook.getSmfwheEvents()).thenReturn(events);
     when(events.getTable()).thenReturn(table);
-    when(table.getDBTableName()).thenReturn("test_table");
+    when(table.getDBTableName()).thenReturn(TEST_TABLE_NAME);
   }
 
 }
