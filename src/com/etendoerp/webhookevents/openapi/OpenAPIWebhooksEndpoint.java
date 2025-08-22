@@ -211,7 +211,7 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
 
     createEndpoint(openAPI,
         tag,
-        request.getDescription(),
+        request.getPostDescription(),
         formInitResponseSchema,
         formInitRequestSchema,
         method,
@@ -228,8 +228,8 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
    *     the OpenAPI object to add the endpoint to
    * @param tag
    *     the tag associated with the endpoint
-   * @param summary
-   *     the summary of the endpoint
+   * @param description
+   *     the description of the endpoint
    * @param responseSchema
    *     the schema for the response
    * @param requestBodySchema
@@ -241,14 +241,14 @@ public class OpenAPIWebhooksEndpoint implements OpenAPIEndpoint {
    */
   private void createEndpoint(OpenAPI openAPI,
       String tag,
-      String summary,
+      String description,
       Schema<?> responseSchema,
       Schema<?> requestBodySchema,
       String httpMethod,
       DefinedWebHook webHook) {
 
     String actionValue = webHook.getName();
-    String description = webHook.getDescription();
+    String summary = webHook.getDescription();
     String schemaKey = actionValue + "Response";
 
     String responseExample = new JSONObject().toString();
