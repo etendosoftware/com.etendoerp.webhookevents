@@ -57,7 +57,7 @@
       <foreign-key foreignTable="AD_ROLE" name="SMFWHE_DEFWEBHOOKRL_ROLE">
         <reference local="AD_ROLE_ID" foreign="AD_ROLE_ID"/>
       </foreign-key>
-      <foreign-key foreignTable="SMFWHE_DEFINEDWEBHOOK" name="SMFWHE_DEFWEBHOOKRL_WEB">
+      <foreign-key foreignTable="SMFWHE_DEFINEDWEBHOOK" name="SMFWHE_DEFWEBHOOKRL_WEB" onDelete="cascade">
         <reference local="SMFWHE_DEFINEDWEBHOOK_ID" foreign="SMFWHE_DEFINEDWEBHOOK_ID"/>
       </foreign-key>
       <index name="SMFWHE_DEFWEBHOOKRL_WEB_IDX" unique="false">
