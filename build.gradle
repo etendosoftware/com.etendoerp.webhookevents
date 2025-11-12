@@ -7,7 +7,7 @@
 */
 
 group          = "com.etendoerp"
-version        = "2.5.0"
+version        = "2.5.1"
 description    = "Module Webhook Events"
 ext.artifact   = "webhookevents"
 ext.repository = "https://maven.pkg.github.com/etendosoftware/com.etendoerp.platform.extensions"
