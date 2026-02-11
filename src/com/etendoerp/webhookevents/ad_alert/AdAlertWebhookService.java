@@ -18,8 +18,6 @@
 package com.etendoerp.webhookevents.ad_alert;
 
 import com.etendoerp.webhookevents.services.BaseWebhookService;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.model.ad.alert.Alert;
 import org.openbravo.model.ad.alert.AlertRule;
@@ -37,7 +35,7 @@ public class AdAlertWebhookService extends BaseWebhookService {
     Alert alert = new Alert();
     alert.setAlertRule(OBDal.getInstance().get(AlertRule.class, parameter.get("rule")));
     alert.setDescription(parameter.get("description"));
-    alert.setReferenceSearchKey("");
+    alert.setReferenceSearchKey("searchKey");
     OBDal.getInstance().save(alert);
     OBDal.getInstance().flush();
     responseVars.put("created", alert.getId());
