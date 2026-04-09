@@ -27,7 +27,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
 
-import javax.enterprise.inject.Any;
+import jakarta.enterprise.inject.Any;
 import javax.net.ssl.HttpsURLConnection;
 
 import com.etendoerp.webhookevents.interfaces.DynamicEventHandler;
@@ -39,7 +39,7 @@ import org.apache.log4j.Logger;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.hibernate.criterion.Restrictions;
+import org.openbravo.dal.service.Restrictions;
 import org.openbravo.base.exception.OBException;
 import org.openbravo.base.model.Entity;
 import org.openbravo.base.model.ModelProvider;

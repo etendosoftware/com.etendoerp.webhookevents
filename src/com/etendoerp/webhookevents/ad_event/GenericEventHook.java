@@ -17,7 +17,7 @@
 
 package com.etendoerp.webhookevents.ad_event;
 
-import javax.enterprise.event.Observes;
+import jakarta.enterprise.event.Observes;
 
 import com.etendoerp.webhookevents.webhook_util.Constants;
 import com.etendoerp.webhookevents.webhook_util.WebHookUtil;

@@ -5,7 +5,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.net.HttpURLConnection;
 
-import org.hibernate.criterion.Restrictions;
+import org.openbravo.dal.service.Restrictions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

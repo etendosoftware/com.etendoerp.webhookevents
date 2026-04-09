@@ -52,10 +52,9 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
     Events event;
     OBContext.setAdminMode();
     OBCriteria<QueueEventHook> cQueue = OBDal.getInstance().createCriteria(QueueEventHook.class);
-    cQueue.setFetchSize(1000);
     try (ScrollableResults scroller = cQueue.scroll()) {
       while (scroller.next()) {
-        obj = (QueueEventHook) scroller.get()[0];
+        obj = (QueueEventHook) scroller.get();
         event = obj.getSmfwheEvents();
 
         handleDequeueEvent(event, obj, logger);

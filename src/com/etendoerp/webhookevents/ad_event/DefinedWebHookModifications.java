@@ -17,7 +17,7 @@
 
 package com.etendoerp.webhookevents.ad_event;
 
-import javax.enterprise.event.Observes;
+import jakarta.enterprise.event.Observes;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
