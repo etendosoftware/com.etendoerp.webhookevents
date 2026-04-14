@@ -11,7 +11,6 @@ import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.openbravo.base.exception.OBSecurityException;
 import org.openbravo.base.weld.test.WeldBaseTest;
-import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.erpCommon.utility.OBMessageUtils;
 import org.openbravo.test.base.Issue;

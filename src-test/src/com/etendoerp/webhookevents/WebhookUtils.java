@@ -288,15 +288,31 @@ public class WebhookUtils {
         JsonNode jsonNode = objectMapper.readTree(content.toString());
         return new WebhookHttpResponse(responseCode, jsonNode.get("created").asText());
       } else {
-        BufferedReader errorReader = new BufferedReader(new InputStreamReader(con.getErrorStream()));
+        java.io.InputStream errorStream = con.getErrorStream();
+        if (errorStream == null) {
+          fail("Server returned HTTP " + responseCode + " with no error body — endpoint may not be reachable");
+          return null;
+        }
+        BufferedReader errorReader = new BufferedReader(new InputStreamReader(errorStream));
         String errorInputLine;
         StringBuilder errorContent = new StringBuilder();
         while ((errorInputLine = errorReader.readLine()) != null) {
           errorContent.append(errorInputLine);
         }
         errorReader.close();
-        JsonNode jsonNode = objectMapper.readTree(errorContent.toString());
-        return new WebhookHttpResponse(responseCode, jsonNode.get("message").asText());
+        String errorBody = errorContent.toString();
+        try {
+          JsonNode jsonNode = objectMapper.readTree(errorBody);
+          return new WebhookHttpResponse(responseCode, jsonNode.get("message").asText());
+        } catch (Exception jsonEx) {
+          // Server returned non-JSON (e.g. HTML error page from Tomcat/authentication filter).
+          // This usually means the endpoint is unreachable or the security filter is intercepting
+          // the request before it reaches WebhookServiceHandler.
+          log4j.error("Non-JSON error response (HTTP " + responseCode + "): " + errorBody);
+          fail("Expected JSON from webhook endpoint but got HTTP " + responseCode +
+              ". Response (first 500 chars): " +
+              errorBody.substring(0, Math.min(500, errorBody.length())));
+        }
       }
     } catch (Exception e) {
       log4j.error(e.getMessage());
