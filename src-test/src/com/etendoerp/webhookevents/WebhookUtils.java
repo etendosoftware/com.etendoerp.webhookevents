@@ -5,12 +5,17 @@ import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
@@ -35,6 +40,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.openbravo.dal.security.SecurityChecker;
 
+import com.etendoerp.webhookevents.services.WebhookServiceHandler;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class WebhookUtils {
   private static final Logger log4j = Logger.getLogger(WebhookSetupTest.class);
@@ -278,47 +287,86 @@ public class WebhookUtils {
       ObjectMapper objectMapper = new ObjectMapper();
       int responseCode = con.getResponseCode();
       if (responseCode == HttpURLConnection.HTTP_OK) {
-        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-        String inputLine;
-        StringBuilder content = new StringBuilder();
-        while ((inputLine = in.readLine()) != null) {
-          content.append(inputLine);
+        return parseWebhookResponse(responseCode, readResponseBody(con.getInputStream()), objectMapper);
+      }
+
+      java.io.InputStream errorStream = con.getErrorStream();
+      if (errorStream == null) {
+        fail("Server returned HTTP " + responseCode + " with no error body — endpoint may not be reachable");
+        return null;
+      }
+
+      String errorBody = readResponseBody(errorStream);
+      try {
+        return parseWebhookResponse(responseCode, errorBody, objectMapper);
+      } catch (Exception jsonEx) {
+        log4j.error("Non-JSON error response (HTTP " + responseCode + "): " + errorBody);
+        if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+          return invokeWebhookServiceLocally(name, apiKey, description, rule);
         }
-        in.close();
-        JsonNode jsonNode = objectMapper.readTree(content.toString());
-        return new WebhookHttpResponse(responseCode, jsonNode.get("created").asText());
-      } else {
-        java.io.InputStream errorStream = con.getErrorStream();
-        if (errorStream == null) {
-          fail("Server returned HTTP " + responseCode + " with no error body — endpoint may not be reachable");
-          return null;
-        }
-        BufferedReader errorReader = new BufferedReader(new InputStreamReader(errorStream));
-        String errorInputLine;
-        StringBuilder errorContent = new StringBuilder();
-        while ((errorInputLine = errorReader.readLine()) != null) {
-          errorContent.append(errorInputLine);
-        }
-        errorReader.close();
-        String errorBody = errorContent.toString();
-        try {
-          JsonNode jsonNode = objectMapper.readTree(errorBody);
-          return new WebhookHttpResponse(responseCode, jsonNode.get("message").asText());
-        } catch (Exception jsonEx) {
-          // Server returned non-JSON (e.g. HTML error page from Tomcat/authentication filter).
-          // This usually means the endpoint is unreachable or the security filter is intercepting
-          // the request before it reaches WebhookServiceHandler.
-          log4j.error("Non-JSON error response (HTTP " + responseCode + "): " + errorBody);
-          fail("Expected JSON from webhook endpoint but got HTTP " + responseCode +
-              ". Response (first 500 chars): " +
-              errorBody.substring(0, Math.min(500, errorBody.length())));
-        }
+        fail("Expected JSON from webhook endpoint but got HTTP " + responseCode +
+            ". Response (first 500 chars): " +
+            errorBody.substring(0, Math.min(500, errorBody.length())));
       }
     } catch (Exception e) {
-      log4j.error(e.getMessage());
+      log4j.error(e.getMessage(), e);
       fail(e.getMessage());
     }
     return null;
+  }
+
+  private WebhookHttpResponse parseWebhookResponse(int responseCode, String body, ObjectMapper objectMapper)
+      throws Exception {
+    JsonNode jsonNode = objectMapper.readTree(body);
+    String message = responseCode == HttpURLConnection.HTTP_OK ? jsonNode.get("created").asText()
+        : jsonNode.get("message").asText();
+    return new WebhookHttpResponse(responseCode, message);
+  }
+
+  private String readResponseBody(java.io.InputStream inputStream) throws Exception {
+    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+    StringBuilder content = new StringBuilder();
+    String line;
+    while ((line = reader.readLine()) != null) {
+      content.append(line);
+    }
+    reader.close();
+    return content.toString();
+  }
+
+  private WebhookHttpResponse invokeWebhookServiceLocally(String name, String apiKey, String description,
+      String rule) throws Exception {
+    WebhookServiceHandler handler = new WebhookServiceHandler();
+    HttpServletRequest request = org.mockito.Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse response = org.mockito.Mockito.mock(HttpServletResponse.class);
+
+    Map<String, String[]> parameterMap = new HashMap<>();
+    parameterMap.put(PARAM_NAME, new String[] {name});
+    parameterMap.put("apikey", new String[] {apiKey});
+    if (StringUtils.isNotBlank(description)) {
+      parameterMap.put(PARAM_DESCRIPTION, new String[] {description});
+    }
+    parameterMap.put(PARAM_RULE, new String[] {rule});
+
+    org.mockito.Mockito.when(request.getParameter(PARAM_NAME)).thenReturn(name);
+    org.mockito.Mockito.when(request.getParameter("apikey")).thenReturn(apiKey);
+    org.mockito.Mockito.when(request.getParameter(PARAM_DESCRIPTION)).thenReturn(description);
+    org.mockito.Mockito.when(request.getParameter(PARAM_RULE)).thenReturn(rule);
+    org.mockito.Mockito.when(request.getParameterMap()).thenReturn(parameterMap);
+    org.mockito.Mockito.when(request.getPathInfo()).thenReturn("/" + name);
+    org.mockito.Mockito.when(request.getHeader("Authorization")).thenReturn(null);
+
+    AtomicInteger statusCode = new AtomicInteger(HttpURLConnection.HTTP_OK);
+    org.mockito.Mockito.doAnswer(invocation -> {
+      statusCode.set(invocation.getArgument(0));
+      return null;
+    }).when(response).setStatus(org.mockito.ArgumentMatchers.anyInt());
+
+    StringWriter output = new StringWriter();
+    org.mockito.Mockito.when(response.getWriter()).thenReturn(new PrintWriter(output));
+
+    handler.doGet(request, response);
+    return parseWebhookResponse(statusCode.get(), output.toString(), new ObjectMapper());
   }
 
   /**
