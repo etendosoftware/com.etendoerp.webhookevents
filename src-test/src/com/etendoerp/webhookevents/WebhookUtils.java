@@ -21,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.openbravo.base.provider.OBProvider;
 import org.openbravo.base.secureApp.VariablesSecureApp;
+import org.openbravo.base.structure.BaseOBObject;
 import org.openbravo.client.kernel.RequestContext;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
@@ -447,6 +448,11 @@ public class WebhookUtils {
    * Deletes all objects in the objectsToDelete list.
    * For each object, if it is an instance of DefinedWebHook, it sets up the system user context,
    * otherwise, it sets up the admin user context. Then it removes the object from the database and flushes the session.
+   *
+   * <p>After {@code OBDal.getInstance().commitAndClose()}, all entities become detached from the
+   * Hibernate session. In Hibernate 6, calling {@code session.delete()} on a detached entity
+   * either throws or silently does nothing. To avoid leaving stale data in the DB, each entity is
+   * reloaded by ID before removal so the session always holds a managed reference.
    */
   public void deleteAll() {
     for (Object object : objectsToDelete) {
@@ -454,11 +460,30 @@ public class WebhookUtils {
         Runnable setupUser = shouldBeSystem(object) ?
             this::setupUserSystem : this::setupUserAdmin;
         setupUser.run();
-        OBDal.getInstance().remove(object);
-        OBDal.getInstance().flush();
+        Object managed = reloadFromDb(object);
+        if (managed != null) {
+          OBDal.getInstance().remove(managed);
+          OBDal.getInstance().flush();
+        }
       }
     }
     objectsToDelete.clear();
+  }
+
+  /**
+   * Reloads a BaseOBObject entity from the database by its ID so that the returned instance is
+   * managed by the current Hibernate session. This is necessary when the entity may have been
+   * detached (e.g. after {@code commitAndClose()}). Non-BaseOBObject references are returned as-is.
+   *
+   * @param object the entity to reload; may be managed or detached
+   * @return a managed copy of the entity, or null if it no longer exists in the DB
+   */
+  private Object reloadFromDb(Object object) {
+    if (object instanceof BaseOBObject) {
+      Object id = ((BaseOBObject) object).getId();
+      return id == null ? null : OBDal.getInstance().get(object.getClass(), id);
+    }
+    return object;
   }
 
   /**

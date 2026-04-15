@@ -177,8 +177,16 @@ public class WebhookSetupTest extends WeldBaseTest {
 
   @After
   public void tearDown() {
-    webhookUtils.setupUserSystem();
-    webhookUtils.deleteAll();
-    OBDal.getInstance().commitAndClose();
+    try {
+      if (webhookUtils != null) {
+        webhookUtils.setupUserSystem();
+        webhookUtils.deleteAll();
+      }
+      OBDal.getInstance().commitAndClose();
+    } catch (Exception e) {
+      // If cleanup fails (e.g. the test left the PostgreSQL transaction in aborted state),
+      // roll back instead of leaving the connection dirty for the next test.
+      OBDal.getInstance().rollbackAndClose();
+    }
   }
 }
