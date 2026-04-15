@@ -1,7 +1,7 @@
 package com.etendoerp.webhookevents;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -110,7 +110,7 @@ public class WebhookUtils {
     User user = OBDal.getInstance().get(User.class, userID);
 
     try {
-      webHook.setName(WEBHOOK_NAME);
+      webHook.setName(generateWebhookName());
       webHook.setClient(client);
       webHook.setOrganization(org);
       webHook.setCreatedBy(user);
@@ -156,6 +156,10 @@ public class WebhookUtils {
     webHook.setAllowGroupAccess(true);
 
     SecurityChecker.getInstance().checkWriteAccess(webHook);
+  }
+
+  private String generateWebhookName() {
+    return WEBHOOK_NAME + "_" + System.nanoTime();
   }
 
   /**
