@@ -50,6 +50,17 @@ public class OpenAPIWebhooksEndpointTest extends WeldBaseTest {
   private static final String HOST_ADDRESS = "http://localhost:8080";
 
   /**
+   * This test creates system-level entities (org=*). Override the fallback context so that
+   * DalCleanupExtension.beforeTestExecution() also initializes to SYSTEM when OBContext is null,
+   * instead of the default F&B test user which would fail the access-level check.
+   */
+  @Override
+  protected void setTestUserContext() {
+    OBContext.setOBContext(TestConstants.Users.SYSTEM, TestConstants.Roles.SYS_ADMIN,
+        TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN);
+  }
+
+  /**
    * Sets up the test environment before each test.
    *
    * @throws Exception

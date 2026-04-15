@@ -11,6 +11,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.openbravo.base.weld.test.WeldBaseTest;
+import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.model.ad.alert.Alert;
@@ -23,6 +24,13 @@ import com.etendoerp.webhookevents.data.DefinedwebhookRole;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
 public class WebhookSetupTest extends WeldBaseTest {
+
+  @Override
+  protected void setTestUserContext() {
+    OBContext.setOBContext(TestConstants.Users.SYSTEM, TestConstants.Roles.SYS_ADMIN,
+        TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN);
+  }
+
   WebhookUtils webhookUtils;
   DefinedWebHook webhook;
   DefinedwebhookToken token;

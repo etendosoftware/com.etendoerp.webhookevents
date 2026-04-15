@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.openbravo.base.exception.OBSecurityException;
 import org.openbravo.base.weld.test.WeldBaseTest;
+import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.erpCommon.utility.OBMessageUtils;
 import org.openbravo.test.base.Issue;
@@ -22,6 +23,13 @@ import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
 public class WebhookErrorsTest extends WeldBaseTest {
+
+  @Override
+  protected void setTestUserContext() {
+    OBContext.setOBContext(TestConstants.Users.SYSTEM, TestConstants.Roles.SYS_ADMIN,
+        TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN);
+  }
+
   WebhookUtils webhookUtils;
   DefinedWebHook webhook;
   DefinedwebhookToken token;
