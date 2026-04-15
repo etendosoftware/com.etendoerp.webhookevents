@@ -445,45 +445,38 @@ public class WebhookUtils {
   }
 
   /**
-   * Deletes all objects in the objectsToDelete list.
-   * For each object, if it is an instance of DefinedWebHook, it sets up the system user context,
-   * otherwise, it sets up the admin user context. Then it removes the object from the database and flushes the session.
+   * Deletes all objects in the objectsToDelete list using HQL bulk DELETE statements.
    *
-   * <p>After {@code OBDal.getInstance().commitAndClose()}, all entities become detached from the
-   * Hibernate session. In Hibernate 6, calling {@code session.delete()} on a detached entity
-   * either throws or silently does nothing. To avoid leaving stale data in the DB, each entity is
-   * reloaded by ID before removal so the session always holds a managed reference.
+   * <p>HQL bulk DELETE bypasses Hibernate's entity lifecycle entirely — no cascade side effects,
+   * no entity loading, direct SQL DELETE. This avoids "deleted object would be re-saved by cascade"
+   * errors that occur when a loaded child entity still appears in a parent's collection.
+   *
+   * <p>Objects must be added in child-first order so FK constraints are satisfied.
    */
   public void deleteAll() {
     for (Object object : objectsToDelete) {
       if (object != null) {
-        Runnable setupUser = shouldBeSystem(object) ?
-            this::setupUserSystem : this::setupUserAdmin;
+        Runnable setupUser = shouldBeSystem(object) ? this::setupUserSystem : this::setupUserAdmin;
         setupUser.run();
-        Object managed = reloadFromDb(object);
-        if (managed != null) {
-          OBDal.getInstance().remove(managed);
-          OBDal.getInstance().flush();
-        }
+        deleteByQuery(object);
       }
     }
     objectsToDelete.clear();
   }
 
-  /**
-   * Reloads a BaseOBObject entity from the database by its ID so that the returned instance is
-   * managed by the current Hibernate session. This is necessary when the entity may have been
-   * detached (e.g. after {@code commitAndClose()}). Non-BaseOBObject references are returned as-is.
-   *
-   * @param object the entity to reload; may be managed or detached
-   * @return a managed copy of the entity, or null if it no longer exists in the DB
-   */
-  private Object reloadFromDb(Object object) {
-    if (object instanceof BaseOBObject) {
-      Object id = ((BaseOBObject) object).getId();
-      return id == null ? null : OBDal.getInstance().get(object.getClass(), id);
+  private void deleteByQuery(Object object) {
+    if (!(object instanceof BaseOBObject)) {
+      return;
     }
-    return object;
+    BaseOBObject entity = (BaseOBObject) object;
+    Object id = entity.getId();
+    if (id == null) {
+      return;
+    }
+    OBDal.getInstance().getSession()
+        .createMutationQuery("delete from " + entity.getEntityName() + " where id = :id")
+        .setParameter("id", id)
+        .executeUpdate();
   }
 
   /**

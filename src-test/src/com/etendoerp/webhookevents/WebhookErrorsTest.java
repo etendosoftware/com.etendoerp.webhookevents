@@ -191,7 +191,14 @@ public class WebhookErrorsTest extends WeldBaseTest {
 
   @After
   public void tearDown() {
-    webhookUtils.deleteAll();
-    OBDal.getInstance().commitAndClose();
+    try {
+      if (webhookUtils != null) {
+        webhookUtils.setupUserSystem();
+        webhookUtils.deleteAll();
+      }
+      OBDal.getInstance().commitAndClose();
+    } catch (Exception e) {
+      OBDal.getInstance().rollbackAndClose();
+    }
   }
 }

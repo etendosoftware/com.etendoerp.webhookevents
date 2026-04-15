@@ -8,10 +8,8 @@ import java.util.List;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.openbravo.base.provider.OBProvider;
@@ -49,9 +47,6 @@ public class OpenAPIWebhooksEndpointTest extends WeldBaseTest {
   @Mock
   private OpenAPI mockOpenAPI;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private static final String HOST_ADDRESS = "http://localhost:8080";
 
   /**
@@ -60,7 +55,8 @@ public class OpenAPIWebhooksEndpointTest extends WeldBaseTest {
    * @throws Exception
    *     if an error occurs during setup
    */
-  @Before
+  @BeforeEach
+  @Override
   public void setUp() throws Exception {
     // Initialize mocks
     MockitoAnnotations.openMocks(this);
