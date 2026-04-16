@@ -19,6 +19,10 @@ import com.etendoerp.webhookevents.data.DefinedWebhookParam;
 import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
+/**
+ * Integration tests for webhook error scenarios: unauthorized access, incorrect tokens,
+ * unknown webhook names, missing access, and missing required parameters.
+ */
 public class WebhookErrorsTest extends WebhookBaseTest {
 
   DefinedWebHook webhook;

@@ -7,6 +7,10 @@ import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.test.base.TestConstants;
 
+/**
+ * Base test class for webhook integration tests. Provides shared setup, teardown,
+ * and utility initialization common to all webhook test suites.
+ */
 public abstract class WebhookBaseTest extends WeldBaseTest {
 
   protected WebhookUtils webhookUtils;

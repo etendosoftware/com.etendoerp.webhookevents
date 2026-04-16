@@ -20,6 +20,10 @@ import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
 import com.etendoerp.webhookevents.data.DefinedwebhookRole;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
+/**
+ * Integration tests for webhook setup: token creation, webhook configuration,
+ * parameter handling, and alert generation via GET requests.
+ */
 public class WebhookSetupTest extends WebhookBaseTest {
 
   DefinedWebHook webhook;
