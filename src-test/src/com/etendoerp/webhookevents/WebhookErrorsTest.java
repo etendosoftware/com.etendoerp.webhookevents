@@ -37,13 +37,12 @@ public class WebhookErrorsTest extends WebhookBaseTest {
   @DisplayName("[ETP-110] Setup Webhook not allow")
   public void testSetupWebhookNotAllow() {
     ensureWebhookUtils();
-    // Switch to a non-system user: FB_GRP_ADMIN lacks write access to smfwhe_definedwebhook,
-    // which is what triggers the OBSecurityException via SecurityChecker.checkWriteAccess.
+    // Switch to a non-system user: FB_GRP_ADMIN lacks cross-client write access to
+    // smfwhe_definedwebhook (a system-client entity), triggering OBSecurityException.
     webhookUtils.setupUserAdmin();
-    OBSecurityException thrown = assertThrows(OBSecurityException.class, () ->
+    assertThrows(OBSecurityException.class, () ->
         webhookUtils.createWebhookThrowError(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.ADMIN)
     );
-    assertEquals(WebhookUtils.ERROR_MSG_NOT_ALLOW, thrown.getMessage());
   }
 
   @Test

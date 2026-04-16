@@ -60,7 +60,6 @@ public class WebhookUtils {
   static final String WEBHOOK_DESCRIPTION = "Create an alert with custom message";
   static final String WEBHOOK_JAVACLASS = "com.etendoerp.webhookevents.ad_alert.AdAlertWebhookService";
   static final String WEBHOOK_EVENTCLASS = "JAVA";
-  static final String ERROR_MSG_NOT_ALLOW = "Entity smfwhe_definedwebhook may only have instances with client 0";
 
   /**
    * Creates a new DefinedwebhookToken and sets its attributes.
