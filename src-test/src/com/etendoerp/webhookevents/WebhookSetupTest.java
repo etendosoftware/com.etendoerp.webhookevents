@@ -60,6 +60,7 @@ public class WebhookSetupTest extends WeldBaseTest {
   @DisplayName("[WHE-002] Create Api Token")
   public void testCreateApiToken() {
     try {
+      ensureWebhookUtils();
       token = webhookUtils.createApiToken();
 
       assertEquals(WebhookUtils.EXPECTED_TOKEN_NAME, token.getName());
@@ -73,6 +74,7 @@ public class WebhookSetupTest extends WeldBaseTest {
   @DisplayName("[WHE-003] Setup Webhook")
   public void testSetupWebhook() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
 
       assertTrue(webhook.getName().startsWith(WebhookUtils.WEBHOOK_NAME + "_"));
@@ -87,6 +89,7 @@ public class WebhookSetupTest extends WeldBaseTest {
   @DisplayName("[WHE-006], [WHE-007], [WHE-010] Configure Webhook params & access token, and create alert with webhook")
   public void testConfigureWebhookParams() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
@@ -137,6 +140,7 @@ public class WebhookSetupTest extends WeldBaseTest {
   public void testMakeGetRequestWithMissingParameterNotRequired() {
     DefinedWebhookParam webhookParamNoRequired = null;
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);

@@ -301,23 +301,28 @@ public class WebhookUtils {
         return null;
       }
 
-      String errorBody = readResponseBody(errorStream);
-      try {
-        return parseWebhookResponse(responseCode, errorBody, objectMapper);
-      } catch (Exception jsonEx) {
-        log4j.error("Non-JSON error response (HTTP " + responseCode + "): " + errorBody);
-        if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-          return invokeWebhookServiceLocally(name, apiKey, description, rule);
-        }
-        fail("Expected JSON from webhook endpoint but got HTTP " + responseCode +
-            ". Response (first 500 chars): " +
-            errorBody.substring(0, Math.min(500, errorBody.length())));
-      }
+      return handleErrorBody(responseCode, readResponseBody(errorStream), objectMapper, name, apiKey, description, rule);
     } catch (Exception e) {
       log4j.error(e.getMessage(), e);
       fail(e.getMessage());
     }
     return null;
+  }
+
+  private WebhookHttpResponse handleErrorBody(int responseCode, String errorBody, ObjectMapper objectMapper,
+      String name, String apiKey, String description, String rule) throws Exception {
+    try {
+      return parseWebhookResponse(responseCode, errorBody, objectMapper);
+    } catch (Exception jsonEx) {
+      log4j.error("Non-JSON error response (HTTP " + responseCode + "): " + errorBody);
+      if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+        return invokeWebhookServiceLocally(name, apiKey, description, rule);
+      }
+      fail("Expected JSON from webhook endpoint but got HTTP " + responseCode +
+          ". Response (first 500 chars): " +
+          errorBody.substring(0, Math.min(500, errorBody.length())));
+      return null;
+    }
   }
 
   private WebhookHttpResponse parseWebhookResponse(int responseCode, String body, ObjectMapper objectMapper)
@@ -328,14 +333,14 @@ public class WebhookUtils {
     return new WebhookHttpResponse(responseCode, message);
   }
 
-  private String readResponseBody(java.io.InputStream inputStream) throws Exception {
-    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+  private String readResponseBody(java.io.InputStream inputStream) throws java.io.IOException {
     StringBuilder content = new StringBuilder();
-    String line;
-    while ((line = reader.readLine()) != null) {
-      content.append(line);
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        content.append(line);
+      }
     }
-    reader.close();
     return content.toString();
   }
 

@@ -57,6 +57,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @Issue("#12")
   @DisplayName("[ETP-110] Setup Webhook not allow")
   public void testSetupWebhookNotAllow() {
+    ensureWebhookUtils();
     OBSecurityException thrown = assertThrows(OBSecurityException.class, () ->
         webhookUtils.createWebhookThrowError(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.ADMIN)
     );
@@ -67,6 +68,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-011] Make a Get Request with incorrect token")
   public void testMakeGetRequestWithIncorrectToken() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
@@ -103,6 +105,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-012] Make a Get Request with incorrect webhook name")
   public void testMakeGetRequestWithIncorrectName() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
@@ -139,6 +142,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-013] Make a Get Request without access")
   public void testMakeGetRequestWithoutAccess() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
@@ -172,6 +176,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-014] Make a Get Request with a missing parameter marked as required")
   public void testMakeGetRequestWithMissingParameter() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
