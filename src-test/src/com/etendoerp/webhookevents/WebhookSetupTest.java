@@ -7,12 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.HttpURLConnection;
 
 import org.openbravo.dal.service.Restrictions;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.openbravo.base.weld.test.WeldBaseTest;
-import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.model.ad.alert.Alert;
@@ -24,15 +20,8 @@ import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
 import com.etendoerp.webhookevents.data.DefinedwebhookRole;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
-public class WebhookSetupTest extends WeldBaseTest {
+public class WebhookSetupTest extends WebhookBaseTest {
 
-  @Override
-  protected void setTestUserContext() {
-    OBContext.setOBContext(TestConstants.Users.SYSTEM, TestConstants.Roles.SYS_ADMIN,
-        TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN);
-  }
-
-  WebhookUtils webhookUtils;
   DefinedWebHook webhook;
   DefinedwebhookToken token;
   DefinedWebhookParam webhookParamName;
@@ -41,20 +30,6 @@ public class WebhookSetupTest extends WeldBaseTest {
   DefinedwebhookAccess webhookAccess;
   DefinedwebhookRole webhookRole;
   Alert alert;
-
-  @Override
-  @BeforeEach
-  public void setUp() throws Exception {
-    super.setUp();
-    ensureWebhookUtils();
-  }
-
-  private void ensureWebhookUtils() {
-    if (webhookUtils == null) {
-      webhookUtils = new WebhookUtils();
-    }
-    webhookUtils.setupUserSystem();
-  }
 
   @Test
   @DisplayName("[WHE-002] Create Api Token")
@@ -189,21 +164,6 @@ public class WebhookSetupTest extends WeldBaseTest {
       webhookUtils.addObjectToDelete(webhookParamNoRequired);
       webhookUtils.addObjectToDelete(webhook);
       webhookUtils.addObjectToDelete(alert);
-    }
-  }
-
-  @AfterEach
-  public void tearDown() {
-    try {
-      if (webhookUtils != null) {
-        webhookUtils.setupUserSystem();
-        webhookUtils.deleteAll();
-      }
-      OBDal.getInstance().commitAndClose();
-    } catch (Exception e) {
-      // If cleanup fails (e.g. the test left the PostgreSQL transaction in aborted state),
-      // roll back instead of leaving the connection dirty for the next test.
-      OBDal.getInstance().rollbackAndClose();
     }
   }
 }

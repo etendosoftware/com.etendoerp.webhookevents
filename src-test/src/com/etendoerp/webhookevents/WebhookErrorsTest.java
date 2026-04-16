@@ -6,13 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openbravo.base.exception.OBSecurityException;
-import org.openbravo.base.weld.test.WeldBaseTest;
-import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.erpCommon.utility.OBMessageUtils;
 import org.openbravo.test.base.Issue;
@@ -23,35 +19,14 @@ import com.etendoerp.webhookevents.data.DefinedWebhookParam;
 import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
-public class WebhookErrorsTest extends WeldBaseTest {
+public class WebhookErrorsTest extends WebhookBaseTest {
 
-  @Override
-  protected void setTestUserContext() {
-    OBContext.setOBContext(TestConstants.Users.SYSTEM, TestConstants.Roles.SYS_ADMIN,
-        TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN);
-  }
-
-  WebhookUtils webhookUtils;
   DefinedWebHook webhook;
   DefinedwebhookToken token;
   DefinedWebhookParam webhookParamName;
   DefinedWebhookParam webhookParamDescription;
   DefinedWebhookParam webhookParamRule;
   DefinedwebhookAccess webhookAccess;
-
-  @Override
-  @BeforeEach
-  public void setUp() throws Exception {
-    super.setUp();
-    ensureWebhookUtils();
-  }
-
-  private void ensureWebhookUtils() {
-    if (webhookUtils == null) {
-      webhookUtils = new WebhookUtils();
-    }
-    webhookUtils.setupUserSystem();
-  }
 
   @Test
   @Issue("#12")
@@ -205,19 +180,6 @@ public class WebhookErrorsTest extends WeldBaseTest {
       webhookUtils.addObjectToDelete(webhookParamDescription);
       webhookUtils.addObjectToDelete(webhookParamRule);
       webhookUtils.addObjectToDelete(webhook);
-    }
-  }
-
-  @AfterEach
-  public void tearDown() {
-    try {
-      if (webhookUtils != null) {
-        webhookUtils.setupUserSystem();
-        webhookUtils.deleteAll();
-      }
-      OBDal.getInstance().commitAndClose();
-    } catch (Exception e) {
-      OBDal.getInstance().rollbackAndClose();
     }
   }
 }
