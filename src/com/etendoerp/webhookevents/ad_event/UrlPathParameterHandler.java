@@ -19,7 +19,7 @@ package com.etendoerp.webhookevents.ad_event;
 
 import java.util.HashMap;
 
-import javax.enterprise.event.Observes;
+import jakarta.enterprise.event.Observes;
 
 import com.etendoerp.webhookevents.interfaces.ComputedFunction;
 import com.etendoerp.webhookevents.webhook_util.Constants;

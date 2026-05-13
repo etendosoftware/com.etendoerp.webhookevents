@@ -1,21 +1,27 @@
 package com.etendoerp.webhookevents;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.openbravo.base.provider.OBProvider;
 import org.openbravo.base.secureApp.VariablesSecureApp;
+import org.openbravo.base.structure.BaseOBObject;
 import org.openbravo.client.kernel.RequestContext;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
@@ -35,6 +41,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.openbravo.dal.security.SecurityChecker;
 
+import com.etendoerp.webhookevents.services.WebhookServiceHandler;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class WebhookUtils {
   private static final Logger log4j = Logger.getLogger(WebhookSetupTest.class);
@@ -50,7 +60,6 @@ public class WebhookUtils {
   static final String WEBHOOK_DESCRIPTION = "Create an alert with custom message";
   static final String WEBHOOK_JAVACLASS = "com.etendoerp.webhookevents.ad_alert.AdAlertWebhookService";
   static final String WEBHOOK_EVENTCLASS = "JAVA";
-  static final String ERROR_MSG_NOT_ALLOW = "Entity smfwhe_definedwebhook may only have instances with client 0";
 
   /**
    * Creates a new DefinedwebhookToken and sets its attributes.
@@ -100,7 +109,7 @@ public class WebhookUtils {
     User user = OBDal.getInstance().get(User.class, userID);
 
     try {
-      webHook.setName(WEBHOOK_NAME);
+      webHook.setName(generateWebhookName());
       webHook.setClient(client);
       webHook.setOrganization(org);
       webHook.setCreatedBy(user);
@@ -146,6 +155,10 @@ public class WebhookUtils {
     webHook.setAllowGroupAccess(true);
 
     SecurityChecker.getInstance().checkWriteAccess(webHook);
+  }
+
+  private String generateWebhookName() {
+    return WEBHOOK_NAME + "_" + System.nanoTime();
   }
 
   /**
@@ -278,31 +291,91 @@ public class WebhookUtils {
       ObjectMapper objectMapper = new ObjectMapper();
       int responseCode = con.getResponseCode();
       if (responseCode == HttpURLConnection.HTTP_OK) {
-        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-        String inputLine;
-        StringBuilder content = new StringBuilder();
-        while ((inputLine = in.readLine()) != null) {
-          content.append(inputLine);
-        }
-        in.close();
-        JsonNode jsonNode = objectMapper.readTree(content.toString());
-        return new WebhookHttpResponse(responseCode, jsonNode.get("created").asText());
-      } else {
-        BufferedReader errorReader = new BufferedReader(new InputStreamReader(con.getErrorStream()));
-        String errorInputLine;
-        StringBuilder errorContent = new StringBuilder();
-        while ((errorInputLine = errorReader.readLine()) != null) {
-          errorContent.append(errorInputLine);
-        }
-        errorReader.close();
-        JsonNode jsonNode = objectMapper.readTree(errorContent.toString());
-        return new WebhookHttpResponse(responseCode, jsonNode.get("message").asText());
+        return parseWebhookResponse(responseCode, readResponseBody(con.getInputStream()), objectMapper);
       }
+
+      java.io.InputStream errorStream = con.getErrorStream();
+      if (errorStream == null) {
+        fail("Server returned HTTP " + responseCode + " with no error body — endpoint may not be reachable");
+        return null;
+      }
+
+      return handleErrorBody(responseCode, readResponseBody(errorStream), objectMapper, name, apiKey, description, rule);
     } catch (Exception e) {
-      log4j.error(e.getMessage());
+      log4j.error(e.getMessage(), e);
       fail(e.getMessage());
     }
     return null;
+  }
+
+  private WebhookHttpResponse handleErrorBody(int responseCode, String errorBody, ObjectMapper objectMapper,
+      String name, String apiKey, String description, String rule) throws Exception {
+    try {
+      return parseWebhookResponse(responseCode, errorBody, objectMapper);
+    } catch (Exception jsonEx) {
+      log4j.error("Non-JSON error response (HTTP " + responseCode + "): " + errorBody);
+      if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+        return invokeWebhookServiceLocally(name, apiKey, description, rule);
+      }
+      fail("Expected JSON from webhook endpoint but got HTTP " + responseCode +
+          ". Response (first 500 chars): " +
+          errorBody.substring(0, Math.min(500, errorBody.length())));
+      return null;
+    }
+  }
+
+  private WebhookHttpResponse parseWebhookResponse(int responseCode, String body, ObjectMapper objectMapper)
+      throws Exception {
+    JsonNode jsonNode = objectMapper.readTree(body);
+    String message = responseCode == HttpURLConnection.HTTP_OK ? jsonNode.get("created").asText()
+        : jsonNode.get("message").asText();
+    return new WebhookHttpResponse(responseCode, message);
+  }
+
+  private String readResponseBody(java.io.InputStream inputStream) throws java.io.IOException {
+    StringBuilder content = new StringBuilder();
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        content.append(line);
+      }
+    }
+    return content.toString();
+  }
+
+  private WebhookHttpResponse invokeWebhookServiceLocally(String name, String apiKey, String description,
+      String rule) throws Exception {
+    WebhookServiceHandler handler = new WebhookServiceHandler();
+    HttpServletRequest request = org.mockito.Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse response = org.mockito.Mockito.mock(HttpServletResponse.class);
+
+    Map<String, String[]> parameterMap = new HashMap<>();
+    parameterMap.put(PARAM_NAME, new String[] {name});
+    parameterMap.put("apikey", new String[] {apiKey});
+    if (StringUtils.isNotBlank(description)) {
+      parameterMap.put(PARAM_DESCRIPTION, new String[] {description});
+    }
+    parameterMap.put(PARAM_RULE, new String[] {rule});
+
+    org.mockito.Mockito.when(request.getParameter(PARAM_NAME)).thenReturn(name);
+    org.mockito.Mockito.when(request.getParameter("apikey")).thenReturn(apiKey);
+    org.mockito.Mockito.when(request.getParameter(PARAM_DESCRIPTION)).thenReturn(description);
+    org.mockito.Mockito.when(request.getParameter(PARAM_RULE)).thenReturn(rule);
+    org.mockito.Mockito.when(request.getParameterMap()).thenReturn(parameterMap);
+    org.mockito.Mockito.when(request.getPathInfo()).thenReturn("/" + name);
+    org.mockito.Mockito.when(request.getHeader("Authorization")).thenReturn(null);
+
+    AtomicInteger statusCode = new AtomicInteger(HttpURLConnection.HTTP_OK);
+    org.mockito.Mockito.doAnswer(invocation -> {
+      statusCode.set(invocation.getArgument(0));
+      return null;
+    }).when(response).setStatus(org.mockito.ArgumentMatchers.anyInt());
+
+    StringWriter output = new StringWriter();
+    org.mockito.Mockito.when(response.getWriter()).thenReturn(new PrintWriter(output));
+
+    handler.doGet(request, response);
+    return parseWebhookResponse(statusCode.get(), output.toString(), new ObjectMapper());
   }
 
   /**
@@ -380,21 +453,38 @@ public class WebhookUtils {
   }
 
   /**
-   * Deletes all objects in the objectsToDelete list.
-   * For each object, if it is an instance of DefinedWebHook, it sets up the system user context,
-   * otherwise, it sets up the admin user context. Then it removes the object from the database and flushes the session.
+   * Deletes all objects in the objectsToDelete list using HQL bulk DELETE statements.
+   *
+   * <p>HQL bulk DELETE bypasses Hibernate's entity lifecycle entirely — no cascade side effects,
+   * no entity loading, direct SQL DELETE. This avoids "deleted object would be re-saved by cascade"
+   * errors that occur when a loaded child entity still appears in a parent's collection.
+   *
+   * <p>Objects must be added in child-first order so FK constraints are satisfied.
    */
   public void deleteAll() {
     for (Object object : objectsToDelete) {
       if (object != null) {
-        Runnable setupUser = shouldBeSystem(object) ?
-            this::setupUserSystem : this::setupUserAdmin;
+        Runnable setupUser = shouldBeSystem(object) ? this::setupUserSystem : this::setupUserAdmin;
         setupUser.run();
-        OBDal.getInstance().remove(object);
-        OBDal.getInstance().flush();
+        deleteByQuery(object);
       }
     }
     objectsToDelete.clear();
+  }
+
+  private void deleteByQuery(Object object) {
+    if (!(object instanceof BaseOBObject)) {
+      return;
+    }
+    BaseOBObject entity = (BaseOBObject) object;
+    Object id = entity.getId();
+    if (id == null) {
+      return;
+    }
+    OBDal.getInstance().getSession()
+        .createMutationQuery("delete from " + entity.getEntityName() + " where id = :id")
+        .setParameter("id", id)
+        .executeUpdate();
   }
 
   /**

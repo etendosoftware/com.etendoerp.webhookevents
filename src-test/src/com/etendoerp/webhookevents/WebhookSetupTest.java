@@ -1,16 +1,14 @@
 package com.etendoerp.webhookevents;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
 
-import org.hibernate.criterion.Restrictions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.openbravo.dal.service.Restrictions;
 import org.junit.jupiter.api.DisplayName;
-import org.openbravo.base.weld.test.WeldBaseTest;
+import org.junit.jupiter.api.Test;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.model.ad.alert.Alert;
@@ -22,8 +20,12 @@ import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
 import com.etendoerp.webhookevents.data.DefinedwebhookRole;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
-public class WebhookSetupTest extends WeldBaseTest {
-  WebhookUtils webhookUtils;
+/**
+ * Integration tests for webhook setup: token creation, webhook configuration,
+ * parameter handling, and alert generation via GET requests.
+ */
+public class WebhookSetupTest extends WebhookBaseTest {
+
   DefinedWebHook webhook;
   DefinedwebhookToken token;
   DefinedWebhookParam webhookParamName;
@@ -33,18 +35,11 @@ public class WebhookSetupTest extends WeldBaseTest {
   DefinedwebhookRole webhookRole;
   Alert alert;
 
-  @Override
-  @Before
-  public void setUp() throws Exception {
-    super.setUp();
-    webhookUtils = new WebhookUtils();
-    webhookUtils.setupUserSystem();
-  }
-
   @Test
   @DisplayName("[WHE-002] Create Api Token")
   public void testCreateApiToken() {
     try {
+      ensureWebhookUtils();
       token = webhookUtils.createApiToken();
 
       assertEquals(WebhookUtils.EXPECTED_TOKEN_NAME, token.getName());
@@ -58,9 +53,10 @@ public class WebhookSetupTest extends WeldBaseTest {
   @DisplayName("[WHE-003] Setup Webhook")
   public void testSetupWebhook() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
 
-      assertEquals(WebhookUtils.WEBHOOK_NAME, webhook.getName());
+      assertTrue(webhook.getName().startsWith(WebhookUtils.WEBHOOK_NAME + "_"));
       assertEquals(WebhookUtils.WEBHOOK_DESCRIPTION, webhook.getDescription());
       assertEquals(WebhookUtils.WEBHOOK_EVENTCLASS, webhook.getEventClass());
     } finally {
@@ -72,8 +68,8 @@ public class WebhookSetupTest extends WeldBaseTest {
   @DisplayName("[WHE-006], [WHE-007], [WHE-010] Configure Webhook params & access token, and create alert with webhook")
   public void testConfigureWebhookParams() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
-      webhookUtils.setupUserSystem();
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
       webhookParamDescription = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_DESCRIPTION, true);
@@ -123,7 +119,7 @@ public class WebhookSetupTest extends WeldBaseTest {
   public void testMakeGetRequestWithMissingParameterNotRequired() {
     DefinedWebhookParam webhookParamNoRequired = null;
     try {
-      webhookUtils.setupUserSystem();
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
@@ -173,12 +169,5 @@ public class WebhookSetupTest extends WeldBaseTest {
       webhookUtils.addObjectToDelete(webhook);
       webhookUtils.addObjectToDelete(alert);
     }
-  }
-
-  @After
-  public void tearDown() {
-    webhookUtils.setupUserSystem();
-    webhookUtils.deleteAll();
-    OBDal.getInstance().commitAndClose();
   }
 }

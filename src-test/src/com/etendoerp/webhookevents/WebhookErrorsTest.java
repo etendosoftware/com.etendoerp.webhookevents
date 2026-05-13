@@ -1,17 +1,14 @@
 package com.etendoerp.webhookevents;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.openbravo.base.exception.OBSecurityException;
-import org.openbravo.base.weld.test.WeldBaseTest;
-import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBDal;
 import org.openbravo.erpCommon.utility.OBMessageUtils;
 import org.openbravo.test.base.Issue;
@@ -22,8 +19,12 @@ import com.etendoerp.webhookevents.data.DefinedWebhookParam;
 import com.etendoerp.webhookevents.data.DefinedwebhookAccess;
 import com.etendoerp.webhookevents.data.DefinedwebhookToken;
 
-public class WebhookErrorsTest extends WeldBaseTest {
-  WebhookUtils webhookUtils;
+/**
+ * Integration tests for webhook error scenarios: unauthorized access, incorrect tokens,
+ * unknown webhook names, missing access, and missing required parameters.
+ */
+public class WebhookErrorsTest extends WebhookBaseTest {
+
   DefinedWebHook webhook;
   DefinedwebhookToken token;
   DefinedWebhookParam webhookParamName;
@@ -31,29 +32,24 @@ public class WebhookErrorsTest extends WeldBaseTest {
   DefinedWebhookParam webhookParamRule;
   DefinedwebhookAccess webhookAccess;
 
-  @Override
-  @Before
-  public void setUp() throws Exception {
-    super.setUp();
-    webhookUtils = new WebhookUtils();
-    webhookUtils.setupUserSystem();
-  }
-
   @Test
   @Issue("#12")
   @DisplayName("[ETP-110] Setup Webhook not allow")
   public void testSetupWebhookNotAllow() {
-    try {
-      webhookUtils.createWebhookThrowError(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.ADMIN);
-    } catch (OBSecurityException e) {
-      assertEquals(WebhookUtils.ERROR_MSG_NOT_ALLOW, e.getMessage());
-    }
+    ensureWebhookUtils();
+    // Switch to a non-system user: FB_GRP_ADMIN lacks cross-client write access to
+    // smfwhe_definedwebhook (a system-client entity), triggering OBSecurityException.
+    webhookUtils.setupUserAdmin();
+    assertThrows(OBSecurityException.class, () ->
+        webhookUtils.createWebhookThrowError(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.ADMIN)
+    );
   }
 
   @Test
   @DisplayName("[WHE-011] Make a Get Request with incorrect token")
   public void testMakeGetRequestWithIncorrectToken() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
@@ -90,6 +86,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-012] Make a Get Request with incorrect webhook name")
   public void testMakeGetRequestWithIncorrectName() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
@@ -126,6 +123,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-013] Make a Get Request without access")
   public void testMakeGetRequestWithoutAccess() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
@@ -159,6 +157,7 @@ public class WebhookErrorsTest extends WeldBaseTest {
   @DisplayName("[WHE-014] Make a Get Request with a missing parameter marked as required")
   public void testMakeGetRequestWithMissingParameter() {
     try {
+      ensureWebhookUtils();
       webhook = webhookUtils.createWebhook(TestConstants.Clients.SYSTEM, TestConstants.Orgs.MAIN, TestConstants.Users.SYSTEM);
       token = webhookUtils.createApiToken();
       webhookParamName = webhookUtils.createWebhookParam(webhook, WebhookUtils.PARAM_NAME, true);
@@ -188,11 +187,5 @@ public class WebhookErrorsTest extends WeldBaseTest {
       webhookUtils.addObjectToDelete(webhookParamRule);
       webhookUtils.addObjectToDelete(webhook);
     }
-  }
-
-  @After
-  public void tearDown() {
-    webhookUtils.deleteAll();
-    OBDal.getInstance().commitAndClose();
   }
 }
