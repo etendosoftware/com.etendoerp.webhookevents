@@ -12,6 +12,7 @@ import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_TABLE_ID;
 import static com.etendoerp.webhookevents.WebhookTestConstants.TEST_TABLE_NAME;
 import static com.etendoerp.webhookevents.WebhookTestConstants.VALUE1;
 import static com.etendoerp.webhookevents.WebhookTestConstants.VALUE2;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
@@ -1081,6 +1083,79 @@ class WebHookUtilTest {
       assertNotNull(exception);
     }
   }
+  /**
+   * Tests that the delete notification writes the minimal payload built from the data captured in
+   * the queue (the deleted record id and the delete event type) and sets the event's HTTP method.
+   *
+   * @throws Exception if the notification fails
+   */
+  @Test
+  void testSendDeleteNotificationWritesMinimalDeletePayload() throws Exception {
+    Webhook webhook = mock(Webhook.class);
+    Events event = mock(Events.class);
+    when(webhook.getUrlnotify()).thenReturn("http://example.com/delete");
+    when(webhook.getSmfwheEvents()).thenReturn(event);
+    when(event.getMethod()).thenReturn("POST");
+
+    HttpURLConnection connection = mock(HttpURLConnection.class);
+    ByteArrayOutputStream body = new ByteArrayOutputStream();
+    when(connection.getOutputStream()).thenReturn(body);
+    when(connection.getResponseCode()).thenReturn(200);
+
+    WebHookUtil.sendDeleteNotification(webhook, connection, RECORD_ID, logger);
+
+    verify(connection).setRequestMethod("POST");
+    String payload = body.toString();
+    assertTrue(payload.contains("\"id\":\"" + RECORD_ID + "\""));
+    assertTrue(payload.contains(Constants.DELETE));
+  }
+
+  /**
+   * Tests that callWebHookForDelete ignores inactive webhooks, so no request is attempted for
+   * them.
+   */
+  @Test
+  void testCallWebHookForDeleteSkipsInactiveWebhook() {
+    try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class)) {
+      mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
+
+      Webhook webhook = mock(Webhook.class);
+      when(webhook.isActive()).thenReturn(false);
+      // A malformed URL would fail if the inactive webhook were used.
+      when(webhook.getUrlnotify()).thenReturn("http://invalid url with spaces");
+
+      OBCriteria<Webhook> webhookCriteria = mock(OBCriteria.class);
+      when(obDal.createCriteria(Webhook.class)).thenReturn(webhookCriteria);
+      when(webhookCriteria.add(any())).thenReturn(webhookCriteria);
+      when(webhookCriteria.list()).thenReturn(List.of(webhook));
+
+      assertDoesNotThrow(() -> WebHookUtil.callWebHookForDelete(events, RECORD_ID, logger));
+    }
+  }
+
+  /**
+   * Tests that callWebHookForDelete wraps a delivery failure in an OBException, so the caller can
+   * keep the queue entry instead of discarding it silently.
+   */
+  @Test
+  void testCallWebHookForDeleteWrapsFailureInOBException() {
+    try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class)) {
+      mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
+
+      Webhook webhook = mock(Webhook.class);
+      when(webhook.isActive()).thenReturn(true);
+      when(webhook.getUrlnotify()).thenReturn("http://invalid url with spaces");
+
+      OBCriteria<Webhook> webhookCriteria = mock(OBCriteria.class);
+      when(obDal.createCriteria(Webhook.class)).thenReturn(webhookCriteria);
+      when(webhookCriteria.add(any())).thenReturn(webhookCriteria);
+      when(webhookCriteria.list()).thenReturn(List.of(webhook));
+
+      assertThrows(OBException.class,
+          () -> WebHookUtil.callWebHookForDelete(events, RECORD_ID, logger));
+    }
+  }
+
   /**
    * Helper method to set up the OBContext mock.
    * This method is used to configure the OBContext mock with the necessary language settings.

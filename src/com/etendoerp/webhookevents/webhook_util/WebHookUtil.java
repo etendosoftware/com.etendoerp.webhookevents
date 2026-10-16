@@ -214,8 +214,7 @@ public class WebHookUtil {
 
     String url = generateUrlParameter(cUrlPathParam.list(), hook.getUrlnotify(), bob,
         logger).toLowerCase();
-    URL obj = new URL(url);
-    HttpURLConnection con = getConnection(url, obj);
+    HttpURLConnection con = openConnection(url);
     // Setting basic post request
     cUrlPathParam = OBDal.getInstance().createCriteria(UrlPathParam.class);
     cUrlPathParam.add(Restrictions.eq(UrlPathParam.PROPERTY_TYPEPARAMETER, "H"));
@@ -232,11 +231,7 @@ public class WebHookUtil {
     }
 
     // Send post request
-    con.setDoOutput(true);
-    DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-    wr.writeBytes(sendData);
-    wr.flush();
-    wr.close();
+    writePayload(con, sendData);
 
     int responseCode = con.getResponseCode();
     logger.debug("nSending " + hook.getSmfwheEvents().getMethod() + "request to URL : " + url);
@@ -253,6 +248,87 @@ public class WebHookUtil {
 
     // printing result from response
     logger.debug(response.toString());
+  }
+
+  /**
+   * Calls all the webhooks defined for an On Delete event whose record no longer exists in the
+   * database. Since the entity is gone by the time the queue is processed, the payload built from
+   * the data captured when the event was queued only carries the record id and the event type; the
+   * deleted entity's properties are not available at dequeue time.
+   *
+   * @param event    Events configured for the deletion of the record
+   * @param recordId Id of the deleted record, captured when the event was queued
+   * @param logger   Info logger in log
+   * @throws OBException if any of the webhooks could not be notified
+   */
+  public static void callWebHookForDelete(Events event, String recordId, Logger logger)
+      throws OBException {
+    OBCriteria<Webhook> cWebhook = OBDal.getInstance().createCriteria(Webhook.class);
+    cWebhook.add(Restrictions.eq(Webhook.PROPERTY_SMFWHEEVENTS, event));
+    for (Webhook hook : cWebhook.list()) {
+      try {
+        if (BooleanUtils.isTrue(hook.isActive())) {
+          sendDeleteNotification(hook, openConnection(hook.getUrlnotify()), recordId, logger);
+        }
+      } catch (Exception e) {
+        throw new OBException(e);
+      }
+    }
+  }
+
+  /**
+   * Sends a minimal notification for a deleted record through the given connection. The payload
+   * only carries the deleted record id and the delete event type, because the entity itself is no
+   * longer available when the queue is processed.
+   *
+   * @param hook     Webhook defined in the event
+   * @param con      Open connection to the webhook URL
+   * @param recordId Id of the deleted record
+   * @param logger   Info logger in log
+   * @throws Exception if the notification could not be sent
+   */
+  static void sendDeleteNotification(Webhook hook, HttpURLConnection con, String recordId,
+      Logger logger) throws Exception {
+    con.setRequestMethod(hook.getSmfwheEvents().getMethod());
+
+    JSONObject sendData = new JSONObject();
+    sendData.put("id", recordId);
+    sendData.put("event", Constants.DELETE);
+
+    writePayload(con, sendData.toString());
+
+    int responseCode = con.getResponseCode();
+    logger.debug("Sending " + hook.getSmfwheEvents().getMethod() + " delete notification to URL : "
+        + hook.getUrlnotify());
+    logger.debug("Post Data : " + sendData);
+    logger.debug("Response Code : " + responseCode);
+  }
+
+  /**
+   * Opens a connection for the given URL, choosing the http or https implementation.
+   *
+   * @param url Url to send the request to
+   * @return the opened connection
+   * @throws IOException if the URL is malformed or the connection cannot be opened
+   */
+  private static HttpURLConnection openConnection(String url) throws IOException {
+    URL obj = new URL(url);
+    return getConnection(url, obj);
+  }
+
+  /**
+   * Writes the payload of the request to the connection.
+   *
+   * @param con      Open connection to the webhook URL
+   * @param sendData Data to send in the request body
+   * @throws IOException if the payload cannot be written
+   */
+  private static void writePayload(HttpURLConnection con, String sendData) throws IOException {
+    con.setDoOutput(true);
+    try (DataOutputStream wr = new DataOutputStream(con.getOutputStream())) {
+      wr.writeBytes(sendData);
+      wr.flush();
+    }
   }
 
   private static String getXMLToSend(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {

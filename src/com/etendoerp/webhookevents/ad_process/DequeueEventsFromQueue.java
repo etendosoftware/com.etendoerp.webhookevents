@@ -17,6 +17,9 @@
 
 package com.etendoerp.webhookevents.ad_process;
 
+import java.util.List;
+
+import com.etendoerp.webhookevents.webhook_util.Constants;
 import com.etendoerp.webhookevents.webhook_util.WebHookUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
@@ -58,9 +61,12 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
         obj = (QueueEventHook) scroller.get()[0];
         event = obj.getSmfwheEvents();
 
-        handleDequeueEvent(event, obj, logger);
-
-        OBDal.getInstance().remove(obj);
+        try {
+          handleDequeueEvent(event, obj, logger);
+          OBDal.getInstance().remove(obj);
+        } catch (Exception e) {
+          logger.logln("Error processing queue entry " + obj.getId() + ": " + e.getMessage());
+        }
         i++;
         if (i % 100 == 0) {
           OBDal.getInstance().flush();
@@ -90,25 +96,40 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
             .getName(), whereClause);
     qBob.setNamedParameter("id", obj.getRecord());
 
-    if (!qBob.list().isEmpty()) {
-      BaseOBObject entity = null;
-      if(qBob.list().isEmpty()) {
-       throw new OBException("No entity found for id: " + obj.getRecord());
-      }
-      entity = qBob.list().get(0);
-      if(entity == null) {
-        throw new OBException("No entity found for id: " + obj.getRecord());
-      }
-      WebHookUtil.callWebHook(event, entity,  log);
+    List<BaseOBObject> results = qBob.list();
+    if (!results.isEmpty()) {
+      BaseOBObject entity = results.get(0);
+      WebHookUtil.callWebHook(event, entity, log);
       String entityName = entity.getEntityName();
       String identifier = entity.getIdentifier();
-      if(StringUtils.isEmpty(entityName) || StringUtils.isEmpty(identifier)) {
+      if (StringUtils.isEmpty(entityName) || StringUtils.isEmpty(identifier)) {
         throw new OBException("Entity name or identifier is empty for id: " + obj.getRecord());
       }
       String message = String.format(
           Utility.messageBD(conn, "smfwhe_SendCallWebHook", LANGUAGE), event.getName(),
           entityName + " " + identifier);
       logger.logln(message);
+    } else if (isDeleteEvent(event)) {
+      WebHookUtil.callWebHookForDelete(event, obj.getRecord(), log);
+      String message = String.format(
+          Utility.messageBD(conn, "smfwhe_SendCallWebHook", LANGUAGE), event.getName(),
+          "record " + obj.getRecord());
+      logger.logln(message);
+    } else {
+      throw new OBException("No entity found for id: " + obj.getRecord());
     }
+  }
+
+  /**
+   * Checks whether the event was configured to be fired on the deletion of a record. For those
+   * events the affected row no longer exists when the queue is processed, so the payload is built
+   * from the data captured when the event was queued instead of from a re-query.
+   *
+   * @param event the queued event
+   * @return true when the event type is On Delete
+   */
+  private static boolean isDeleteEvent(Events event) {
+    return event != null && event.getSmfwheEventType() != null
+        && Constants.DELETE.equals(event.getSmfwheEventType().getId());
   }
 }
