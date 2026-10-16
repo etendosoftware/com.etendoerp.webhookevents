@@ -61,12 +61,7 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
         obj = (QueueEventHook) scroller.get()[0];
         event = obj.getSmfwheEvents();
 
-        try {
-          handleDequeueEvent(event, obj, logger);
-          OBDal.getInstance().remove(obj);
-        } catch (Exception e) {
-          logger.logln("Error processing queue entry " + obj.getId() + ": " + e.getMessage());
-        }
+        processQueueEntry(event, obj, logger);
         i++;
         if (i % 100 == 0) {
           OBDal.getInstance().flush();
@@ -81,6 +76,24 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
     OBDal.getInstance().flush();
     OBContext.restorePreviousMode();
     logger.logln("Finish dequeue process.");
+  }
+
+  /**
+   * Processes one queue entry, delivering its webhook and removing it from the queue. If the entry
+   * cannot be processed the error is logged and the entry is kept in the queue, so the batch can
+   * continue with the remaining entries and the failure is not silently discarded.
+   *
+   * @param event  Event configured for the queued record
+   * @param obj    Queue entry to process
+   * @param logger Process logger
+   */
+  private static void processQueueEntry(Events event, QueueEventHook obj, ProcessLogger logger) {
+    try {
+      handleDequeueEvent(event, obj, logger);
+      OBDal.getInstance().remove(obj);
+    } catch (Exception e) {
+      logger.logln("Error processing queue entry " + obj.getId() + ": " + e.getMessage());
+    }
   }
 
   private static void handleDequeueEvent(Events event, QueueEventHook obj, ProcessLogger logger)

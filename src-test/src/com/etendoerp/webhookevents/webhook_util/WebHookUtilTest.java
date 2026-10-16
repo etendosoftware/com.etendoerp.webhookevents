@@ -28,11 +28,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1101,11 +1103,13 @@ class WebHookUtilTest {
     ByteArrayOutputStream body = new ByteArrayOutputStream();
     when(connection.getOutputStream()).thenReturn(body);
     when(connection.getResponseCode()).thenReturn(200);
+    when(connection.getInputStream()).thenReturn(
+        new ByteArrayInputStream("ok".getBytes(StandardCharsets.UTF_8)));
 
     WebHookUtil.sendDeleteNotification(webhook, connection, RECORD_ID, logger);
 
     verify(connection).setRequestMethod("POST");
-    String payload = body.toString();
+    String payload = body.toString(StandardCharsets.UTF_8);
     assertTrue(payload.contains("\"id\":\"" + RECORD_ID + "\""));
     assertTrue(payload.contains(Constants.DELETE));
   }

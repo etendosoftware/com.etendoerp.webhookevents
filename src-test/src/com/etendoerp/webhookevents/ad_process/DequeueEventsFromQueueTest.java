@@ -58,6 +58,7 @@ class DequeueEventsFromQueueTest {
   private static final String RECORD_ID = "record-id-1";
   private static final String SECOND_RECORD_ID = "record-id-2";
   private static final String SEND_WEBHOOK_MESSAGE = "Send webhook for this record: '%s'";
+  private static final String SEND_WEBHOOK_LOG = "Send webhook for this record";
   private static final String ERROR_QUEUE_ENTRY_MESSAGE = "Error processing queue entry";
 
   private DequeueEventsFromQueue process;
@@ -140,7 +141,7 @@ class DequeueEventsFromQueueTest {
       mockedWebHookUtil.verify(() -> WebHookUtil.callWebHookForDelete(eq(event), eq(RECORD_ID),
           any(Logger.class)));
       verify(obDal).remove(entry);
-      verify(processLogger).logln(contains("Send webhook for this record"));
+      verify(processLogger).logln(contains(SEND_WEBHOOK_LOG));
     }
   }
 
@@ -176,7 +177,7 @@ class DequeueEventsFromQueueTest {
 
       verify(processLogger).logln(contains(ERROR_QUEUE_ENTRY_MESSAGE));
       verify(obDal, never()).remove(entry);
-      verify(processLogger, never()).logln(contains("Send webhook for this record"));
+      verify(processLogger, never()).logln(contains(SEND_WEBHOOK_LOG));
     }
   }
 
@@ -223,7 +224,7 @@ class DequeueEventsFromQueueTest {
       verify(obDal, never()).remove(failingEntry);
       verify(obDal).remove(validEntry);
       verify(processLogger).logln(contains(ERROR_QUEUE_ENTRY_MESSAGE));
-      verify(processLogger).logln(contains("Send webhook for this record"));
+      verify(processLogger).logln(contains(SEND_WEBHOOK_LOG));
     }
   }
 
@@ -266,7 +267,7 @@ class DequeueEventsFromQueueTest {
       mockedWebHookUtil.verify(
           () -> WebHookUtil.callWebHook(eq(event), eq(entity), any(Logger.class)));
       verify(obDal).remove(entry);
-      verify(processLogger).logln(contains("Send webhook for this record"));
+      verify(processLogger).logln(contains(SEND_WEBHOOK_LOG));
     }
   }
 

@@ -238,16 +238,8 @@ public class WebHookUtil {
     logger.debug("Post Data : " + sendData);
     logger.debug("Response Code : " + responseCode);
 
-    BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-    String output;
-    StringBuilder response = new StringBuilder();
-    while ((output = in.readLine()) != null) {
-      response.append(output);
-    }
-    in.close();
-
     // printing result from response
-    logger.debug(response.toString());
+    logger.debug(readResponse(con));
   }
 
   /**
@@ -285,10 +277,11 @@ public class WebHookUtil {
    * @param con      Open connection to the webhook URL
    * @param recordId Id of the deleted record
    * @param logger   Info logger in log
-   * @throws Exception if the notification could not be sent
+   * @throws IOException   if the payload cannot be sent or the response cannot be read
+   * @throws JSONException if the notification payload cannot be built
    */
   static void sendDeleteNotification(Webhook hook, HttpURLConnection con, String recordId,
-      Logger logger) throws Exception {
+      Logger logger) throws IOException, JSONException {
     con.setRequestMethod(hook.getSmfwheEvents().getMethod());
 
     JSONObject sendData = new JSONObject();
@@ -302,6 +295,7 @@ public class WebHookUtil {
         + hook.getUrlnotify());
     logger.debug("Post Data : " + sendData);
     logger.debug("Response Code : " + responseCode);
+    logger.debug(readResponse(con));
   }
 
   /**
@@ -329,6 +323,25 @@ public class WebHookUtil {
       wr.writeBytes(sendData);
       wr.flush();
     }
+  }
+
+  /**
+   * Reads the response of the request. Reading the stream also raises the error status codes of the
+   * endpoint, so an HTTP error is treated as a delivery failure.
+   *
+   * @param con Open connection to the webhook URL
+   * @return the response body
+   * @throws IOException if the response cannot be read
+   */
+  private static String readResponse(HttpURLConnection con) throws IOException {
+    StringBuilder response = new StringBuilder();
+    try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+      String output;
+      while ((output = in.readLine()) != null) {
+        response.append(output);
+      }
+    }
+    return response.toString();
   }
 
   private static String getXMLToSend(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
