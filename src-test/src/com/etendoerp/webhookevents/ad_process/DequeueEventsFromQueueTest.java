@@ -17,6 +17,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.hibernate.ScrollableResults;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,9 @@ class DequeueEventsFromQueueTest {
   private static final String TABLE_NAME = "C_BPartner_Location";
   private static final String RECORD_ID = "record-id-1";
   private static final String SECOND_RECORD_ID = "record-id-2";
+  private static final String QUEUE_ONE = "queue-1";
+  private static final String QUEUE_TWO = "queue-2";
+  private static final String IDENTIFIER = "Address 1";
   private static final String SEND_WEBHOOK_MESSAGE = "Send webhook for this record: '%s'";
   private static final String SEND_WEBHOOK_LOG = "Send webhook for this record";
   private static final String ERROR_QUEUE_ENTRY_MESSAGE = "Error processing queue entry";
@@ -64,6 +68,12 @@ class DequeueEventsFromQueueTest {
   private DequeueEventsFromQueue process;
   private ProcessBundle bundle;
   private ProcessLogger processLogger;
+  private OBDal obDal;
+  private MockedStatic<OBDal> mockedOBDal;
+  private MockedStatic<ModelProvider> mockedModelProvider;
+  private MockedStatic<WebHookUtil> mockedWebHookUtil;
+  private MockedStatic<Utility> mockedUtility;
+  private MockedStatic<OBContext> mockedContext;
 
   /**
    * Forces the initialization of the production classes whose static fields read the OBContext
@@ -83,6 +93,127 @@ class DequeueEventsFromQueueTest {
     }
   }
 
+  @BeforeEach
+  void setUp() {
+    process = new DequeueEventsFromQueue();
+    bundle = mock(ProcessBundle.class);
+    processLogger = mock(ProcessLogger.class);
+    when(bundle.getLogger()).thenReturn(processLogger);
+
+    obDal = mock(OBDal.class);
+    mockedOBDal = mockStatic(OBDal.class);
+    mockedModelProvider = mockStatic(ModelProvider.class);
+    mockedWebHookUtil = mockStatic(WebHookUtil.class);
+    mockedUtility = mockStatic(Utility.class);
+    mockedContext = mockStatic(OBContext.class);
+
+    mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
+    stubOBContext(mockedContext);
+    mockEntityResolution();
+    mockedUtility.when(() -> Utility.messageBD(any(), anyString(), anyString()))
+        .thenReturn(SEND_WEBHOOK_MESSAGE);
+  }
+
+  @AfterEach
+  void tearDown() {
+    mockedContext.close();
+    mockedUtility.close();
+    mockedWebHookUtil.close();
+    mockedModelProvider.close();
+    mockedOBDal.close();
+  }
+
+  /**
+   * An On Delete event whose record is gone must still deliver the webhook using the record id
+   * captured in the queue, log the confirmation and remove the processed entry.
+   *
+   * @throws Exception if the process execution fails
+   */
+  @Test
+  void deleteEventWithMissingRecordDeliversWebhookAndLogs() throws Exception {
+    Events event = buildEvent(Constants.DELETE);
+    QueueEventHook entry = buildEntry(QUEUE_ONE, event, RECORD_ID);
+    stubQueue(entry);
+    stubEmptyQuery();
+
+    process.doExecute(bundle);
+
+    mockedWebHookUtil.verify(
+        () -> WebHookUtil.callWebHookForDelete(eq(event), eq(RECORD_ID), any(Logger.class)));
+    verify(obDal).remove(entry);
+    verify(processLogger).logln(contains(SEND_WEBHOOK_LOG));
+  }
+
+  /**
+   * A non-delete event whose record is unexpectedly missing must log the error and keep the entry
+   * in the queue instead of silently removing it.
+   *
+   * @throws Exception if the process execution fails
+   */
+  @Test
+  void missingRecordForNonDeleteEventLogsErrorAndKeepsEntry() throws Exception {
+    Events event = buildEvent(Constants.UPDATE);
+    QueueEventHook entry = buildEntry(QUEUE_ONE, event, RECORD_ID);
+    stubQueue(entry);
+    stubEmptyQuery();
+
+    assertDoesNotThrow(() -> process.doExecute(bundle));
+
+    verify(processLogger).logln(contains(ERROR_QUEUE_ENTRY_MESSAGE));
+    verify(obDal, never()).remove(entry);
+    verify(processLogger, never()).logln(contains(SEND_WEBHOOK_LOG));
+  }
+
+  /**
+   * When one entry cannot be processed the process must log the error, keep that entry and
+   * continue with the remaining entries.
+   *
+   * @throws Exception if the process execution fails
+   */
+  @Test
+  void batchContinuesAfterOneFailingEntry() throws Exception {
+    QueueEventHook failingEntry = buildEntry(QUEUE_ONE, buildEvent(Constants.UPDATE), RECORD_ID);
+    QueueEventHook validEntry = buildEntry(QUEUE_TWO, buildEvent(Constants.UPDATE),
+        SECOND_RECORD_ID);
+    stubQueue(failingEntry, validEntry);
+
+    OBQuery<BaseOBObject> failingQuery = mock(OBQuery.class);
+    OBQuery<BaseOBObject> validQuery = mock(OBQuery.class);
+    when(obDal.createQuery(anyString(), anyString())).thenReturn(failingQuery, validQuery);
+    when(failingQuery.list()).thenReturn(new ArrayList<>());
+    BaseOBObject entity = buildEntity();
+    when(validQuery.list()).thenReturn(List.of(entity));
+
+    process.doExecute(bundle);
+
+    verify(obDal, never()).remove(failingEntry);
+    verify(obDal).remove(validEntry);
+    verify(processLogger).logln(contains(ERROR_QUEUE_ENTRY_MESSAGE));
+    verify(processLogger).logln(contains(SEND_WEBHOOK_LOG));
+  }
+
+  /**
+   * Control case: a non-delete event whose record still exists keeps the original behaviour, it
+   * delivers the webhook from the entity, logs the confirmation and removes the entry.
+   *
+   * @throws Exception if the process execution fails
+   */
+  @Test
+  void existingRecordStillCallsWebHookAndRemovesEntry() throws Exception {
+    Events event = buildEvent(Constants.CREATE);
+    QueueEventHook entry = buildEntry(QUEUE_ONE, event, RECORD_ID);
+    stubQueue(entry);
+    BaseOBObject entity = buildEntity();
+    when(mockQuery().list()).thenReturn(List.of(entity));
+
+    process.doExecute(bundle);
+
+    mockedWebHookUtil.verify(
+        () -> WebHookUtil.callWebHook(eq(event), eq(entity), any(Logger.class)));
+    verify(obDal).remove(entry);
+    verify(processLogger).logln(contains(SEND_WEBHOOK_LOG));
+  }
+
   /**
    * Stubs the mocked static OBContext with a usable language, so that any production class that is
    * initialized while the mock is active can read it.
@@ -97,182 +228,17 @@ class DequeueEventsFromQueueTest {
     when(language.getLanguage()).thenReturn("en_US");
   }
 
-  @BeforeEach
-  void setUp() {
-    process = new DequeueEventsFromQueue();
-    bundle = mock(ProcessBundle.class);
-    processLogger = mock(ProcessLogger.class);
-    when(bundle.getLogger()).thenReturn(processLogger);
+  private void mockEntityResolution() {
+    ModelProvider modelProvider = mock(ModelProvider.class);
+    Entity entity = mock(Entity.class);
+    mockedModelProvider.when(ModelProvider::getInstance).thenReturn(modelProvider);
+    when(modelProvider.getEntityByTableName(TABLE_NAME)).thenReturn(entity);
+    when(entity.getName()).thenReturn(ENTITY_NAME);
   }
 
-  /**
-   * An On Delete event whose record is gone must still deliver the webhook using the record id
-   * captured in the queue, log the confirmation and remove the processed entry.
-   *
-   * @throws Exception if the process execution fails
-   */
-  @Test
-  void deleteEventWithMissingRecordDeliversWebhookAndLogs() throws Exception {
-    Events event = buildEvent(Constants.DELETE);
-    QueueEventHook entry = buildEntry("queue-1", event, RECORD_ID);
-
-    OBDal obDal = mock(OBDal.class);
+  private void stubQueue(QueueEventHook... entries) {
     OBCriteria<QueueEventHook> queueCriteria = mock(OBCriteria.class);
     ScrollableResults scroller = mock(ScrollableResults.class);
-    OBQuery<BaseOBObject> query = mock(OBQuery.class);
-
-    try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class);
-         MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class);
-         MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class);
-         MockedStatic<Utility> mockedUtility = mockStatic(Utility.class);
-         MockedStatic<OBContext> mockedContext = mockStatic(OBContext.class)) {
-      stubOBContext(mockedContext);
-      mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
-
-      mockQueue(obDal, queueCriteria, scroller, entry);
-      mockEntityResolution(mockedModelProvider);
-      when(obDal.createQuery(anyString(), anyString())).thenReturn(query);
-      when(query.list()).thenReturn(new ArrayList<>());
-      mockedUtility.when(() -> Utility.messageBD(any(), anyString(), anyString()))
-          .thenReturn(SEND_WEBHOOK_MESSAGE);
-
-      process.doExecute(bundle);
-
-      mockedWebHookUtil.verify(() -> WebHookUtil.callWebHookForDelete(eq(event), eq(RECORD_ID),
-          any(Logger.class)));
-      verify(obDal).remove(entry);
-      verify(processLogger).logln(contains(SEND_WEBHOOK_LOG));
-    }
-  }
-
-  /**
-   * A non-delete event whose record is unexpectedly missing must log the error and keep the entry
-   * in the queue instead of silently removing it.
-   *
-   * @throws Exception if the process execution fails
-   */
-  @Test
-  void missingRecordForNonDeleteEventLogsErrorAndKeepsEntry() throws Exception {
-    Events event = buildEvent(Constants.UPDATE);
-    QueueEventHook entry = buildEntry("queue-1", event, RECORD_ID);
-
-    OBDal obDal = mock(OBDal.class);
-    OBCriteria<QueueEventHook> queueCriteria = mock(OBCriteria.class);
-    ScrollableResults scroller = mock(ScrollableResults.class);
-    OBQuery<BaseOBObject> query = mock(OBQuery.class);
-
-    try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class);
-         MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class);
-         MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class);
-         MockedStatic<OBContext> mockedContext = mockStatic(OBContext.class)) {
-      stubOBContext(mockedContext);
-      mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
-
-      mockQueue(obDal, queueCriteria, scroller, entry);
-      mockEntityResolution(mockedModelProvider);
-      when(obDal.createQuery(anyString(), anyString())).thenReturn(query);
-      when(query.list()).thenReturn(new ArrayList<>());
-
-      assertDoesNotThrow(() -> process.doExecute(bundle));
-
-      verify(processLogger).logln(contains(ERROR_QUEUE_ENTRY_MESSAGE));
-      verify(obDal, never()).remove(entry);
-      verify(processLogger, never()).logln(contains(SEND_WEBHOOK_LOG));
-    }
-  }
-
-  /**
-   * When one entry cannot be processed the process must log the error, keep that entry and
-   * continue with the remaining entries.
-   *
-   * @throws Exception if the process execution fails
-   */
-  @Test
-  void batchContinuesAfterOneFailingEntry() throws Exception {
-    Events failingEvent = buildEvent(Constants.UPDATE);
-    QueueEventHook failingEntry = buildEntry("queue-1", failingEvent, RECORD_ID);
-    Events validEvent = buildEvent(Constants.UPDATE);
-    QueueEventHook validEntry = buildEntry("queue-2", validEvent, SECOND_RECORD_ID);
-
-    OBDal obDal = mock(OBDal.class);
-    OBCriteria<QueueEventHook> queueCriteria = mock(OBCriteria.class);
-    ScrollableResults scroller = mock(ScrollableResults.class);
-    OBQuery<BaseOBObject> failingQuery = mock(OBQuery.class);
-    OBQuery<BaseOBObject> validQuery = mock(OBQuery.class);
-
-    try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class);
-         MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class);
-         MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class);
-         MockedStatic<Utility> mockedUtility = mockStatic(Utility.class);
-         MockedStatic<OBContext> mockedContext = mockStatic(OBContext.class)) {
-      stubOBContext(mockedContext);
-      mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
-
-      mockQueue(obDal, queueCriteria, scroller, failingEntry, validEntry);
-      mockEntityResolution(mockedModelProvider);
-      when(obDal.createQuery(anyString(), anyString())).thenReturn(failingQuery, validQuery);
-      when(failingQuery.list()).thenReturn(new ArrayList<>());
-      BaseOBObject entity = mock(BaseOBObject.class);
-      when(entity.getEntityName()).thenReturn(ENTITY_NAME);
-      when(entity.getIdentifier()).thenReturn("Address 1");
-      when(validQuery.list()).thenReturn(List.of(entity));
-      mockedUtility.when(() -> Utility.messageBD(any(), anyString(), anyString()))
-          .thenReturn(SEND_WEBHOOK_MESSAGE);
-
-      process.doExecute(bundle);
-
-      verify(obDal, never()).remove(failingEntry);
-      verify(obDal).remove(validEntry);
-      verify(processLogger).logln(contains(ERROR_QUEUE_ENTRY_MESSAGE));
-      verify(processLogger).logln(contains(SEND_WEBHOOK_LOG));
-    }
-  }
-
-  /**
-   * Control case: a non-delete event whose record still exists keeps the original behaviour, it
-   * delivers the webhook from the entity, logs the confirmation and removes the entry.
-   *
-   * @throws Exception if the process execution fails
-   */
-  @Test
-  void existingRecordStillCallsWebHookAndRemovesEntry() throws Exception {
-    Events event = buildEvent(Constants.CREATE);
-    QueueEventHook entry = buildEntry("queue-1", event, RECORD_ID);
-    BaseOBObject entity = mock(BaseOBObject.class);
-
-    OBDal obDal = mock(OBDal.class);
-    OBCriteria<QueueEventHook> queueCriteria = mock(OBCriteria.class);
-    ScrollableResults scroller = mock(ScrollableResults.class);
-    OBQuery<BaseOBObject> query = mock(OBQuery.class);
-
-    try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class);
-         MockedStatic<ModelProvider> mockedModelProvider = mockStatic(ModelProvider.class);
-         MockedStatic<WebHookUtil> mockedWebHookUtil = mockStatic(WebHookUtil.class);
-         MockedStatic<Utility> mockedUtility = mockStatic(Utility.class);
-         MockedStatic<OBContext> mockedContext = mockStatic(OBContext.class)) {
-      stubOBContext(mockedContext);
-      mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
-
-      mockQueue(obDal, queueCriteria, scroller, entry);
-      mockEntityResolution(mockedModelProvider);
-      when(obDal.createQuery(anyString(), anyString())).thenReturn(query);
-      when(query.list()).thenReturn(List.of(entity));
-      when(entity.getEntityName()).thenReturn(ENTITY_NAME);
-      when(entity.getIdentifier()).thenReturn("Address 1");
-      mockedUtility.when(() -> Utility.messageBD(any(), anyString(), anyString()))
-          .thenReturn(SEND_WEBHOOK_MESSAGE);
-
-      process.doExecute(bundle);
-
-      mockedWebHookUtil.verify(
-          () -> WebHookUtil.callWebHook(eq(event), eq(entity), any(Logger.class)));
-      verify(obDal).remove(entry);
-      verify(processLogger).logln(contains(SEND_WEBHOOK_LOG));
-    }
-  }
-
-  private void mockQueue(OBDal obDal, OBCriteria<QueueEventHook> queueCriteria,
-      ScrollableResults scroller, QueueEventHook... entries) {
     when(obDal.createCriteria(QueueEventHook.class)).thenReturn(queueCriteria);
     when(queueCriteria.scroll()).thenReturn(scroller);
 
@@ -289,12 +255,21 @@ class DequeueEventsFromQueueTest {
         Arrays.copyOfRange(getReturn, 1, getReturn.length));
   }
 
-  private void mockEntityResolution(MockedStatic<ModelProvider> mockedModelProvider) {
-    ModelProvider modelProvider = mock(ModelProvider.class);
-    Entity entity = mock(Entity.class);
-    mockedModelProvider.when(ModelProvider::getInstance).thenReturn(modelProvider);
-    when(modelProvider.getEntityByTableName(TABLE_NAME)).thenReturn(entity);
-    when(entity.getName()).thenReturn(ENTITY_NAME);
+  private OBQuery<BaseOBObject> mockQuery() {
+    OBQuery<BaseOBObject> query = mock(OBQuery.class);
+    when(obDal.createQuery(anyString(), anyString())).thenReturn(query);
+    return query;
+  }
+
+  private void stubEmptyQuery() {
+    when(mockQuery().list()).thenReturn(new ArrayList<>());
+  }
+
+  private BaseOBObject buildEntity() {
+    BaseOBObject entity = mock(BaseOBObject.class);
+    when(entity.getEntityName()).thenReturn(ENTITY_NAME);
+    when(entity.getIdentifier()).thenReturn(IDENTIFIER);
+    return entity;
   }
 
   private QueueEventHook buildEntry(String id, Events event, String recordId) {
