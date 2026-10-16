@@ -5,8 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,9 +31,12 @@ import org.openbravo.base.exception.OBException;
 import org.openbravo.dal.core.OBContext;
 import org.openbravo.dal.service.OBCriteria;
 import org.openbravo.dal.service.OBDal;
+import org.openbravo.model.ad.datamodel.Table;
 import org.openbravo.model.ad.system.Language;
 
+import com.etendoerp.webhookevents.data.EventType;
 import com.etendoerp.webhookevents.data.Events;
+import com.etendoerp.webhookevents.data.UrlPathParam;
 import com.etendoerp.webhookevents.data.Webhook;
 
 /**
@@ -45,6 +51,8 @@ class WebHookUtilDeleteTest {
   private static final String WEBHOOK_URL = "http://example.com/delete";
   private static final String UNREACHABLE_URL = "http://invalid url with spaces";
   private static final String POST_METHOD = "POST";
+  private static final String TABLE_NAME = "C_BPartner_Location";
+  private static final String ON_DELETE = "On Delete";
 
   /**
    * Forces the initialization of {@link WebHookUtil} with a usable OBContext, so that mocking other
@@ -72,25 +80,43 @@ class WebHookUtilDeleteTest {
    */
   @Test
   void testSendDeleteNotificationWritesMinimalDeletePayload() throws Exception {
-    Webhook webhook = mock(Webhook.class);
-    Events event = mock(Events.class);
-    when(webhook.getUrlnotify()).thenReturn(WEBHOOK_URL);
-    when(webhook.getSmfwheEvents()).thenReturn(event);
-    when(event.getMethod()).thenReturn(POST_METHOD);
-
-    HttpURLConnection connection = mock(HttpURLConnection.class);
+    Webhook webhook = buildDeleteWebhook();
+    HttpURLConnection connection = mockConnection();
     ByteArrayOutputStream body = new ByteArrayOutputStream();
     when(connection.getOutputStream()).thenReturn(body);
-    when(connection.getResponseCode()).thenReturn(HttpURLConnection.HTTP_OK);
-    when(connection.getInputStream()).thenReturn(
-        new ByteArrayInputStream("ok".getBytes(StandardCharsets.UTF_8)));
 
-    WebHookUtil.sendDeleteNotification(webhook, connection, RECORD_ID, mock(Logger.class));
+    WebHookUtil.sendDeleteNotification(webhook, connection, RECORD_ID, List.of(),
+        mock(Logger.class));
 
     verify(connection).setRequestMethod(POST_METHOD);
+    verify(connection).setRequestProperty("Content-Type", "application/json");
     String payload = body.toString(StandardCharsets.UTF_8);
     assertTrue(payload.contains("\"id\":\"" + RECORD_ID + "\""));
-    assertTrue(payload.contains(Constants.DELETE));
+    assertTrue(payload.contains("\"entity\":\"" + TABLE_NAME + "\""));
+    assertTrue(payload.contains("\"event\":\"" + ON_DELETE + "\""));
+  }
+
+  /**
+   * The delete notification must send the webhook's static headers (e.g. an API key) and skip the
+   * ones that need the deleted record to be resolved.
+   *
+   * @throws Exception if the notification fails
+   */
+  @Test
+  void testSendDeleteNotificationSendsOnlyStaticHeaders() throws Exception {
+    HttpURLConnection connection = mockConnection();
+    when(connection.getOutputStream()).thenReturn(new ByteArrayOutputStream());
+    UrlPathParam staticHeader = buildHeader("X-Api-Key", Constants.TYPE_VALUE_STRING, "secret");
+    UrlPathParam placeholderHeader = buildHeader("X-Name", Constants.TYPE_VALUE_STRING,
+        "@name@");
+    UrlPathParam propertyHeader = buildHeader("X-Org", Constants.TYPE_VALUE_PROPERTY, null);
+
+    WebHookUtil.sendDeleteNotification(buildDeleteWebhook(), connection, RECORD_ID,
+        List.of(staticHeader, placeholderHeader, propertyHeader), mock(Logger.class));
+
+    verify(connection).setRequestProperty("X-Api-Key", "secret");
+    verify(connection, never()).setRequestProperty(eq("X-Name"), anyString());
+    verify(connection, never()).setRequestProperty(eq("X-Org"), anyString());
   }
 
   /**
@@ -126,6 +152,37 @@ class WebHookUtilDeleteTest {
     }
   }
 
+  private Webhook buildDeleteWebhook() {
+    Webhook webhook = mock(Webhook.class);
+    Events event = mock(Events.class);
+    Table table = mock(Table.class);
+    EventType eventType = mock(EventType.class);
+    when(webhook.getUrlnotify()).thenReturn(WEBHOOK_URL);
+    when(webhook.getSmfwheEvents()).thenReturn(event);
+    when(event.getMethod()).thenReturn(POST_METHOD);
+    when(event.getTable()).thenReturn(table);
+    when(table.getDBTableName()).thenReturn(TABLE_NAME);
+    when(event.getSmfwheEventType()).thenReturn(eventType);
+    when(eventType.getName()).thenReturn(ON_DELETE);
+    return webhook;
+  }
+
+  private HttpURLConnection mockConnection() throws Exception {
+    HttpURLConnection connection = mock(HttpURLConnection.class);
+    when(connection.getResponseCode()).thenReturn(HttpURLConnection.HTTP_OK);
+    when(connection.getInputStream()).thenReturn(
+        new ByteArrayInputStream("ok".getBytes(StandardCharsets.UTF_8)));
+    return connection;
+  }
+
+  private UrlPathParam buildHeader(String name, String typeValue, String value) {
+    UrlPathParam header = mock(UrlPathParam.class);
+    when(header.getName()).thenReturn(name);
+    when(header.getTypeValue()).thenReturn(typeValue);
+    when(header.getValue()).thenReturn(value);
+    return header;
+  }
+
   private Webhook buildWebhook(boolean active, String url) {
     Webhook webhook = mock(Webhook.class);
     when(webhook.isActive()).thenReturn(active);
@@ -138,5 +195,9 @@ class WebHookUtilDeleteTest {
     when(obDal.createCriteria(Webhook.class)).thenReturn(webhookCriteria);
     when(webhookCriteria.add(any())).thenReturn(webhookCriteria);
     when(webhookCriteria.list()).thenReturn(List.of(webhook));
+    OBCriteria<UrlPathParam> headerCriteria = mock(OBCriteria.class);
+    when(obDal.createCriteria(UrlPathParam.class)).thenReturn(headerCriteria);
+    when(headerCriteria.add(any())).thenReturn(headerCriteria);
+    when(headerCriteria.list()).thenReturn(List.of());
   }
 }

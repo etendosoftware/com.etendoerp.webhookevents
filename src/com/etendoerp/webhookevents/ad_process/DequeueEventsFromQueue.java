@@ -79,9 +79,9 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
   }
 
   /**
-   * Processes one queue entry, delivering its webhook and removing it from the queue. If the entry
-   * cannot be processed the error is logged and the entry is kept in the queue, so the batch can
-   * continue with the remaining entries and the failure is not silently discarded.
+   * Processes one queue entry, delivering its webhook and removing it from the queue. If the
+   * delivery fails the error is logged and the entry is kept in the queue, so the batch can continue
+   * with the remaining entries and the failure is not silently discarded.
    *
    * @param event  Event configured for the queued record
    * @param obj    Queue entry to process
@@ -129,7 +129,9 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
           "record " + obj.getRecord());
       logger.logln(message);
     } else {
-      throw new OBException("No entity found for id: " + obj.getRecord());
+      // deleted before dequeue or filtered out by the HQL where clause: a retry can never succeed
+      logger.logln("No record found for id " + obj.getRecord() + " in event " + event.getName()
+          + ", queue entry discarded.");
     }
   }
 

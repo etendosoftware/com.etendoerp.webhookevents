@@ -245,8 +245,8 @@ public class WebHookUtil {
   /**
    * Calls all the webhooks defined for an On Delete event whose record no longer exists in the
    * database. Since the entity is gone by the time the queue is processed, the payload built from
-   * the data captured when the event was queued only carries the record id and the event type; the
-   * deleted entity's properties are not available at dequeue time.
+   * the data captured when the event was queued only carries the record id, its table and the event
+   * type; the deleted entity's properties are not available at dequeue time.
    *
    * @param event    Events configured for the deletion of the record
    * @param recordId Id of the deleted record, captured when the event was queued
@@ -260,7 +260,8 @@ public class WebHookUtil {
     for (Webhook hook : cWebhook.list()) {
       try {
         if (BooleanUtils.isTrue(hook.isActive())) {
-          sendDeleteNotification(hook, openConnection(hook.getUrlnotify()), recordId, logger);
+          HttpURLConnection con = openConnection(hook.getUrlnotify());
+          sendDeleteNotification(hook, con, recordId, getHeaderParams(hook), logger);
         }
       } catch (Exception e) {
         throw new OBException(e);
@@ -270,23 +271,28 @@ public class WebHookUtil {
 
   /**
    * Sends a minimal notification for a deleted record through the given connection. The payload
-   * only carries the deleted record id and the delete event type, because the entity itself is no
-   * longer available when the queue is processed.
+   * only carries the deleted record id, its table and the event type, because the entity itself is
+   * no longer available when the queue is processed.
    *
    * @param hook     Webhook defined in the event
    * @param con      Open connection to the webhook URL
    * @param recordId Id of the deleted record
+   * @param headers  Header parameters defined in the webhook
    * @param logger   Info logger in log
    * @throws IOException   if the payload cannot be sent or the response cannot be read
    * @throws JSONException if the notification payload cannot be built
    */
   static void sendDeleteNotification(Webhook hook, HttpURLConnection con, String recordId,
-      Logger logger) throws IOException, JSONException {
-    con.setRequestMethod(hook.getSmfwheEvents().getMethod());
+      List<UrlPathParam> headers, Logger logger) throws IOException, JSONException {
+    Events event = hook.getSmfwheEvents();
+    con.setRequestMethod(event.getMethod());
+    con.setRequestProperty("Content-Type", "application/json");
+    setStaticHeaders(con, headers, logger);
 
     JSONObject sendData = new JSONObject();
     sendData.put("id", recordId);
-    sendData.put("event", Constants.DELETE);
+    sendData.put("entity", event.getTable().getDBTableName());
+    sendData.put("event", event.getSmfwheEventType().getName());
 
     writePayload(con, sendData.toString());
 
@@ -296,6 +302,43 @@ public class WebHookUtil {
     logger.debug("Post Data : " + sendData);
     logger.debug("Response Code : " + responseCode);
     logger.debug(readResponse(con));
+  }
+
+  /**
+   * Gets the active header parameters defined in the given webhook.
+   *
+   * @param hook Webhook defined in the event
+   * @return the header parameters of the webhook
+   */
+  private static List<UrlPathParam> getHeaderParams(Webhook hook) {
+    OBCriteria<UrlPathParam> cHeader = OBDal.getInstance().createCriteria(UrlPathParam.class);
+    cHeader.add(Restrictions.eq(UrlPathParam.PROPERTY_SMFWHEWEBHOOK, hook));
+    cHeader.add(Restrictions.eq(UrlPathParam.PROPERTY_TYPEPARAMETER,
+        Constants.TYPE_PARAMETER_HEADER));
+    return cHeader.list();
+  }
+
+  /**
+   * Sets the header parameters whose value does not depend on the record. Headers built from a
+   * property, a computed function or a @property@ placeholder need the record, which no longer
+   * exists, so they are skipped with a warning.
+   *
+   * @param con     Open connection to the webhook URL
+   * @param headers Header parameters defined in the webhook
+   * @param logger  Info logger in log
+   */
+  private static void setStaticHeaders(HttpURLConnection con, List<UrlPathParam> headers,
+      Logger logger) {
+    for (UrlPathParam param : headers) {
+      String value = param.getValue();
+      if (Constants.TYPE_VALUE_STRING.equals(param.getTypeValue()) && value != null
+          && !value.contains(Constants.AT)) {
+        con.setRequestProperty(param.getName(), value);
+      } else {
+        logger.warn("Header " + param.getName()
+            + " depends on the deleted record and is not sent in the delete notification");
+      }
+    }
   }
 
   /**
