@@ -26,6 +26,7 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.openbravo.base.exception.OBException;
 import org.openbravo.base.model.Entity;
 import org.openbravo.base.model.ModelProvider;
 import org.openbravo.base.structure.BaseOBObject;
@@ -64,6 +65,7 @@ class DequeueEventsFromQueueTest {
   private static final String SEND_WEBHOOK_MESSAGE = "Send webhook for this record: '%s'";
   private static final String SEND_WEBHOOK_LOG = "Send webhook for this record";
   private static final String ERROR_QUEUE_ENTRY_MESSAGE = "Error processing queue entry";
+  private static final String DISCARDED_ENTRY_MESSAGE = "queue entry discarded";
 
   private DequeueEventsFromQueue process;
   private ProcessBundle bundle;
@@ -145,34 +147,39 @@ class DequeueEventsFromQueueTest {
   }
 
   /**
-   * A non-delete event whose record is unexpectedly missing must log the error and keep the entry
-   * in the queue instead of silently removing it.
+   * A non-delete event whose record no longer exists (e.g. an On Create entry for a record deleted
+   * before the queue was processed) can never be delivered, so it must be logged and discarded
+   * instead of staying in the queue forever.
    *
    * @throws Exception if the process execution fails
    */
   @Test
-  void missingRecordForNonDeleteEventLogsErrorAndKeepsEntry() throws Exception {
-    Events event = buildEvent(Constants.UPDATE);
+  void missingRecordForNonDeleteEventIsDiscarded() throws Exception {
+    Events event = buildEvent(Constants.CREATE);
     QueueEventHook entry = buildEntry(QUEUE_ONE, event, RECORD_ID);
     stubQueue(entry);
     stubEmptyQuery();
 
     assertDoesNotThrow(() -> process.doExecute(bundle));
 
-    verify(processLogger).logln(contains(ERROR_QUEUE_ENTRY_MESSAGE));
-    verify(obDal, never()).remove(entry);
+    verify(obDal).remove(entry);
+    verify(processLogger).logln(contains(DISCARDED_ENTRY_MESSAGE));
+    verify(processLogger, never()).logln(contains(ERROR_QUEUE_ENTRY_MESSAGE));
     verify(processLogger, never()).logln(contains(SEND_WEBHOOK_LOG));
+    mockedWebHookUtil.verify(
+        () -> WebHookUtil.callWebHookForDelete(any(), anyString(), any(Logger.class)), never());
   }
 
   /**
-   * When one entry cannot be processed the process must log the error, keep that entry and
-   * continue with the remaining entries.
+   * When the delivery of one entry fails the process must log the error, keep that entry for a
+   * later retry and continue with the remaining entries.
    *
    * @throws Exception if the process execution fails
    */
   @Test
   void batchContinuesAfterOneFailingEntry() throws Exception {
-    QueueEventHook failingEntry = buildEntry(QUEUE_ONE, buildEvent(Constants.UPDATE), RECORD_ID);
+    Events failingEvent = buildEvent(Constants.UPDATE);
+    QueueEventHook failingEntry = buildEntry(QUEUE_ONE, failingEvent, RECORD_ID);
     QueueEventHook validEntry = buildEntry(QUEUE_TWO, buildEvent(Constants.UPDATE),
         SECOND_RECORD_ID);
     stubQueue(failingEntry, validEntry);
@@ -180,7 +187,11 @@ class DequeueEventsFromQueueTest {
     OBQuery<BaseOBObject> failingQuery = mock(OBQuery.class);
     OBQuery<BaseOBObject> validQuery = mock(OBQuery.class);
     when(obDal.createQuery(anyString(), anyString())).thenReturn(failingQuery, validQuery);
-    when(failingQuery.list()).thenReturn(new ArrayList<>());
+    BaseOBObject failingEntity = buildEntity();
+    when(failingQuery.list()).thenReturn(List.of(failingEntity));
+    mockedWebHookUtil.when(
+            () -> WebHookUtil.callWebHook(eq(failingEvent), any(), any(Logger.class)))
+        .thenThrow(new OBException("Server returned HTTP response code: 500"));
     BaseOBObject entity = buildEntity();
     when(validQuery.list()).thenReturn(List.of(entity));
 
