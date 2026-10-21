@@ -2,6 +2,7 @@ package com.etendoerp.webhookevents.webhook_util;
 
 import static com.etendoerp.webhookevents.WebhookTestConstants.RECORD_ID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -16,8 +17,12 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import com.sun.net.httpserver.HttpServer;
 
 import org.apache.log4j.Logger;
 import org.junit.jupiter.api.BeforeAll;
@@ -152,6 +157,42 @@ class WebHookUtilDeleteTest {
     }
   }
 
+  /**
+   * A webhook that fails must not block the next ones: callWebHookForDelete attempts every active
+   * webhook and only then reports the failure, so the queue entry is kept for a retry.
+   *
+   * @throws Exception if the local endpoint cannot be started
+   */
+  @Test
+  void testCallWebHookForDeleteNotifiesRemainingWebhooksAfterFailure() throws Exception {
+    HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+    List<String> received = new CopyOnWriteArrayList<>();
+    server.createContext("/", exchange -> {
+      received.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+      exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, -1);
+      exchange.close();
+    });
+    server.start();
+    try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class)) {
+      OBDal obDal = mock(OBDal.class);
+      mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
+      Webhook reachable = buildDeleteWebhook();
+      when(reachable.isActive()).thenReturn(true);
+      when(reachable.getUrlnotify()).thenReturn(
+          "http://localhost:" + server.getAddress().getPort() + "/");
+      stubWebhooks(obDal, buildWebhook(true, UNREACHABLE_URL), reachable);
+
+      Events event = mock(Events.class);
+      Logger logger = mock(Logger.class);
+      assertThrows(OBException.class,
+          () -> WebHookUtil.callWebHookForDelete(event, RECORD_ID, logger));
+      assertEquals(1, received.size());
+      assertTrue(received.get(0).contains("\"id\":\"" + RECORD_ID + "\""));
+    } finally {
+      server.stop(0);
+    }
+  }
+
   private Webhook buildDeleteWebhook() {
     Webhook webhook = mock(Webhook.class);
     Events event = mock(Events.class);
@@ -190,11 +231,11 @@ class WebHookUtilDeleteTest {
     return webhook;
   }
 
-  private void stubWebhooks(OBDal obDal, Webhook webhook) {
+  private void stubWebhooks(OBDal obDal, Webhook... webhooks) {
     OBCriteria<Webhook> webhookCriteria = mock(OBCriteria.class);
     when(obDal.createCriteria(Webhook.class)).thenReturn(webhookCriteria);
     when(webhookCriteria.add(any())).thenReturn(webhookCriteria);
-    when(webhookCriteria.list()).thenReturn(List.of(webhook));
+    when(webhookCriteria.list()).thenReturn(List.of(webhooks));
     OBCriteria<UrlPathParam> headerCriteria = mock(OBCriteria.class);
     when(obDal.createCriteria(UrlPathParam.class)).thenReturn(headerCriteria);
     when(headerCriteria.add(any())).thenReturn(headerCriteria);

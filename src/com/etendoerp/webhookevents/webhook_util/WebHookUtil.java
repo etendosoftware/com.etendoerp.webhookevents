@@ -191,24 +191,30 @@ public class WebHookUtil {
   }
 
   /**
-   * Call the all webhook defined in this event
+   * Call the all webhook defined in this event. Every active webhook is attempted even if a previous
+   * one fails, so a broken endpoint does not block the others; the failures are reported together
+   * once all of them were attempted.
    *
    * @param event  Events
    * @param bob    BaseOBObject to generate data (JSON or XML)
    * @param logger Info logger in log
-   * @throws OBException
+   * @throws OBException if any of the webhooks could not be notified
    */
   public static void callWebHook(Events event, BaseOBObject bob, Logger logger) throws OBException {
     OBCriteria<Webhook> cWebhook = OBDal.getInstance().createCriteria(Webhook.class);
     cWebhook.add(Restrictions.eq(Webhook.PROPERTY_SMFWHEEVENTS, event));
+    OBException failure = null;
     for (Webhook hook : cWebhook.list()) {
       try {
         if (BooleanUtils.isTrue(hook.isActive())) {
           sendEvent(hook, bob, logger);
         }
       } catch (Exception e) {
-        throw new OBException(e);
+        failure = addDeliveryFailure(failure, hook, e, logger);
       }
+    }
+    if (failure != null) {
+      throw failure;
     }
   }
 
@@ -259,7 +265,8 @@ public class WebHookUtil {
    * Calls all the webhooks defined for an On Delete event whose record no longer exists in the
    * database. Since the entity is gone by the time the queue is processed, the payload built from
    * the data captured when the event was queued only carries the record id, its table and the event
-   * type; the deleted entity's properties are not available at dequeue time.
+   * type; the deleted entity's properties are not available at dequeue time. Every active webhook is
+   * attempted even if a previous one fails; the failures are reported together at the end.
    *
    * @param event    Events configured for the deletion of the record
    * @param recordId Id of the deleted record, captured when the event was queued
@@ -270,6 +277,7 @@ public class WebHookUtil {
       throws OBException {
     OBCriteria<Webhook> cWebhook = OBDal.getInstance().createCriteria(Webhook.class);
     cWebhook.add(Restrictions.eq(Webhook.PROPERTY_SMFWHEEVENTS, event));
+    OBException failure = null;
     for (Webhook hook : cWebhook.list()) {
       try {
         if (BooleanUtils.isTrue(hook.isActive())) {
@@ -277,9 +285,33 @@ public class WebHookUtil {
           sendDeleteNotification(hook, con, recordId, getHeaderParams(hook), logger);
         }
       } catch (Exception e) {
-        throw new OBException(e);
+        failure = addDeliveryFailure(failure, hook, e, logger);
       }
     }
+    if (failure != null) {
+      throw failure;
+    }
+  }
+
+  /**
+   * Logs a webhook delivery failure and accumulates it: the first failure becomes the exception to
+   * throw and the following ones are attached to it as suppressed.
+   *
+   * @param failure the failure accumulated so far, or null if none
+   * @param hook    Webhook that could not be notified
+   * @param error   Error raised while notifying the webhook
+   * @param logger  Info logger in log
+   * @return the accumulated failure
+   */
+  private static OBException addDeliveryFailure(OBException failure, Webhook hook, Exception error,
+      Logger logger) {
+    logger.error("Webhook " + hook.getUrlnotify() + " could not be notified: " + error.getMessage(),
+        error);
+    if (failure == null) {
+      return new OBException(error);
+    }
+    failure.addSuppressed(error);
+    return failure;
   }
 
   /**
