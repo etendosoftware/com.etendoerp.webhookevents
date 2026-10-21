@@ -102,7 +102,9 @@ public class WebHookUtil {
 
   /**
    * Inserts an event record in the queue. Special for events handlers, include Event Handler and
-   * Dynamic Event Handler Types
+   * Dynamic Event Handler Types. The event lookup and the queue insert run in admin mode: the queue
+   * is module infrastructure, so an event must be queued whatever the role that changed the record.
+   * The dynamic event handler keeps running with the user's permissions.
    *
    * @param tableName   Table Name the event is defined for
    * @param tableId     Table ID the event is defined for
@@ -111,7 +113,13 @@ public class WebHookUtil {
    */
   public static void queueEventFromEventHandler(String tableName, String tableId,
       String eventTypeId, String recordId) {
-    List<Events> lEvents = WebHookUtil.getEventHandlerClassEvents(eventTypeId, tableName);
+    List<Events> lEvents;
+    OBContext.setAdminMode(true);
+    try {
+      lEvents = WebHookUtil.getEventHandlerClassEvents(eventTypeId, tableName);
+    } finally {
+      OBContext.restorePreviousMode();
+    }
     if (!lEvents.isEmpty()) {
       QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
       Events event = lEvents.get(0);
@@ -137,14 +145,19 @@ public class WebHookUtil {
       }
 
       if (dynamicEventSuccess) {
-        obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
-        obj.setCreationDate(new Date());
-        obj.setUpdated(new Date());
-        obj.setRecord(recordId);
-        obj.setTable(OBDal.getInstance().get(Table.class, tableId));
-        obj.setSmfwheEvents(event);
+        OBContext.setAdminMode(true);
+        try {
+          obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
+          obj.setCreationDate(new Date());
+          obj.setUpdated(new Date());
+          obj.setRecord(recordId);
+          obj.setTable(OBDal.getInstance().get(Table.class, tableId));
+          obj.setSmfwheEvents(event);
 
-        OBDal.getInstance().save(obj);
+          OBDal.getInstance().save(obj);
+        } finally {
+          OBContext.restorePreviousMode();
+        }
       }
     }
   }
