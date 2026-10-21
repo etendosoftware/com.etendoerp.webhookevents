@@ -265,8 +265,11 @@ public class WebHookUtil {
    * Calls all the webhooks defined for an On Delete event whose record no longer exists in the
    * database. Since the entity is gone by the time the queue is processed, the payload built from
    * the data captured when the event was queued only carries the record id, its table and the event
-   * type; the deleted entity's properties are not available at dequeue time. Every active webhook is
-   * attempted even if a previous one fails; the failures are reported together at the end.
+   * type; the deleted entity's properties are not available at dequeue time. The payload is always
+   * JSON ({@code {"id", "entity", "event"}}), whatever the data type configured in the webhook, and
+   * the event's HQL where clause is not evaluated because there is no record left to filter. Every
+   * active webhook is attempted even if a previous one fails; the failures are reported together at
+   * the end.
    *
    * @param event    Events configured for the deletion of the record
    * @param recordId Id of the deleted record, captured when the event was queued

@@ -41,6 +41,21 @@ import org.openbravo.service.db.DalConnectionProvider;
 import com.etendoerp.webhookevents.data.Events;
 import com.etendoerp.webhookevents.data.QueueEventHook;
 
+/**
+ * Background process that delivers the webhook events waiting in the queue
+ * ({@code SMFWHE_QUEUEEVENTHOOK}).
+ * <ul>
+ * <li>It only processes the queue entries visible to the client it is scheduled for, so it has to
+ * be scheduled in each client that queues events.</li>
+ * <li>An entry is removed once all its webhooks were notified. If any webhook fails, the entry is
+ * kept and the next run notifies every webhook of the event again, including the ones that already
+ * received it: receivers must be idempotent (use the record id and the event type as the key).</li>
+ * <li>On Delete entries are delivered with a minimal JSON payload, without evaluating the event's
+ * HQL where clause (see {@link WebHookUtil#callWebHookForDelete}).</li>
+ * <li>Entries of other event types whose record no longer exists, or no longer matches the where
+ * clause, are logged and discarded.</li>
+ * </ul>
+ */
 public class DequeueEventsFromQueue extends DalBaseProcess {
   private static final ConnectionProvider conn = new DalConnectionProvider(false);
   private static final Logger log = Logger.getLogger(DequeueEventsFromQueue.class);
