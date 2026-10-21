@@ -42,7 +42,6 @@ import com.etendoerp.webhookevents.data.Events;
 import com.etendoerp.webhookevents.data.QueueEventHook;
 
 public class DequeueEventsFromQueue extends DalBaseProcess {
-  private static final String LANGUAGE = OBContext.getOBContext().getLanguage().getLanguage();
   private static final ConnectionProvider conn = new DalConnectionProvider(false);
   private static final Logger log = Logger.getLogger(DequeueEventsFromQueue.class);
 
@@ -119,13 +118,13 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
         throw new OBException("Entity name or identifier is empty for id: " + obj.getRecord());
       }
       String message = String.format(
-          Utility.messageBD(conn, "smfwhe_SendCallWebHook", LANGUAGE), event.getName(),
+          Utility.messageBD(conn, "smfwhe_SendCallWebHook", getLanguage()), event.getName(),
           entityName + " " + identifier);
       logger.logln(message);
     } else if (isDeleteEvent(event)) {
       WebHookUtil.callWebHookForDelete(event, obj.getRecord(), log);
       String message = String.format(
-          Utility.messageBD(conn, "smfwhe_SendCallWebHook", LANGUAGE), event.getName(),
+          Utility.messageBD(conn, "smfwhe_SendCallWebHook", getLanguage()), event.getName(),
           "record " + obj.getRecord());
       logger.logln(message);
     } else {
@@ -133,6 +132,16 @@ public class DequeueEventsFromQueue extends DalBaseProcess {
       logger.logln("No record found for id " + obj.getRecord() + " in event " + event.getName()
           + ", queue entry discarded.");
     }
+  }
+
+  /**
+   * Resolves the language of the context running the process. It is read on each execution, not in
+   * a static field, because the scheduler loads this class on startup without an OBContext.
+   *
+   * @return the language code of the current context
+   */
+  private static String getLanguage() {
+    return OBContext.getOBContext().getLanguage().getLanguage();
   }
 
   /**
