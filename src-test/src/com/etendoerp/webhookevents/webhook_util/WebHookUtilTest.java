@@ -497,7 +497,8 @@ class WebHookUtilTest {
   @Test
   void testQueueEventFromEventHandler() {
     try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class);
-         MockedStatic<OBProvider> mockedProvider = mockStatic(OBProvider.class)) {
+         MockedStatic<OBProvider> mockedProvider = mockStatic(OBProvider.class);
+         MockedStatic<OBContext> mockedOBContext = mockStatic(OBContext.class)) {
 
       mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
 
@@ -786,7 +787,8 @@ class WebHookUtilTest {
   void testQueueEventFromEventHandlerWithDynamicJavaClass() throws Exception {
     try (MockedStatic<OBDal> mockedOBDal = mockStatic(OBDal.class);
          MockedStatic<OBProvider> mockedProvider = mockStatic(OBProvider.class);
-         MockedStatic<OBClassLoader> mockedClassLoader = mockStatic(OBClassLoader.class)) {
+         MockedStatic<OBClassLoader> mockedClassLoader = mockStatic(OBClassLoader.class);
+         MockedStatic<OBContext> mockedOBContext = mockStatic(OBContext.class)) {
 
       mockedOBDal.when(OBDal::getInstance).thenReturn(obDal);
 
@@ -1081,6 +1083,7 @@ class WebHookUtilTest {
       assertNotNull(exception);
     }
   }
+
   /**
    * Helper method to set up the OBContext mock.
    * This method is used to configure the OBContext mock with the necessary language settings.
