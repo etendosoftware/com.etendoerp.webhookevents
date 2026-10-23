@@ -102,7 +102,9 @@ public class WebHookUtil {
 
   /**
    * Inserts an event record in the queue. Special for events handlers, include Event Handler and
-   * Dynamic Event Handler Types
+   * Dynamic Event Handler Types. The event lookup and the queue insert run in admin mode: the queue
+   * is module infrastructure, so an event must be queued whatever the role that changed the record.
+   * The dynamic event handler keeps running with the user's permissions.
    *
    * @param tableName   Table Name the event is defined for
    * @param tableId     Table ID the event is defined for
@@ -111,7 +113,13 @@ public class WebHookUtil {
    */
   public static void queueEventFromEventHandler(String tableName, String tableId,
       String eventTypeId, String recordId) {
-    List<Events> lEvents = WebHookUtil.getEventHandlerClassEvents(eventTypeId, tableName);
+    List<Events> lEvents;
+    OBContext.setAdminMode(true);
+    try {
+      lEvents = WebHookUtil.getEventHandlerClassEvents(eventTypeId, tableName);
+    } finally {
+      OBContext.restorePreviousMode();
+    }
     if (!lEvents.isEmpty()) {
       QueueEventHook obj = OBProvider.getInstance().get(QueueEventHook.class);
       Events event = lEvents.get(0);
@@ -137,14 +145,19 @@ public class WebHookUtil {
       }
 
       if (dynamicEventSuccess) {
-        obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
-        obj.setCreationDate(new Date());
-        obj.setUpdated(new Date());
-        obj.setRecord(recordId);
-        obj.setTable(OBDal.getInstance().get(Table.class, tableId));
-        obj.setSmfwheEvents(event);
+        OBContext.setAdminMode(true);
+        try {
+          obj.setOrganization(OBDal.getInstance().get(Organization.class, "0"));
+          obj.setCreationDate(new Date());
+          obj.setUpdated(new Date());
+          obj.setRecord(recordId);
+          obj.setTable(OBDal.getInstance().get(Table.class, tableId));
+          obj.setSmfwheEvents(event);
 
-        OBDal.getInstance().save(obj);
+          OBDal.getInstance().save(obj);
+        } finally {
+          OBContext.restorePreviousMode();
+        }
       }
     }
   }
@@ -178,24 +191,30 @@ public class WebHookUtil {
   }
 
   /**
-   * Call the all webhook defined in this event
+   * Call the all webhook defined in this event. Every active webhook is attempted even if a previous
+   * one fails, so a broken endpoint does not block the others; the failures are reported together
+   * once all of them were attempted.
    *
    * @param event  Events
    * @param bob    BaseOBObject to generate data (JSON or XML)
    * @param logger Info logger in log
-   * @throws OBException
+   * @throws OBException if any of the webhooks could not be notified
    */
   public static void callWebHook(Events event, BaseOBObject bob, Logger logger) throws OBException {
     OBCriteria<Webhook> cWebhook = OBDal.getInstance().createCriteria(Webhook.class);
     cWebhook.add(Restrictions.eq(Webhook.PROPERTY_SMFWHEEVENTS, event));
+    OBException failure = null;
     for (Webhook hook : cWebhook.list()) {
       try {
         if (BooleanUtils.isTrue(hook.isActive())) {
           sendEvent(hook, bob, logger);
         }
       } catch (Exception e) {
-        throw new OBException(e);
+        failure = addDeliveryFailure(failure, hook, e, logger);
       }
+    }
+    if (failure != null) {
+      throw failure;
     }
   }
 
@@ -214,8 +233,7 @@ public class WebHookUtil {
 
     String url = generateUrlParameter(cUrlPathParam.list(), hook.getUrlnotify(), bob,
         logger).toLowerCase();
-    URL obj = new URL(url);
-    HttpURLConnection con = getConnection(url, obj);
+    HttpURLConnection con = openConnection(url);
     // Setting basic post request
     cUrlPathParam = OBDal.getInstance().createCriteria(UrlPathParam.class);
     cUrlPathParam.add(Restrictions.eq(UrlPathParam.PROPERTY_TYPEPARAMETER, "H"));
@@ -232,27 +250,189 @@ public class WebHookUtil {
     }
 
     // Send post request
-    con.setDoOutput(true);
-    DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-    wr.writeBytes(sendData);
-    wr.flush();
-    wr.close();
+    writePayload(con, sendData);
 
     int responseCode = con.getResponseCode();
     logger.debug("nSending " + hook.getSmfwheEvents().getMethod() + "request to URL : " + url);
     logger.debug("Post Data : " + sendData);
     logger.debug("Response Code : " + responseCode);
 
-    BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-    String output;
-    StringBuilder response = new StringBuilder();
-    while ((output = in.readLine()) != null) {
-      response.append(output);
-    }
-    in.close();
-
     // printing result from response
-    logger.debug(response.toString());
+    logger.debug(readResponse(con));
+  }
+
+  /**
+   * Calls all the webhooks defined for an On Delete event whose record no longer exists in the
+   * database. Since the entity is gone by the time the queue is processed, the payload built from
+   * the data captured when the event was queued only carries the record id, its table and the event
+   * type; the deleted entity's properties are not available at dequeue time. The payload is always
+   * JSON ({@code {"id", "entity", "event"}}), whatever the data type configured in the webhook, and
+   * the event's HQL where clause is not evaluated because there is no record left to filter. Every
+   * active webhook is attempted even if a previous one fails; the failures are reported together at
+   * the end.
+   *
+   * @param event    Events configured for the deletion of the record
+   * @param recordId Id of the deleted record, captured when the event was queued
+   * @param logger   Info logger in log
+   * @throws OBException if any of the webhooks could not be notified
+   */
+  public static void callWebHookForDelete(Events event, String recordId, Logger logger)
+      throws OBException {
+    OBCriteria<Webhook> cWebhook = OBDal.getInstance().createCriteria(Webhook.class);
+    cWebhook.add(Restrictions.eq(Webhook.PROPERTY_SMFWHEEVENTS, event));
+    OBException failure = null;
+    for (Webhook hook : cWebhook.list()) {
+      try {
+        if (BooleanUtils.isTrue(hook.isActive())) {
+          HttpURLConnection con = openConnection(hook.getUrlnotify());
+          sendDeleteNotification(hook, con, recordId, getHeaderParams(hook), logger);
+        }
+      } catch (Exception e) {
+        failure = addDeliveryFailure(failure, hook, e, logger);
+      }
+    }
+    if (failure != null) {
+      throw failure;
+    }
+  }
+
+  /**
+   * Logs a webhook delivery failure and accumulates it: the first failure becomes the exception to
+   * throw and the following ones are attached to it as suppressed.
+   *
+   * @param failure the failure accumulated so far, or null if none
+   * @param hook    Webhook that could not be notified
+   * @param error   Error raised while notifying the webhook
+   * @param logger  Info logger in log
+   * @return the accumulated failure
+   */
+  private static OBException addDeliveryFailure(OBException failure, Webhook hook, Exception error,
+      Logger logger) {
+    logger.error("Webhook " + hook.getUrlnotify() + " could not be notified: " + error.getMessage(),
+        error);
+    if (failure == null) {
+      return new OBException(error);
+    }
+    failure.addSuppressed(error);
+    return failure;
+  }
+
+  /**
+   * Sends a minimal notification for a deleted record through the given connection. The payload
+   * only carries the deleted record id, its table and the event type, because the entity itself is
+   * no longer available when the queue is processed.
+   *
+   * @param hook     Webhook defined in the event
+   * @param con      Open connection to the webhook URL
+   * @param recordId Id of the deleted record
+   * @param headers  Header parameters defined in the webhook
+   * @param logger   Info logger in log
+   * @throws IOException   if the payload cannot be sent or the response cannot be read
+   * @throws JSONException if the notification payload cannot be built
+   */
+  static void sendDeleteNotification(Webhook hook, HttpURLConnection con, String recordId,
+      List<UrlPathParam> headers, Logger logger) throws IOException, JSONException {
+    Events event = hook.getSmfwheEvents();
+    con.setRequestMethod(event.getMethod());
+    con.setRequestProperty("Content-Type", "application/json");
+    setStaticHeaders(con, headers, logger);
+
+    JSONObject sendData = new JSONObject();
+    sendData.put("id", recordId);
+    sendData.put("entity", event.getTable().getDBTableName());
+    sendData.put("event", event.getSmfwheEventType().getName());
+
+    writePayload(con, sendData.toString());
+
+    int responseCode = con.getResponseCode();
+    logger.debug("Sending " + hook.getSmfwheEvents().getMethod() + " delete notification to URL : "
+        + hook.getUrlnotify());
+    logger.debug("Post Data : " + sendData);
+    logger.debug("Response Code : " + responseCode);
+    logger.debug(readResponse(con));
+  }
+
+  /**
+   * Gets the active header parameters defined in the given webhook.
+   *
+   * @param hook Webhook defined in the event
+   * @return the header parameters of the webhook
+   */
+  private static List<UrlPathParam> getHeaderParams(Webhook hook) {
+    OBCriteria<UrlPathParam> cHeader = OBDal.getInstance().createCriteria(UrlPathParam.class);
+    cHeader.add(Restrictions.eq(UrlPathParam.PROPERTY_SMFWHEWEBHOOK, hook));
+    cHeader.add(Restrictions.eq(UrlPathParam.PROPERTY_TYPEPARAMETER,
+        Constants.TYPE_PARAMETER_HEADER));
+    return cHeader.list();
+  }
+
+  /**
+   * Sets the header parameters whose value does not depend on the record. Headers built from a
+   * property, a computed function or a @property@ placeholder need the record, which no longer
+   * exists, so they are skipped with a warning.
+   *
+   * @param con     Open connection to the webhook URL
+   * @param headers Header parameters defined in the webhook
+   * @param logger  Info logger in log
+   */
+  private static void setStaticHeaders(HttpURLConnection con, List<UrlPathParam> headers,
+      Logger logger) {
+    for (UrlPathParam param : headers) {
+      String value = param.getValue();
+      if (Constants.TYPE_VALUE_STRING.equals(param.getTypeValue()) && value != null
+          && !value.contains(Constants.AT)) {
+        con.setRequestProperty(param.getName(), value);
+      } else {
+        logger.warn("Header " + param.getName()
+            + " depends on the deleted record and is not sent in the delete notification");
+      }
+    }
+  }
+
+  /**
+   * Opens a connection for the given URL, choosing the http or https implementation.
+   *
+   * @param url Url to send the request to
+   * @return the opened connection
+   * @throws IOException if the URL is malformed or the connection cannot be opened
+   */
+  private static HttpURLConnection openConnection(String url) throws IOException {
+    URL obj = new URL(url);
+    return getConnection(url, obj);
+  }
+
+  /**
+   * Writes the payload of the request to the connection.
+   *
+   * @param con      Open connection to the webhook URL
+   * @param sendData Data to send in the request body
+   * @throws IOException if the payload cannot be written
+   */
+  private static void writePayload(HttpURLConnection con, String sendData) throws IOException {
+    con.setDoOutput(true);
+    try (DataOutputStream wr = new DataOutputStream(con.getOutputStream())) {
+      wr.writeBytes(sendData);
+      wr.flush();
+    }
+  }
+
+  /**
+   * Reads the response of the request. Reading the stream also raises the error status codes of the
+   * endpoint, so an HTTP error is treated as a delivery failure.
+   *
+   * @param con Open connection to the webhook URL
+   * @return the response body
+   * @throws IOException if the response cannot be read
+   */
+  private static String readResponse(HttpURLConnection con) throws IOException {
+    StringBuilder response = new StringBuilder();
+    try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+      String output;
+      while ((output = in.readLine()) != null) {
+        response.append(output);
+      }
+    }
+    return response.toString();
   }
 
   private static String getXMLToSend(Webhook hook, BaseOBObject bob, Logger logger) throws Exception {
